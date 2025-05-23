@@ -174,3 +174,16 @@ export interface Vendor {
   approvedAt?: string; // ISO DateTime string
   notes?: string; // Any additional notes by submitter or admin
 }
+
+// Committee Member Type
+export interface CommitteeMember {
+  id: string;
+  name: string;
+  roleInCommittee: string;
+  flatNumber: string;
+  imageUrl?: string; // Optional, can be placeholder
+  email?: string;
+  phone?: string;
+  createdAt?: string; // ISO DateTime string
+  updatedAt?: string; // ISO DateTime string
+}
