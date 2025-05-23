@@ -28,24 +28,13 @@ import { addVisitorEntry } from '@/lib/store';
 import type { VisitorEntry } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import React, { useState } from 'react';
-
-const visitPurposes = [
-  "Delivery",
-  "Guest Visit",
-  "Maintenance/Service",
-  "Enquiry",
-  "Staff/Employee",
-  "Cab/Taxi",
-  "Sales/Vendor",
-  "Interview",
-  "Other",
-] as const;
+import { VISIT_PURPOSES } from '@/lib/constants'; // Import shared purposes
 
 const visitorEntrySchema = z.object({
   visitorName: z.string().min(2, { message: 'Visitor name must be at least 2 characters.' }),
   mobileNumber: z.string().regex(/^\d{10}$/, { message: 'Mobile number must be 10 digits.' }),
   flatNumber: z.string().min(1, { message: 'Flat number is required.' }),
-  purposeOfVisit: z.enum(visitPurposes, { required_error: 'Purpose of visit is required.' }),
+  purposeOfVisit: z.enum(VISIT_PURPOSES, { required_error: 'Purpose of visit is required.' }),
   entryTimestamp: z.date({ required_error: 'Entry date and time are required.' }),
   vehicleNumber: z.string().optional(),
   visitorPhoto: z.instanceof(FileList).optional(), // For file upload
@@ -259,7 +248,7 @@ export function VisitorEntryForm() {
                         </div>
                       </FormControl>
                       <SelectContent>
-                        {visitPurposes.map((purpose) => (
+                        {VISIT_PURPOSES.map((purpose) => (
                           <SelectItem key={purpose} value={purpose}>
                             {purpose}
                           </SelectItem>
@@ -344,5 +333,3 @@ export function VisitorEntryForm() {
     </Card>
   );
 }
-
-    

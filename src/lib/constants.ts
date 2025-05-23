@@ -10,3 +10,17 @@ export const LOCAL_STORAGE_KEYS = {
   VISITORS: "resiGateVisitors",
   LOGGED_IN_USER: "resiGateLoggedInUser",
 };
+
+export const VISIT_PURPOSES = [
+  "Delivery",
+  "Guest Visit",
+  "Maintenance/Service",
+  "Enquiry",
+  "Staff/Employee",
+  "Cab/Taxi",
+  "Sales/Vendor",
+  "Interview",
+  "Other",
+] as const;
+
+export const PUBLIC_ENTRY_SOURCE = "PUBLIC_QR_SCAN";

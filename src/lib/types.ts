@@ -21,6 +21,7 @@ export interface VisitorEntry {
   exitTimestamp?: Date;
   vehicleNumber?: string;
   visitorPhotoUrl?: string; // In a real app, this would be a URL to Azure Blob Storage
-  enteredBy: string; // User ID of the guard or system
+  enteredBy?: string; // User ID of the guard, system, or public source
   notes?: string;
+  tokenCode?: string; // For public entries to show to guard
 }
