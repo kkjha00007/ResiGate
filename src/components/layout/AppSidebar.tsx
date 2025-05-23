@@ -17,13 +17,14 @@ import {
   LucideIcon,
   CalendarPlus,
   Ticket,
-  ShieldCheckIcon, 
-  Settings2, 
+  ShieldCheckIcon,
+  Settings2,
   Megaphone,
   ClipboardEdit,
-  UsersRound, // For Manage Meetings
-  Store, // For Vendor Directory
-  ConciergeBell, // For Add Vendor
+  UsersRound,
+  Store,
+  ConciergeBell,
+  ListFilter, // Added for Manage Vendors
 } from 'lucide-react';
 import {
   Sidebar,
@@ -40,29 +41,29 @@ export interface NavItem {
   href: string;
   label: string;
   icon: LucideIcon;
-  role?: UserRole[]; 
-  hideForRole?: UserRole[]; 
+  role?: UserRole[];
+  hideForRole?: UserRole[];
   disabled?: boolean;
   iconColor?: string;
 }
 
 const getNavItems = (isAdminUser: boolean, isOwnerOrRenterUser: boolean, isGuardUser: boolean): NavItem[] => [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, iconColor: 'text-sky-500' },
-  
+
   // Guard Specific
   ...(isGuardUser ? [
     { href: '/dashboard/add-visitor', label: 'Add Visitor Entry', icon: UserPlus, iconColor: 'text-emerald-500' } as NavItem,
     { href: '/dashboard/gate-pass/validate', label: 'Validate Gate Pass', icon: ShieldCheckIcon, iconColor: 'text-blue-500' } as NavItem,
   ] : []),
-  
-  { href: '/dashboard/visitor-log', label: 'Visitor Log', icon: ClipboardList, iconColor: 'text-amber-500' }, 
-  
+
+  { href: '/dashboard/visitor-log', label: 'Visitor Log', icon: ClipboardList, iconColor: 'text-amber-500' },
+
   // Owner/Renter and Admin Specific
   ...((isOwnerOrRenterUser || isAdminUser) ? [
     { href: '/dashboard/gate-pass/create', label: 'Create Gate Pass', icon: CalendarPlus, iconColor: 'text-violet-500' } as NavItem,
     { href: '/dashboard/gate-pass/my-passes', label: 'My Gate Passes', icon: Ticket, iconColor: 'text-rose-500' } as NavItem,
   ] : []),
-  
+
   // Owner/Renter Specific
   ...(isOwnerOrRenterUser ? [
     { href: '/dashboard/personal-logs', label: 'My Visitor Logs', icon: FileText, iconColor: 'text-teal-500' } as NavItem,
@@ -72,13 +73,13 @@ const getNavItems = (isAdminUser: boolean, isOwnerOrRenterUser: boolean, isGuard
   // Vendor Directory - All authenticated users
   { href: '/dashboard/vendors/directory', label: 'Vendor Directory', icon: Store, iconColor: 'text-cyan-500' },
   { href: '/dashboard/vendors/add', label: 'Add Vendor', icon: ConciergeBell, iconColor: 'text-purple-500' },
-  
+
   // Admin Specific
   ...(isAdminUser ? [
     { href: '/dashboard/admin-approvals', label: 'User Approvals', icon: Users, iconColor: 'text-pink-500' } as NavItem,
     { href: '/dashboard/admin/manage-notices', label: 'Manage Notices', icon: ClipboardEdit, iconColor: 'text-indigo-500' } as NavItem,
     { href: '/dashboard/admin/manage-meetings', label: 'Manage Meetings', icon: UsersRound, iconColor: 'text-lime-500' } as NavItem,
-    // Add "Manage Vendors" link for admin in a later phase
+    { href: '/dashboard/admin/manage-vendors', label: 'Manage Vendors', icon: ListFilter, iconColor: 'text-yellow-500' } as NavItem,
   ] : []),
 
   // All logged-in users
@@ -91,6 +92,7 @@ export function AppSidebar() {
   const { user, logout, isAdmin, isOwnerOrRenter, isGuard } = useAuth();
 
   const navItems = React.useMemo(() => getNavItems(isAdmin(), isOwnerOrRenter(), isGuard()), [isAdmin, isOwnerOrRenter, isGuard]);
+
 
   const logoutTooltipProps = React.useMemo(() => ({
     children: "Logout",
@@ -125,7 +127,7 @@ export function AppSidebar() {
                     isActive={isActive}
                     tooltip={tooltipProps}
                     disabled={item.disabled}
-                    className="justify-start group" 
+                    className="justify-start group"
                   >
                     <Link href={item.href}>
                       <item.icon className={cn("h-5 w-5", item.iconColor || 'text-sidebar-foreground')} />
