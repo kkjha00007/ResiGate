@@ -59,7 +59,11 @@ export default function HomePage() {
           <ul className="flex flex-wrap justify-center gap-3 sm:gap-4">
             {landingNavItems.map((item) => (
               <li key={item.label}>
-                <Button variant="outline" asChild className="shadow-sm hover:shadow-md transition-shadow bg-card hover:bg-secondary/50">
+                <Button
+                  variant="outline"
+                  asChild
+                  className="shadow-sm hover:shadow-md transition-shadow bg-card hover:bg-secondary hover:text-secondary-foreground"
+                >
                   <Link href={item.href}>
                     <item.icon className="mr-2 h-4 w-4 text-primary/80" />
                     {item.label}
