@@ -4,9 +4,8 @@ import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth-provider';
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { APP_NAME } from '@/lib/constants';
-import { LogIn, UserPlus, Building2, ListChecks, MessagesSquare, SearchCheck, ShieldAlert, Heart } from 'lucide-react';
+import { LogIn, UserPlus, Building2, Heart } from 'lucide-react';
 import Link from 'next/link';
 import { Skeleton } from '@/components/ui/skeleton';
 
@@ -47,58 +46,25 @@ export default function HomePage() {
           </p>
         </header>
 
-        <main className="w-full max-w-4xl">
-          <Card className="shadow-xl hover:shadow-2xl transition-shadow duration-300 rounded-lg">
-            <CardHeader>
-              <CardTitle className="text-3xl font-semibold text-foreground text-center">
-                Streamline Your Community
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <p className="text-muted-foreground text-base text-center">
-                {APP_NAME} empowers residents and management committees with easy-to-use tools for communication, visitor tracking, complaint resolution, and much more. Experience seamless society operations, enhanced security, and a more connected neighborhood.
-              </p>
-              
-              <div>
-                <h4 className="font-semibold text-foreground mb-3 text-lg text-center">Key Features:</h4>
-                <ul className="list-none space-y-3 text-muted-foreground text-sm grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-3">
-                  <li className="flex items-center">
-                    <SearchCheck className="h-5 w-5 mr-3 text-primary flex-shrink-0" />
-                    Effortless Visitor Management & Gate Pass System
-                  </li>
-                  <li className="flex items-center">
-                    <MessagesSquare className="h-5 w-5 mr-3 text-primary flex-shrink-0" />
-                    Transparent Communication (Announcements, Meetings)
-                  </li>
-                  <li className="flex items-center">
-                    <ShieldAlert className="h-5 w-5 mr-3 text-primary flex-shrink-0" />
-                    Enhanced Security with Digital Gatekeeping
-                  </li>
-                  <li className="flex items-center">
-                    <ListChecks className="h-5 w-5 mr-3 text-primary flex-shrink-0" />
-                    Organized Society Operations & Important Contacts
-                  </li>
-                </ul>
-              </div>
-
-              <div className="pt-8 text-center space-y-4">
-                <h3 className="text-xl font-semibold text-foreground">Get Started</h3>
-                <p className="text-muted-foreground text-sm">Access your community portal or create a new account.</p>
-                <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mt-4">
-                    <Link href="/login" passHref>
-                        <Button size="lg" className="w-full sm:w-auto shadow-md hover:shadow-lg transition-shadow">
-                            <LogIn className="mr-2 h-5 w-5" /> Login to Your Account
-                        </Button>
-                    </Link>
-                    <Link href="/register" passHref>
-                        <Button variant="outline" size="lg" className="w-full sm:w-auto shadow-md hover:shadow-lg transition-shadow">
-                            <UserPlus className="mr-2 h-5 w-5" /> Register for an Account
-                        </Button>
-                    </Link>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+        <main className="w-full max-w-4xl flex-grow flex flex-col items-center justify-center">
+          {/* Removed "Streamline Your Community" and "Key Features" section */}
+          
+          <div className="text-center space-y-4 mt-8 md:mt-12">
+            <h3 className="text-xl font-semibold text-foreground">Get Started</h3>
+            <p className="text-muted-foreground text-sm">Access your community portal or create a new account.</p>
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mt-4">
+                <Link href="/login" passHref>
+                    <Button size="lg" className="w-full sm:w-auto shadow-md hover:shadow-lg transition-shadow">
+                        <LogIn className="mr-2 h-5 w-5" /> Login to Your Account
+                    </Button>
+                </Link>
+                <Link href="/register" passHref>
+                    <Button variant="outline" size="lg" className="w-full sm:w-auto shadow-md hover:shadow-lg transition-shadow">
+                        <UserPlus className="mr-2 h-5 w-5" /> Register for an Account
+                    </Button>
+                </Link>
+            </div>
+          </div>
         </main>
 
         <footer className="mt-16 md:mt-24 text-center text-muted-foreground">
