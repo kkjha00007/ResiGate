@@ -1,0 +1,70 @@
+
+// src/app/api/notices/route.ts
+import { NextResponse, type NextRequest } from 'next/server';
+import { noticesContainer } from '@/lib/cosmosdb';
+import type { Notice } from '@/lib/types';
+import { v4 as uuidv4 } from 'uuid';
+import { format } from 'date-fns';
+
+// Create a new notice (Super Admin only)
+export async function POST(request: NextRequest) {
+  try {
+    // TODO: Add authentication and authorization to ensure only Super Admin can create notices
+    // For now, we'll assume this check is handled by client-side routing or a higher-level middleware
+    const body = await request.json();
+    const { 
+        title, 
+        content,
+        postedByUserId, // Should come from authenticated user session
+        postedByName,   // Should come from authenticated user session
+    } = body as Omit<Notice, 'id' | 'createdAt' | 'isActive' | 'monthYear' | 'updatedAt'> & { postedByUserId: string, postedByName: string};
+
+    if (!title || !content || !postedByUserId || !postedByName) {
+      return NextResponse.json({ message: 'Missing required fields for notice creation' }, { status: 400 });
+    }
+
+    const now = new Date();
+    const newNotice: Notice = {
+      id: uuidv4(),
+      title,
+      content,
+      postedByUserId,
+      postedByName,
+      createdAt: now.toISOString(),
+      isActive: true, // Notices are active by default
+      monthYear: format(now, 'yyyy-MM'), // For partitioning
+    };
+
+    const { resource: createdNotice } = await noticesContainer.items.create(newNotice);
+
+    if (!createdNotice) {
+      return NextResponse.json({ message: 'Failed to create notice' }, { status: 500 });
+    }
+
+    return NextResponse.json(createdNotice, { status: 201 });
+
+  } catch (error) {
+    console.error('Create Notice API error:', error);
+    const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
+    return NextResponse.json({ message: 'Internal server error', error: errorMessage }, { status: 500 });
+  }
+}
+
+
+// Get all active notices (for all users)
+export async function GET(request: NextRequest) {
+  try {
+    const querySpec = {
+      query: "SELECT * FROM c WHERE c.isActive = true ORDER BY c.createdAt DESC"
+    };
+
+    const { resources: activeNotices } = await noticesContainer.items.query<Notice>(querySpec).fetchAll();
+
+    return NextResponse.json(activeNotices, { status: 200 });
+
+  } catch (error) {
+    console.error('Get Active Notices API error:', error);
+    const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
+    return NextResponse.json({ message: 'Internal server error', error: errorMessage }, { status: 500 });
+  }
+}

@@ -106,3 +106,17 @@ export interface Complaint {
   resolvedAt?: string; // ISO DateTime string
   // attachments?: string[]; // For future enhancement
 }
+
+// Notice Feature Types
+export interface Notice {
+  id: string;
+  title: string;
+  content: string;
+  postedByUserId: string;
+  postedByName: string;
+  createdAt: string; // ISO DateTime string
+  updatedAt?: string; // ISO DateTime string
+  isActive: boolean;
+  monthYear: string; // For partitioning, e.g., "YYYY-MM"
+  // expiresAt?: string; // Optional: ISO DateTime string
+}

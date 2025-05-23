@@ -2,10 +2,10 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
-import type { User, UserProfile, VisitorEntry, GatePass, UserRole, Complaint } from './types'; // Added Complaint
+import type { User, UserProfile, VisitorEntry, GatePass, UserRole, Complaint, Notice } from './types'; // Added Notice
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
-import { USER_ROLES, PUBLIC_ENTRY_SOURCE } from './constants'; // Added PUBLIC_ENTRY_SOURCE
+import { USER_ROLES, PUBLIC_ENTRY_SOURCE } from './constants'; 
 import { GATE_PASS_STATUSES } from './types';
 
 interface AuthContextType {
@@ -31,9 +31,17 @@ interface AuthContextType {
   cancelGatePass: (passId: string) => Promise<boolean>;
   markGatePassUsed: (passId: string, guardId: string) => Promise<{visitorEntry: VisitorEntry, updatedPass: GatePass} | null>;
   fetchGatePassByToken: (tokenCode: string) => Promise<GatePass | null>;
-  myComplaints: Complaint[]; // New state for user's complaints
-  submitComplaint: (complaintData: Omit<Complaint, 'id' | 'submittedAt' | 'status' | 'userId' | 'userName' | 'userFlatNumber'>) => Promise<Complaint | null>; // New function
-  fetchMyComplaints: () => Promise<void>; // New function
+  myComplaints: Complaint[];
+  submitComplaint: (complaintData: Omit<Complaint, 'id' | 'submittedAt' | 'status' | 'userId' | 'userName' | 'userFlatNumber'>) => Promise<Complaint | null>;
+  fetchMyComplaints: () => Promise<void>;
+  activeNotices: Notice[];
+  fetchActiveNotices: () => Promise<void>;
+  createNotice: (noticeData: { title: string; content: string; }) => Promise<Notice | null>;
+  // Future notice management functions for admin:
+  // allNoticesAdmin: Notice[];
+  // fetchAllNoticesAdmin: () => Promise<void>;
+  // updateNotice: (noticeId: string, updates: Partial<Omit<Notice, 'id' | 'postedByUserId' | 'postedByName' | 'createdAt' | 'monthYear'>>) => Promise<Notice | null>;
+  // deleteNotice: (noticeId: string) => Promise<boolean>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -43,7 +51,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [allUsers, setAllUsersState] = useState<UserProfile[]>([]);
   const [visitorEntries, setVisitorEntriesState] = useState<VisitorEntry[]>([]);
   const [gatePasses, setGatePassesState] = useState<GatePass[]>([]);
-  const [myComplaints, setMyComplaintsState] = useState<Complaint[]>([]); // New state
+  const [myComplaints, setMyComplaintsState] = useState<Complaint[]>([]);
+  const [activeNotices, setActiveNoticesState] = useState<Notice[]>([]); // New state for active notices
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
   const { toast } = useToast();
@@ -160,7 +169,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         toast({ title: 'Gate Pass Update Failed', description: data.message || 'Could not mark pass as used.', variant: 'destructive' });
         return null;
       }
-      toast({ title: 'Gate Pass Marked as Used', description: `Pass for ${data.updatedPass.visitorName} processed.` });
+      // Toast message can be more concise or specific here
+      toast({ title: 'Gate Pass Processed', description: `Visitor entry created. Pass marked as used.` });
       await fetchGatePasses(); 
       await fetchVisitorEntries(); 
       return data;
@@ -230,7 +240,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setAllUsersState([]);
     setVisitorEntriesState([]);
     setGatePassesState([]);
-    setMyComplaintsState([]); // Clear complaints on logout
+    setMyComplaintsState([]); 
+    setActiveNoticesState([]); // Clear notices on logout
     router.push('/');
     toast({ title: 'Logged Out', description: 'You have been successfully logged out.' });
   };
@@ -293,7 +304,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         toast({ title: 'Rejection Failed', description: data.message || 'Could not reject user.', variant: 'destructive' });
         return false;
       }
-      toast({ title: 'User Rejected', description: `The user registration has been rejected and removed.` });
+      const data = await response.json();
+      toast({ title: 'User Rejected', description: `Registration for ${data.name} has been rejected and removed.` });
       await fetchAllUsers(); 
       return true;
     } catch (error) {
@@ -369,7 +381,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         return null;
       }
       toast({ title: 'Complaint Submitted', description: 'Your complaint has been successfully submitted.' });
-      await fetchMyComplaints(); // Refresh the list of complaints
+      await fetchMyComplaints(); 
       return data as Complaint;
     } catch (error) {
       toast({ title: 'Complaint Submission Error', description: (error as Error).message || 'An unexpected error occurred.', variant: 'destructive' });
@@ -392,6 +404,53 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       toast({ title: 'Error Loading Complaints', description: (error as Error).message, variant: 'destructive' });
     }
   }, [user, toast]);
+
+  // Notice Functions
+  const fetchActiveNotices = useCallback(async () => {
+    try {
+      const response = await fetch('/api/notices');
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ message: 'Failed to fetch active notices.' }));
+        throw new Error(errorData.message || 'Server error.');
+      }
+      const noticesData: Notice[] = await response.json();
+      setActiveNoticesState(noticesData);
+    } catch (error) {
+      console.error("Failed to fetch active notices:", error);
+      toast({ title: 'Error Loading Notices', description: (error as Error).message, variant: 'destructive' });
+    }
+  }, [toast]);
+
+  const createNotice = async (noticeData: { title: string; content: string; }): Promise<Notice | null> => {
+    if (!user || user.role !== USER_ROLES.SUPERADMIN) {
+        toast({ title: 'Unauthorized', description: 'Only super admins can create notices.', variant: 'destructive' });
+        return null;
+    }
+    const submissionData = {
+        ...noticeData,
+        postedByUserId: user.id,
+        postedByName: user.name,
+    };
+    try {
+        const response = await fetch('/api/notices', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(submissionData),
+        });
+        const data = await response.json();
+        if (!response.ok) {
+            toast({ title: 'Notice Creation Failed', description: data.message || 'Could not create notice.', variant: 'destructive' });
+            return null;
+        }
+        toast({ title: 'Notice Created', description: `Notice "${data.title}" has been posted.` });
+        await fetchActiveNotices(); // Refresh active notices for all
+        // await fetchAllNoticesAdmin(); // If admin needs to see all notices immediately
+        return data as Notice;
+    } catch (error) {
+        toast({ title: 'Notice Creation Error', description: (error as Error).message || 'An unexpected error occurred.', variant: 'destructive' });
+        return null;
+    }
+  };
 
 
   const isAdmin = useCallback(() => user?.role === USER_ROLES.SUPERADMIN, [user]);
@@ -425,6 +484,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         myComplaints,
         submitComplaint,
         fetchMyComplaints,
+        activeNotices,
+        fetchActiveNotices,
+        createNotice,
     }}>
       {children}
     </AuthContext.Provider>
