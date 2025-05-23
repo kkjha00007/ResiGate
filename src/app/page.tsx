@@ -1,26 +1,27 @@
 
 'use client';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth-provider';
 import { Button } from "@/components/ui/button";
 import { APP_NAME } from '@/lib/constants';
-import { LogIn, UserPlus, Building2, Heart, Info, Phone, Users, ListChecks, MapPin, Star } from 'lucide-react';
+import { LogIn, UserPlus, Building2, Heart, Info, Phone, Users, ListChecks, MapPin, Star, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { LoginForm } from '@/components/auth/LoginForm'; // Import the LoginForm
 
 const landingNavItems = [
   { label: 'About Us', href: '#', icon: Info },
   { label: 'Features', href: '#', icon: ListChecks },
   { label: 'Services', href: '#', icon: Star },
-  // { label: 'Pricing', href: '#', icon: Tag }, // Example if you add pricing
   { label: 'Contact Us', href: '#', icon: Phone },
 ];
 
 export default function HomePage() {
   const router = useRouter();
   const { user, isLoading } = useAuth();
+  const [showLoginForm, setShowLoginForm] = useState(false); // State to toggle login form
 
   useEffect(() => {
     if (!isLoading && user) {
@@ -77,30 +78,43 @@ export default function HomePage() {
         <main className="w-full max-w-2xl flex-grow flex flex-col items-center justify-center">
           <Card className="w-full shadow-xl rounded-xl">
             <CardHeader className="text-center pb-4">
-              <CardTitle className="text-3xl font-semibold text-foreground">Get Started</CardTitle>
-              <CardDescription className="text-md text-muted-foreground pt-1">
-                Access your community portal or create a new account.
-              </CardDescription>
+              <CardTitle className="text-3xl font-semibold text-foreground">
+                {showLoginForm ? 'Login to Your Account' : 'Get Started'}
+              </CardTitle>
+              {!showLoginForm && (
+                <CardDescription className="text-md text-muted-foreground pt-1">
+                  Access your community portal or create a new account.
+                </CardDescription>
+              )}
             </CardHeader>
             <CardContent className="pt-2 pb-6">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mt-2 text-center">
-                <Link href="/login" passHref className="flex flex-col items-center group">
-                  <div className="p-4 bg-primary/10 rounded-full mb-3 group-hover:bg-primary/20 transition-colors">
-                    <LogIn className="h-12 w-12 text-primary" />
-                  </div>
-                  <Button size="lg" className="w-full shadow-md hover:shadow-lg transition-shadow">
-                     Login to Your Account
+              {showLoginForm ? (
+                <div>
+                  <LoginForm />
+                  <Button variant="outline" className="w-full mt-4" onClick={() => setShowLoginForm(false)}>
+                    <ArrowLeft className="mr-2 h-4 w-4" /> Back to options
                   </Button>
-                </Link>
-                <Link href="/register" passHref className="flex flex-col items-center group">
-                   <div className="p-4 bg-accent/10 rounded-full mb-3 group-hover:bg-accent/20 transition-colors">
-                    <UserPlus className="h-12 w-12 text-accent" />
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mt-2 text-center">
+                  <div className="flex flex-col items-center group">
+                    <div className="p-4 bg-primary/10 rounded-full mb-3 group-hover:bg-primary/20 transition-colors">
+                      <LogIn className="h-12 w-12 text-primary" />
+                    </div>
+                    <Button size="lg" className="w-full shadow-md hover:shadow-lg transition-shadow" onClick={() => setShowLoginForm(true)}>
+                       Login to Your Account
+                    </Button>
                   </div>
-                  <Button variant="outline" size="lg" className="w-full shadow-md hover:shadow-lg transition-shadow">
-                    Register for an Account
-                  </Button>
-                </Link>
-              </div>
+                  <Link href="/register" passHref className="flex flex-col items-center group">
+                     <div className="p-4 bg-accent/10 rounded-full mb-3 group-hover:bg-accent/20 transition-colors">
+                      <UserPlus className="h-12 w-12 text-accent" />
+                    </div>
+                    <Button variant="outline" size="lg" className="w-full shadow-md hover:shadow-lg transition-shadow">
+                      Register for an Account
+                    </Button>
+                  </Link>
+                </div>
+              )}
             </CardContent>
           </Card>
         </main>
