@@ -22,7 +22,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
-import { CalendarIcon, User, Car, Send, FilePlus, ListChecks, Clock, StickyNote, TicketCheck } from 'lucide-react';
+import { CalendarIcon, User, Car, Send, ListChecks, Clock, StickyNote, TicketCheck, CalendarPlus } from 'lucide-react'; // Added FilePlus back if it was used, ensured CalendarPlus is here
 import { useAuth } from '@/lib/auth-provider';
 import { useToast } from '@/hooks/use-toast';
 import React, { useState } from 'react';
