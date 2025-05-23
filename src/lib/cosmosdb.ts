@@ -2,7 +2,7 @@
 // IMPORTANT: Ensure you have @azure/cosmos package installed: npm install @azure/cosmos
 
 import { CosmosClient, ConsistencyLevel } from "@azure/cosmos";
-import type { User, VisitorEntry, LoginAudit, GatePass, Complaint, Notice, Meeting, Vendor, CommitteeMember } from './types'; // Added CommitteeMember
+import type { User, VisitorEntry, LoginAudit, GatePass, Complaint, Notice, Meeting, Vendor, CommitteeMember, SocietyPaymentDetails } from './types'; // Added CommitteeMember, SocietyPaymentDetails
 
 const endpoint = process.env.COSMOS_ENDPOINT;
 const key = process.env.COSMOS_KEY;
@@ -27,6 +27,7 @@ export const noticesContainerId = process.env.COSMOS_NOTICES_CONTAINER_ID || "No
 export const meetingsContainerId = process.env.COSMOS_MEETINGS_CONTAINER_ID || "Meetings";
 export const vendorsContainerId = process.env.COSMOS_VENDORS_CONTAINER_ID || "Vendors";
 export const committeeMembersContainerId = process.env.COSMOS_COMMITTEE_MEMBERS_CONTAINER_ID || "CommitteeMembers";
+export const societySettingsContainerId = process.env.COSMOS_SOCIETY_SETTINGS_CONTAINER_ID || "SocietySettings";
 
 
 // Initialize CosmosClient with a placeholder if credentials are not set for local dev,
@@ -47,6 +48,7 @@ export const noticesContainer = database.container(noticesContainerId);
 export const meetingsContainer = database.container(meetingsContainerId);
 export const vendorsContainer = database.container(vendorsContainerId);
 export const committeeMembersContainer = database.container(committeeMembersContainerId);
+export const societySettingsContainer = database.container(societySettingsContainerId);
 
 /**
  * Ensures the database and containers exist, creating them if necessary.
@@ -117,6 +119,12 @@ export async function initializeCosmosDB() {
     });
     console.log(`Container '${committeeMembersCont.id}' ensured.`);
 
+    const { container: societySettingsCont } = await db.containers.createIfNotExists({
+        id: societySettingsContainerId,
+        partitionKey: { paths: ["/id"] }, // Using /id as partition key since there will be few documents
+    });
+    console.log(`Container '${societySettingsCont.id}' ensured.`);
+
 
   } catch (error) {
     console.error("Error initializing Cosmos DB:", error);
@@ -127,4 +135,4 @@ if (process.env.NODE_ENV !== 'test') {
     initializeCosmosDB().catch(console.error);
 }
 
-export type { User, VisitorEntry, LoginAudit, GatePass, Complaint, Notice, Meeting, Vendor, CommitteeMember };
+export type { User, VisitorEntry, LoginAudit, GatePass, Complaint, Notice, Meeting, Vendor, CommitteeMember, SocietyPaymentDetails };

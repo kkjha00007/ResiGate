@@ -2,7 +2,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
-import type { User, UserProfile, VisitorEntry, GatePass, UserRole, Complaint, Notice, Meeting, Vendor, CommitteeMember } from './types';
+import type { User, UserProfile, VisitorEntry, GatePass, UserRole, Complaint, Notice, Meeting, Vendor, CommitteeMember, SocietyPaymentDetails } from './types';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 import { USER_ROLES, PUBLIC_ENTRY_SOURCE } from './constants';
@@ -61,6 +61,9 @@ interface AuthContextType {
   addCommitteeMember: (memberData: Omit<CommitteeMember, 'id' | 'createdAt' | 'updatedAt'>) => Promise<CommitteeMember | null>;
   updateCommitteeMember: (memberId: string, memberData: Partial<Omit<CommitteeMember, 'id' | 'createdAt' | 'updatedAt'>>) => Promise<CommitteeMember | null>;
   deleteCommitteeMember: (memberId: string) => Promise<boolean>;
+  societyPaymentDetails: SocietyPaymentDetails | null;
+  fetchSocietyPaymentDetails: () => Promise<void>;
+  updateSocietyPaymentDetails: (details: Omit<SocietyPaymentDetails, 'id' | 'updatedAt'>) => Promise<SocietyPaymentDetails | null>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -78,6 +81,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [approvedVendors, setApprovedVendorsState] = useState<Vendor[]>([]);
   const [pendingVendors, setPendingVendorsState] = useState<Vendor[]>([]);
   const [committeeMembers, setCommitteeMembersState] = useState<CommitteeMember[]>([]);
+  const [societyPaymentDetails, setSocietyPaymentDetailsState] = useState<SocietyPaymentDetails | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
   const { toast } = useToast();
@@ -148,6 +152,23 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [toast]);
 
+  const _fetchSocietyPaymentDetails = useCallback(async () => {
+    try {
+      const response = await fetch('/api/settings/payment-details');
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ message: 'Failed to fetch payment details.' }));
+        throw new Error(errorData.message || 'Server error.');
+      }
+      const details: SocietyPaymentDetails = await response.json();
+      setSocietyPaymentDetailsState(details);
+    } catch (error) {
+      console.error("Failed to fetch society payment details:", error);
+      toast({ title: 'Error Loading Payment Details', description: (error as Error).message, variant: 'destructive' });
+      setSocietyPaymentDetailsState(null);
+    }
+  }, [toast]);
+
+
   useEffect(() => {
     const checkUserSession = () => {
       setIsLoading(false);
@@ -157,7 +178,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     _fetchUpcomingMeetings();
     _fetchApprovedVendors();
     _fetchCommitteeMembers();
-  }, [_fetchActiveNotices, _fetchUpcomingMeetings, _fetchApprovedVendors, _fetchCommitteeMembers]);
+    _fetchSocietyPaymentDetails();
+  }, [_fetchActiveNotices, _fetchUpcomingMeetings, _fetchApprovedVendors, _fetchCommitteeMembers, _fetchSocietyPaymentDetails]);
 
 
   const fetchAllUsers = useCallback(async () => {
@@ -332,6 +354,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       await _fetchUpcomingMeetings();
       await _fetchApprovedVendors();
       await _fetchCommitteeMembers();
+      await _fetchSocietyPaymentDetails();
+
 
       if (loggedInUser.role === USER_ROLES.SUPERADMIN) {
         await fetchAllUsers(); 
@@ -368,6 +392,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setApprovedVendorsState([]);
     setPendingVendorsState([]);
     setCommitteeMembersState([]);
+    setSocietyPaymentDetailsState(null);
     router.push('/');
     toast({ title: 'Logged Out', description: 'You have been successfully logged out.' });
   };
@@ -776,7 +801,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         throw new Error(errorData.message || 'Server error.');
       }
       const vendorsData: Vendor[] = await response.json();
-      setPendingVendorsState(vendorsData);
+      setPendingVendorsState(vendorsData); 
     } catch (error) {
       console.error("Failed to fetch pending vendors:", error);
       toast({ title: 'Error Loading Pending Vendors', description: (error as Error).message, variant: 'destructive' });
@@ -911,6 +936,33 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  const fetchSocietyPaymentDetails = _fetchSocietyPaymentDetails;
+
+  const updateSocietyPaymentDetails = async (details: Omit<SocietyPaymentDetails, 'id' | 'updatedAt'>): Promise<SocietyPaymentDetails | null> => {
+    if (!isAdmin()) {
+      toast({ title: 'Unauthorized', description: 'Only super admins can update payment details.', variant: 'destructive' });
+      return null;
+    }
+    try {
+      const response = await fetch('/api/settings/payment-details', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(details),
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        toast({ title: 'Update Failed', description: data.message || 'Could not update payment details.', variant: 'destructive' });
+        return null;
+      }
+      toast({ title: 'Payment Details Updated', description: 'Society payment details have been updated.' });
+      setSocietyPaymentDetailsState(data as SocietyPaymentDetails); // Update local state
+      return data as SocietyPaymentDetails;
+    } catch (error) {
+      toast({ title: 'Update Error', description: (error as Error).message || 'An unexpected error occurred.', variant: 'destructive' });
+      return null;
+    }
+  };
+
 
   return (
     <AuthContext.Provider value={{
@@ -965,6 +1017,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         addCommitteeMember,
         updateCommitteeMember,
         deleteCommitteeMember,
+        societyPaymentDetails,
+        fetchSocietyPaymentDetails,
+        updateSocietyPaymentDetails,
     }}>
       {children}
     </AuthContext.Provider>

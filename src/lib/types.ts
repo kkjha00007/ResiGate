@@ -187,3 +187,16 @@ export interface CommitteeMember {
   createdAt?: string; // ISO DateTime string
   updatedAt?: string; // ISO DateTime string
 }
+
+// Society Payment Details Type
+export interface SocietyPaymentDetails {
+  id: "paymentDetailsDoc"; // Fixed ID for the single document
+  bankName: string;
+  accountHolderName: string;
+  accountNumber: string;
+  ifscCode: string;
+  branchName: string;
+  accountType: string;
+  upiId?: string; // Optional: For future QR code generation
+  updatedAt?: string; // ISO DateTime string
+}
