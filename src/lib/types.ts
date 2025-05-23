@@ -7,7 +7,7 @@ export interface User {
   password?: string; // Hashed password
   name: string;
   role: UserRole;
-  flatNumber?: string; // Required for owners and renters
+  flatNumber?: string; // Required for owners and renters, 'NA' for guard
   isApproved: boolean;
   registrationDate: string; // Store as ISO string (e.g., new Date().toISOString())
   secondaryPhoneNumber1?: string;
@@ -54,8 +54,8 @@ export type GatePassStatus = typeof GATE_PASS_STATUSES[keyof typeof GATE_PASS_ST
 
 export interface GatePass {
   id: string;
-  residentUserId: string; // Changed from user.id to residentUserId for clarity
-  residentFlatNumber: string; // Changed from flatNumber
+  residentUserId: string;
+  residentFlatNumber: string;
   visitorName: string;
   expectedVisitDate: string; // ISO Date string (e.g., "2024-12-25")
   visitDetailsOrTime: string; // e.g., "Evening", "Around 2 PM", "Full Day"
@@ -101,10 +101,8 @@ export interface Complaint {
   description: string;
   submittedAt: string; // ISO DateTime string
   status: ComplaintStatus;
-  // Optional fields for admin updates
   adminNotes?: string;
   resolvedAt?: string; // ISO DateTime string
-  // attachments?: string[]; // For future enhancement
 }
 
 // Notice Feature Types
@@ -118,5 +116,19 @@ export interface Notice {
   updatedAt?: string; // ISO DateTime string
   isActive: boolean;
   monthYear: string; // For partitioning, e.g., "YYYY-MM"
-  // expiresAt?: string; // Optional: ISO DateTime string
+}
+
+// Meeting Feature Types
+export interface Meeting {
+  id: string;
+  title: string;
+  description: string;
+  dateTime: string; // ISO DateTime string
+  locationOrLink: string;
+  postedByUserId: string;
+  postedByName: string;
+  createdAt: string; // ISO DateTime string
+  updatedAt?: string; // ISO DateTime string
+  isActive: boolean; // To easily enable/disable if needed
+  monthYear: string; // For partitioning, e.g., "YYYY-MM" derived from dateTime
 }

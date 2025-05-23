@@ -2,7 +2,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
-import type { User, UserProfile, VisitorEntry, GatePass, UserRole, Complaint, Notice } from './types';
+import type { User, UserProfile, VisitorEntry, GatePass, UserRole, Complaint, Notice, Meeting } from './types';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 import { USER_ROLES, PUBLIC_ENTRY_SOURCE } from './constants'; 
@@ -13,7 +13,7 @@ interface AuthContextType {
   isLoading: boolean;
   login: (email: string, password: string) => Promise<boolean>;
   logout: () => void;
-  register: (userData: Omit<User, 'id' | 'isApproved' | 'registrationDate' | 'password'> & {password: string, role: Exclude<UserRole, "superadmin" | "guard"> | "guard" }) => Promise<boolean>;
+  register: (userData: Omit<User, 'id' | 'isApproved' | 'registrationDate' | 'password'> & {password: string, role: Exclude<UserRole, "superadmin">}) => Promise<boolean>;
   approveResident: (userId: string) => Promise<boolean>;
   rejectUser: (userId: string) => Promise<boolean>;
   updateUserProfile: (userId: string, updates: { name?: string; secondaryPhoneNumber1?: string; secondaryPhoneNumber2?: string }) => Promise<UserProfile | null>;
@@ -41,6 +41,9 @@ interface AuthContextType {
   fetchAllNoticesForAdmin: () => Promise<void>;
   updateNotice: (noticeId: string, currentMonthYear: string, updates: Partial<Omit<Notice, 'id' | 'postedByUserId' | 'postedByName' | 'createdAt' | 'monthYear' | 'updatedAt'>>) => Promise<Notice | null>;
   deleteNotice: (noticeId: string, currentMonthYear: string) => Promise<boolean>;
+  upcomingMeetings: Meeting[];
+  fetchUpcomingMeetings: () => Promise<void>;
+  createMeeting: (meetingData: Omit<Meeting, 'id' | 'postedByUserId' | 'postedByName' | 'createdAt' | 'isActive' | 'monthYear' | 'updatedAt'>) => Promise<Meeting | null>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -53,20 +56,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [myComplaints, setMyComplaintsState] = useState<Complaint[]>([]);
   const [activeNotices, setActiveNoticesState] = useState<Notice[]>([]);
   const [allNoticesForAdmin, setAllNoticesForAdminState] = useState<Notice[]>([]);
+  const [upcomingMeetings, setUpcomingMeetingsState] = useState<Meeting[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
   const { toast } = useToast();
 
-  useEffect(() => {
-    setIsLoading(false);
-    // Initial data fetch for active notices when app loads (for dashboard)
-    // We might also want to do this if user becomes available
-    _fetchActiveNotices();
-  }, []);
-
   const _fetchActiveNotices = useCallback(async () => {
     try {
-      const response = await fetch('/api/notices'); // Fetches active notices
+      const response = await fetch('/api/notices'); 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ message: 'Failed to fetch active notices.' }));
         throw new Error(errorData.message || 'Server error.');
@@ -75,14 +72,31 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setActiveNoticesState(noticesData);
     } catch (error) {
       console.error("Failed to fetch active notices:", error);
-      // Potentially a silent fail for dashboard, or a subtle toast
-      // toast({ title: 'Could not load notices', description: (error as Error).message, variant: 'destructive' });
     }
   }, []);
 
+  const _fetchUpcomingMeetings = useCallback(async () => {
+    try {
+      const response = await fetch('/api/meetings');
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ message: 'Failed to fetch upcoming meetings.' }));
+        throw new Error(errorData.message || 'Server error.');
+      }
+      const meetingsData: Meeting[] = await response.json();
+      setUpcomingMeetingsState(meetingsData);
+    } catch (error) {
+      console.error("Failed to fetch upcoming meetings:", error);
+    }
+  }, []);
+
+  useEffect(() => {
+    setIsLoading(false);
+    _fetchActiveNotices();
+    _fetchUpcomingMeetings();
+  }, [_fetchActiveNotices, _fetchUpcomingMeetings]);
+
 
   const fetchAllUsers = useCallback(async () => {
-    // setIsLoading(true); // Consider if individual loading states are needed
     try {
       const response = await fetch('/api/users');
       if (!response.ok) {
@@ -93,9 +107,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setAllUsersState(usersData);
     } catch (error) {
       console.error("Failed to fetch users:", error);
-      toast({ title: 'Error Loading Users', description: (error as Error).message, variant: 'destructive' });
-    } finally {
-      // setIsLoading(false);
+      toast({ title: 'Error Loading Users', description: `Failed to retrieve user list from database. Detail: ${(error as Error).message}`, variant: 'destructive' });
     }
   }, [toast]);
 
@@ -191,10 +203,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         toast({ title: 'Gate Pass Update Failed', description: data.message || 'Could not mark pass as used.', variant: 'destructive' });
         return null;
       }
-      toast({ title: 'Gate Pass Processed', description: `Visitor entry created. Pass marked as used.` });
+      
       if (user?.role === USER_ROLES.GUARD) {
-          // If a guard is marking it used, they wouldn't typically see "My Gate Passes"
-          // but we should refresh the visitor entries log if they can see it.
       } else {
           await fetchGatePasses(); 
       }
@@ -251,7 +261,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
       setUser(loggedInUser);
       toast({ title: 'Login Successful', description: `Welcome back, ${loggedInUser.name}!` });
-      await _fetchActiveNotices(); // Fetch notices on login for dashboard
+      await _fetchActiveNotices();
+      await _fetchUpcomingMeetings();
       router.push('/dashboard');
       return true;
     } catch (error) {
@@ -270,11 +281,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setMyComplaintsState([]); 
     setActiveNoticesState([]);
     setAllNoticesForAdminState([]);
+    setUpcomingMeetingsState([]);
     router.push('/');
     toast({ title: 'Logged Out', description: 'You have been successfully logged out.' });
   };
 
-  const register = async (userData: Omit<User, 'id' | 'isApproved' | 'registrationDate' | 'password'> & {password: string, role: Exclude<UserRole, "superadmin" | "guard"> | "guard"}): Promise<boolean> => {
+  const register = async (userData: Omit<User, 'id' | 'isApproved' | 'registrationDate' | 'password'> & {password: string, role: Exclude<UserRole, "superadmin">}): Promise<boolean> => {
     setIsLoading(true);
     try {
       const response = await fetch('/api/users', {
@@ -289,7 +301,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         return false;
       }
       toast({ title: 'Registration Successful', description: 'Your account has been created and is pending approval.' });
-      router.push('/login');
+      router.push('/'); // Redirect to home/login page after registration
       return true;
     } catch (error) {
       toast({ title: 'Registration Error', description: (error as Error).message || 'An unexpected error occurred during registration.', variant: 'destructive' });
@@ -385,7 +397,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  // Complaint Functions
   const submitComplaint = async (complaintData: Omit<Complaint, 'id' | 'submittedAt' | 'status' | 'userId' | 'userName' | 'userFlatNumber'>): Promise<Complaint | null> => {
     if (!user || !user.flatNumber) {
       toast({ title: 'Error', description: 'You must be logged in as a resident to submit a complaint.', variant: 'destructive' });
@@ -433,11 +444,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [user, toast]);
 
-  // Notice Functions (Phase 1)
-  const fetchActiveNotices = _fetchActiveNotices; // Expose the memoized version
+  const fetchActiveNotices = _fetchActiveNotices; 
 
   const createNotice = async (noticeData: { title: string; content: string; }): Promise<Notice | null> => {
-    if (!user || user.role !== USER_ROLES.SUPERADMIN) {
+    if (!user || !isAdmin()) {
         toast({ title: 'Unauthorized', description: 'Only super admins can create notices.', variant: 'destructive' });
         return null;
     }
@@ -459,17 +469,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         }
         toast({ title: 'Notice Created', description: `Notice "${data.title}" has been posted.` });
         await fetchActiveNotices(); 
-        if (isAdmin()) {
-          await fetchAllNoticesForAdmin();
-        }
+        await fetchAllNoticesForAdmin();
+        
         return data as Notice;
     } catch (error) {
         toast({ title: 'Notice Creation Error', description: (error as Error).message || 'An unexpected error occurred.', variant: 'destructive' });
         return null;
     }
   };
-
-  // Notice Functions (Phase 2 - Admin Management)
+  
   const fetchAllNoticesForAdmin = useCallback(async () => {
     if (!isAdmin()) return;
     try {
@@ -484,7 +492,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       console.error("Failed to fetch all notices for admin:", error);
       toast({ title: 'Error Loading Admin Notices', description: (error as Error).message, variant: 'destructive' });
     }
-  }, [toast, user]); // Added user dependency for isAdmin check consistency
+  }, [toast, user]); 
 
   const updateNotice = async (noticeId: string, currentMonthYear: string, updates: Partial<Omit<Notice, 'id' | 'postedByUserId' | 'postedByName' | 'createdAt' | 'monthYear' | 'updatedAt'>>): Promise<Notice | null> => {
     if (!isAdmin()) {
@@ -495,7 +503,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const response = await fetch(`/api/notices/${noticeId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...updates, monthYear: currentMonthYear }), // Send monthYear for partition key
+        body: JSON.stringify({ ...updates, monthYear: currentMonthYear }), 
       });
       const data = await response.json();
       if (!response.ok) {
@@ -536,6 +544,38 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  const fetchUpcomingMeetings = _fetchUpcomingMeetings;
+
+  const createMeeting = async (meetingData: Omit<Meeting, 'id' | 'postedByUserId' | 'postedByName' | 'createdAt' | 'isActive' | 'monthYear' | 'updatedAt'>): Promise<Meeting | null> => {
+    if (!user || !isAdmin()) {
+        toast({ title: 'Unauthorized', description: 'Only super admins can create meetings.', variant: 'destructive' });
+        return null;
+    }
+    const submissionData = {
+        ...meetingData,
+        postedByUserId: user.id,
+        postedByName: user.name,
+    };
+    try {
+        const response = await fetch('/api/meetings', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(submissionData),
+        });
+        const data = await response.json();
+        if (!response.ok) {
+            toast({ title: 'Meeting Creation Failed', description: data.message || 'Could not create meeting.', variant: 'destructive' });
+            return null;
+        }
+        toast({ title: 'Meeting Created', description: `Meeting "${data.title}" has been scheduled.` });
+        await fetchUpcomingMeetings();
+        // Later, if there's an admin table for meetings: await fetchAllMeetingsForAdmin();
+        return data as Meeting;
+    } catch (error) {
+        toast({ title: 'Meeting Creation Error', description: (error as Error).message || 'An unexpected error occurred.', variant: 'destructive' });
+        return null;
+    }
+  };
 
   const isAdmin = useCallback(() => user?.role === USER_ROLES.SUPERADMIN, [user]);
   const isOwnerOrRenter = useCallback(() => user?.role === USER_ROLES.OWNER || user?.role === USER_ROLES.RENTER, [user]);
@@ -575,6 +615,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         fetchAllNoticesForAdmin,
         updateNotice,
         deleteNotice,
+        upcomingMeetings,
+        fetchUpcomingMeetings,
+        createMeeting,
     }}>
       {children}
     </AuthContext.Provider>

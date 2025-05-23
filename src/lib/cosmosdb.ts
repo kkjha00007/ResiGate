@@ -2,7 +2,7 @@
 // IMPORTANT: Ensure you have @azure/cosmos package installed: npm install @azure/cosmos
 
 import { CosmosClient, ConsistencyLevel } from "@azure/cosmos";
-import type { User, VisitorEntry, LoginAudit, GatePass, Complaint, Notice } from './types'; // Added Notice
+import type { User, VisitorEntry, LoginAudit, GatePass, Complaint, Notice, Meeting } from './types'; // Added Meeting
 
 const endpoint = process.env.COSMOS_ENDPOINT;
 const key = process.env.COSMOS_KEY;
@@ -23,7 +23,8 @@ export const visitorEntriesContainerId = process.env.COSMOS_VISITORS_CONTAINER_I
 export const loginAuditsContainerId = process.env.COSMOS_LOGIN_AUDITS_CONTAINER_ID || "LoginAudits";
 export const gatePassesContainerId = process.env.COSMOS_GATE_PASSES_CONTAINER_ID || "GatePasses";
 export const complaintsContainerId = process.env.COSMOS_COMPLAINTS_CONTAINER_ID || "Complaints";
-export const noticesContainerId = process.env.COSMOS_NOTICES_CONTAINER_ID || "Notices"; // New container ID
+export const noticesContainerId = process.env.COSMOS_NOTICES_CONTAINER_ID || "Notices";
+export const meetingsContainerId = process.env.COSMOS_MEETINGS_CONTAINER_ID || "Meetings"; // New container ID
 
 // Initialize CosmosClient with a placeholder if credentials are not set for local dev,
 // but this will cause errors if actual DB operations are attempted.
@@ -39,7 +40,8 @@ export const visitorEntriesContainer = database.container(visitorEntriesContaine
 export const loginAuditsContainer = database.container(loginAuditsContainerId);
 export const gatePassesContainer = database.container(gatePassesContainerId);
 export const complaintsContainer = database.container(complaintsContainerId);
-export const noticesContainer = database.container(noticesContainerId); // New container instance
+export const noticesContainer = database.container(noticesContainerId);
+export const meetingsContainer = database.container(meetingsContainerId); // New container instance
 
 /**
  * Ensures the database and containers exist, creating them if necessary.
@@ -82,15 +84,21 @@ export async function initializeCosmosDB() {
 
     const { container: complaintsCont } = await db.containers.createIfNotExists({
       id: complaintsContainerId,
-      partitionKey: { paths: ["/userId"] }, // Partition by user who submitted
+      partitionKey: { paths: ["/userId"] }, 
     });
     console.log(`Container '${complaintsCont.id}' ensured.`);
 
     const { container: noticesCont } = await db.containers.createIfNotExists({
       id: noticesContainerId,
-      partitionKey: { paths: ["/monthYear"] }, // Partition by month/year of creation
+      partitionKey: { paths: ["/monthYear"] }, 
     });
     console.log(`Container '${noticesCont.id}' ensured.`);
+
+    const { container: meetingsCont } = await db.containers.createIfNotExists({
+      id: meetingsContainerId,
+      partitionKey: { paths: ["/monthYear"] }, // Partition by month/year of meeting
+    });
+    console.log(`Container '${meetingsCont.id}' ensured.`);
 
 
   } catch (error) {
@@ -102,4 +110,4 @@ if (process.env.NODE_ENV !== 'test') {
     initializeCosmosDB().catch(console.error);
 }
 
-export type { User, VisitorEntry, LoginAudit, GatePass, Complaint, Notice };
+export type { User, VisitorEntry, LoginAudit, GatePass, Complaint, Notice, Meeting };

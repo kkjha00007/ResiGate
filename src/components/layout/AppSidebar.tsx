@@ -1,6 +1,6 @@
 
 'use client';
-import React from 'react';
+import React, { useMemo } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
@@ -20,7 +20,8 @@ import {
   ShieldCheckIcon, 
   Settings2, 
   Megaphone,
-  ClipboardEdit, // For Manage Notices
+  ClipboardEdit,
+  UsersRound, // For Manage Meetings
 } from 'lucide-react';
 import {
   Sidebar,
@@ -70,6 +71,7 @@ const getNavItems = (isAdminUser: boolean, isOwnerOrRenterUser: boolean, isGuard
   ...(isAdminUser ? [
     { href: '/dashboard/admin-approvals', label: 'User Approvals', icon: Users, iconColor: 'text-pink-500' } as NavItem,
     { href: '/dashboard/admin/manage-notices', label: 'Manage Notices', icon: ClipboardEdit, iconColor: 'text-indigo-500' } as NavItem,
+    { href: '/dashboard/admin/manage-meetings', label: 'Manage Meetings', icon: UsersRound, iconColor: 'text-lime-500' } as NavItem,
   ] : []),
 
   // All logged-in users
@@ -91,7 +93,7 @@ export function AppSidebar() {
   if (!user) return null;
 
   return (
-      <Sidebar collapsible="icon" className="border-r shadow-sm hidden md:flex bg-sidebar text-sidebar-foreground">
+      <Sidebar collapsible="icon" className="hidden border-r bg-sidebar text-sidebar-foreground shadow-sm md:flex">
         <SidebarHeader className="p-4 border-b border-sidebar-border">
           <Link href="/dashboard" className="flex items-center gap-2 group-data-[collapsible=icon]:justify-center">
              <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="hsl(var(--sidebar-primary))" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-shield-check"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><path d="m9 12 2 2 4-4"/></svg>
