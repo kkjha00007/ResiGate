@@ -6,7 +6,6 @@ import type { User, UserProfile, VisitorEntry } from './types'; // UserProfile f
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 import { USER_ROLES } from './constants';
-// import { initializeCosmosDB } from './cosmosdb'; // Initialization is handled in cosmosdb.ts
 
 interface AuthContextType {
   user: UserProfile | null;
@@ -18,7 +17,7 @@ interface AuthContextType {
   isAdmin: () => boolean;
   isResident: () => boolean;
   allUsers: UserProfile[];
-  fetchAllUsers: () => Promise<void>; // Renamed from fetchUsers for clarity
+  fetchAllUsers: () => Promise<void>;
   visitorEntries: VisitorEntry[];
   fetchVisitorEntries: () => Promise<void>;
 }
@@ -29,56 +28,53 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<UserProfile | null>(null);
   const [allUsers, setAllUsersState] = useState<UserProfile[]>([]);
   const [visitorEntries, setVisitorEntriesState] = useState<VisitorEntry[]>([]);
-  const [isLoading, setIsLoading] = useState(true); // Initial loading state
+  const [isLoading, setIsLoading] = useState(true); 
   const router = useRouter();
   const { toast } = useToast();
 
-  // Effect for initial setup (e.g. checking for a stored session, not implemented here)
   useEffect(() => {
-    // initializeCosmosDB(); // CosmosDB initialization is now self-contained in its module
-    // For now, we assume no session persistence beyond client state.
-    // A real app would check for a session token here.
-    setIsLoading(false); // Done with initial "session" check
+    // This effect is for initial auth check (e.g., session restoration).
+    // Since we don't have server sessions yet, we just mark loading as complete.
+    // A real app would try to load user from a session here.
+    setIsLoading(false); 
   }, []);
 
 
   const fetchAllUsers = useCallback(async () => {
-    setIsLoading(true);
+    // This function fetches all users. Components should manage their own specific loading UI.
     try {
       const response = await fetch('/api/users');
       if (!response.ok) {
-        throw new Error('Failed to fetch users');
+        const errorData = await response.json().catch(() => ({ message: 'Failed to fetch users and could not parse error response.' }));
+        throw new Error(errorData.message || 'Server error while fetching users.');
       }
       const usersData: UserProfile[] = await response.json();
       setAllUsersState(usersData);
     } catch (error) {
       console.error("Failed to fetch users:", error);
-      toast({ title: 'Error', description: 'Could not load user data.', variant: 'destructive' });
-    } finally {
-      setIsLoading(false);
+      toast({ title: 'Error Loading Users', description: (error as Error).message, variant: 'destructive' });
     }
   }, [toast]);
 
   const fetchVisitorEntries = useCallback(async () => {
-    setIsLoading(true);
+    // This function fetches visitor entries. Components should manage their own specific loading UI.
     try {
       const response = await fetch('/api/visitors');
       if (!response.ok) {
-        throw new Error('Failed to fetch visitor entries');
+        const errorData = await response.json().catch(() => ({ message: 'Failed to fetch visitor entries and could not parse error response.' }));
+        throw new Error(errorData.message || 'Server error while fetching visitor entries.');
       }
       const entriesData: VisitorEntry[] = await response.json();
       setVisitorEntriesState(entriesData);
     } catch (error) {
       console.error("Failed to fetch visitor entries:", error);
-      toast({ title: 'Error', description: 'Could not load visitor entries.', variant: 'destructive' });
-    } finally {
-      setIsLoading(false);
+      toast({ title: 'Error Loading Visitor Entries', description: (error as Error).message, variant: 'destructive' });
     }
   }, [toast]);
 
 
   const login = async (email: string, password: string): Promise<boolean> => {
-    setIsLoading(true);
+    setIsLoading(true); // Global loading during login process
     try {
       const response = await fetch('/api/auth/login', {
         method: 'POST',
@@ -96,7 +92,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const loggedInUser = data as UserProfile;
       if (loggedInUser.role === USER_ROLES.RESIDENT && !loggedInUser.isApproved) {
         toast({ title: 'Login Failed', description: 'Your account is pending approval.', variant: 'destructive' });
-        setUser(null); // Ensure user is not set
+        setUser(null); 
         return false;
       }
 
@@ -105,7 +101,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       router.push('/dashboard');
       return true;
     } catch (error) {
-      toast({ title: 'Login Error', description: 'An unexpected error occurred.', variant: 'destructive' });
+      toast({ title: 'Login Error', description: 'An unexpected error occurred during login.', variant: 'destructive' });
       return false;
     } finally {
       setIsLoading(false);
@@ -114,13 +110,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const logout = () => {
     setUser(null);
-    // In a real app with server-side sessions, call an API to invalidate the session.
     router.push('/login');
     toast({ title: 'Logged Out', description: 'You have been successfully logged out.' });
   };
 
   const register = async (userData: Omit<User, 'id' | 'isApproved' | 'role' | 'registrationDate'> & {password: string}): Promise<boolean> => {
-    setIsLoading(true);
+    setIsLoading(true); // Global loading during registration process
     try {
       const response = await fetch('/api/users', {
         method: 'POST',
@@ -137,7 +132,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       router.push('/login');
       return true;
     } catch (error) {
-      toast({ title: 'Registration Error', description: 'An unexpected error occurred.', variant: 'destructive' });
+      toast({ title: 'Registration Error', description: 'An unexpected error occurred during registration.', variant: 'destructive' });
       return false;
     } finally {
       setIsLoading(false);
@@ -145,7 +140,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const approveResident = async (userId: string): Promise<boolean> => {
-    setIsLoading(true);
+    // Component calling this should handle its own loading state for the specific action
     try {
       const response = await fetch(`/api/users/${userId}`, {
         method: 'PUT',
@@ -159,13 +154,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         return false;
       }
       toast({ title: 'Resident Approved', description: `${data.name} has been approved.` });
-      await fetchAllUsers(); // Refresh the list of users
+      await fetchAllUsers(); 
       return true;
     } catch (error) {
-      toast({ title: 'Approval Error', description: 'An unexpected error occurred.', variant: 'destructive' });
+      toast({ title: 'Approval Error', description: 'An unexpected error occurred during approval.', variant: 'destructive' });
       return false;
-    } finally {
-      setIsLoading(false);
     }
   };
   

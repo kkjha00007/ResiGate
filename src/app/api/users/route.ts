@@ -1,3 +1,4 @@
+
 // src/app/api/users/route.ts
 import { NextResponse, type NextRequest } from 'next/server';
 import { usersContainer } from '@/lib/cosmosdb';
@@ -11,7 +12,7 @@ const SALT_ROUNDS = 10; // Cost factor for bcrypt hashing
 // Get all users (potentially for admin)
 export async function GET(request: NextRequest) {
   try {
-    // TODO: Add authentication and authorization (e.g., only admin can access)
+    // TODO: Add authentication and authorization (e.g., only admin can access this)
     const { resources: userItems } = await usersContainer.items.readAll<User>().fetchAll();
     
     // Remove passwords before sending
@@ -23,7 +24,9 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(users, { status: 200 });
   } catch (error) {
     console.error('Get Users API error:', error);
-    return NextResponse.json({ message: 'Internal server error' }, { status: 500 });
+    const detail = error instanceof Error ? error.message : String(error);
+    // Return a more specific error message to the client
+    return NextResponse.json({ message: `Failed to retrieve user list from database. Detail: ${detail}` }, { status: 500 });
   }
 }
 
@@ -78,7 +81,7 @@ export async function POST(request: NextRequest) {
 
   } catch (error) {
     console.error('Register User API error:', error);
-    const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
+    const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred during registration.';
     return NextResponse.json({ message: 'Internal server error', error: errorMessage }, { status: 500 });
   }
 }
