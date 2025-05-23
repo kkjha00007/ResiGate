@@ -7,7 +7,7 @@ import { useAuth } from '@/lib/auth-provider';
 import { AppHeader } from '@/components/layout/AppHeader';
 import { AppSidebar, NavItem } from '@/components/layout/AppSidebar'; 
 import { USER_ROLES } from '@/lib/constants';
-import { LayoutDashboard, UserPlus, FileText, Users, LogOut, LucideIcon, ClipboardList, CalendarPlus, Ticket, ShieldCheckIcon, Settings2 } from 'lucide-react';
+import { LayoutDashboard, UserPlus, FileText, Users, LogOut, LucideIcon, ClipboardList, CalendarPlus, Ticket, ShieldCheckIcon, Settings2, Megaphone } from 'lucide-react'; // Added Megaphone
 import { SidebarProvider } from '@/components/ui/sidebar';
 import type { UserRole } from '@/lib/types';
 
@@ -31,7 +31,8 @@ const getNavItemsForLayout = (isAdminUser: boolean, isOwnerOrRenterUser: boolean
   
   // Owner/Renter Specific
   ...(isOwnerOrRenterUser ? [
-    { href: '/dashboard/personal-logs', label: 'My Visitor Logs', icon: FileText, iconColor: 'text-teal-500' } as NavItem
+    { href: '/dashboard/personal-logs', label: 'My Visitor Logs', icon: FileText, iconColor: 'text-teal-500' } as NavItem,
+    { href: '/dashboard/complaints', label: 'My Complaints', icon: Megaphone, iconColor: 'text-orange-500' } as NavItem, // New complaints link
   ] : []),
   
   // Admin Specific

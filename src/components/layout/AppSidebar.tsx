@@ -18,7 +18,8 @@ import {
   CalendarPlus,
   Ticket,
   ShieldCheckIcon, 
-  Settings2, // Icon for My Profile
+  Settings2, 
+  Megaphone, // Using Megaphone for Complaints
 } from 'lucide-react';
 import {
   Sidebar,
@@ -60,7 +61,8 @@ const getNavItems = (isAdminUser: boolean, isOwnerOrRenterUser: boolean, isGuard
   
   // Owner/Renter Specific
   ...(isOwnerOrRenterUser ? [
-    { href: '/dashboard/personal-logs', label: 'My Visitor Logs', icon: FileText, iconColor: 'text-teal-500' } as NavItem
+    { href: '/dashboard/personal-logs', label: 'My Visitor Logs', icon: FileText, iconColor: 'text-teal-500' } as NavItem,
+    { href: '/dashboard/complaints', label: 'My Complaints', icon: Megaphone, iconColor: 'text-orange-500' } as NavItem, // New complaints link
   ] : []),
   
   // Admin Specific
@@ -132,7 +134,7 @@ export function AppSidebar() {
               onClick={logout}
             >
             <div>
-              <LogOut className="h-5 w-5 text-red-500 group-hover:font-semibold" />
+              <LogOut className="h-5 w-5 text-red-500" /> {/* Icon color directly applied */}
               <span className="group-data-[collapsible=icon]:hidden group-hover:font-semibold">Logout</span>
             </div>
           </SidebarMenuButton>

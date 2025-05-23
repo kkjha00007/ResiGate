@@ -68,3 +68,41 @@ export interface GatePass {
   updatedAt?: string; // ISO DateTime string
 }
 
+// Complaint Feature Types
+export const COMPLAINT_STATUSES_VALUES = {
+  OPEN: "Open",
+  IN_PROGRESS: "In Progress",
+  RESOLVED: "Resolved",
+  CLOSED: "Closed",
+} as const;
+export type ComplaintStatus = typeof COMPLAINT_STATUSES_VALUES[keyof typeof COMPLAINT_STATUSES_VALUES];
+
+export const COMPLAINT_CATEGORIES_VALUES = [
+  "Maintenance",
+  "Security",
+  "Noise",
+  "Parking",
+  "Cleanliness",
+  "Staff Behavior",
+  "Common Area",
+  "Pet Related",
+  "Other",
+] as const;
+export type ComplaintCategory = (typeof COMPLAINT_CATEGORIES_VALUES)[number];
+
+
+export interface Complaint {
+  id: string;
+  userId: string;
+  userName: string;
+  userFlatNumber: string;
+  subject: string;
+  category: ComplaintCategory;
+  description: string;
+  submittedAt: string; // ISO DateTime string
+  status: ComplaintStatus;
+  // Optional fields for admin updates
+  adminNotes?: string;
+  resolvedAt?: string; // ISO DateTime string
+  // attachments?: string[]; // For future enhancement
+}

@@ -2,10 +2,11 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
-import type { User, UserProfile, VisitorEntry, GatePass, UserRole } from './types';
+import type { User, UserProfile, VisitorEntry, GatePass, UserRole, Complaint } from './types'; // Added Complaint
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
-import { USER_ROLES } from './constants';
+import { USER_ROLES, PUBLIC_ENTRY_SOURCE } from './constants'; // Added PUBLIC_ENTRY_SOURCE
+import { GATE_PASS_STATUSES } from './types';
 
 interface AuthContextType {
   user: UserProfile | null;
@@ -30,6 +31,9 @@ interface AuthContextType {
   cancelGatePass: (passId: string) => Promise<boolean>;
   markGatePassUsed: (passId: string, guardId: string) => Promise<{visitorEntry: VisitorEntry, updatedPass: GatePass} | null>;
   fetchGatePassByToken: (tokenCode: string) => Promise<GatePass | null>;
+  myComplaints: Complaint[]; // New state for user's complaints
+  submitComplaint: (complaintData: Omit<Complaint, 'id' | 'submittedAt' | 'status' | 'userId' | 'userName' | 'userFlatNumber'>) => Promise<Complaint | null>; // New function
+  fetchMyComplaints: () => Promise<void>; // New function
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -39,6 +43,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [allUsers, setAllUsersState] = useState<UserProfile[]>([]);
   const [visitorEntries, setVisitorEntriesState] = useState<VisitorEntry[]>([]);
   const [gatePasses, setGatePassesState] = useState<GatePass[]>([]);
+  const [myComplaints, setMyComplaintsState] = useState<Complaint[]>([]); // New state
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
   const { toast } = useToast();
@@ -49,7 +54,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
 
   const fetchAllUsers = useCallback(async () => {
-    // setIsLoading(true); // Consider if global loading is needed here
     try {
       const response = await fetch('/api/users');
       if (!response.ok) {
@@ -61,8 +65,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     } catch (error) {
       console.error("Failed to fetch users:", error);
       toast({ title: 'Error Loading Users', description: (error as Error).message, variant: 'destructive' });
-    } finally {
-      // setIsLoading(false);
     }
   }, [toast]);
 
@@ -159,8 +161,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         return null;
       }
       toast({ title: 'Gate Pass Marked as Used', description: `Pass for ${data.updatedPass.visitorName} processed.` });
-      await fetchGatePasses(); // Refresh user's gate passes
-      await fetchVisitorEntries(); // Refresh visitor entries log
+      await fetchGatePasses(); 
+      await fetchVisitorEntries(); 
       return data;
     } catch (error) {
       toast({ title: 'Gate Pass Update Error', description: (error as Error).message || 'An unexpected error occurred.', variant: 'destructive' });
@@ -228,6 +230,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setAllUsersState([]);
     setVisitorEntriesState([]);
     setGatePassesState([]);
+    setMyComplaintsState([]); // Clear complaints on logout
     router.push('/');
     toast({ title: 'Logged Out', description: 'You have been successfully logged out.' });
   };
@@ -312,7 +315,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         return null;
       }
       toast({ title: 'Profile Updated', description: 'Your profile has been successfully updated.' });
-      if (user && user.id === userId) { // If current user updated their profile
+      if (user && user.id === userId) { 
         setUser(prevUser => prevUser ? { ...prevUser, ...data } : null);
       }
       return data as UserProfile;
@@ -342,6 +345,55 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  // Complaint Functions
+  const submitComplaint = async (complaintData: Omit<Complaint, 'id' | 'submittedAt' | 'status' | 'userId' | 'userName' | 'userFlatNumber'>): Promise<Complaint | null> => {
+    if (!user || !user.flatNumber) {
+      toast({ title: 'Error', description: 'You must be logged in as a resident to submit a complaint.', variant: 'destructive' });
+      return null;
+    }
+    const submissionData = {
+      ...complaintData,
+      userId: user.id,
+      userName: user.name,
+      userFlatNumber: user.flatNumber,
+    };
+    try {
+      const response = await fetch('/api/complaints', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(submissionData),
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        toast({ title: 'Complaint Submission Failed', description: data.message || 'Could not submit complaint.', variant: 'destructive' });
+        return null;
+      }
+      toast({ title: 'Complaint Submitted', description: 'Your complaint has been successfully submitted.' });
+      await fetchMyComplaints(); // Refresh the list of complaints
+      return data as Complaint;
+    } catch (error) {
+      toast({ title: 'Complaint Submission Error', description: (error as Error).message || 'An unexpected error occurred.', variant: 'destructive' });
+      return null;
+    }
+  };
+
+  const fetchMyComplaints = useCallback(async () => {
+    if (!user) return;
+    try {
+      const response = await fetch(`/api/complaints/user/${user.id}`);
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ message: 'Failed to fetch your complaints.' }));
+        throw new Error(errorData.message || 'Server error.');
+      }
+      const complaintsData: Complaint[] = await response.json();
+      setMyComplaintsState(complaintsData);
+    } catch (error) {
+      console.error("Failed to fetch my complaints:", error);
+      toast({ title: 'Error Loading Complaints', description: (error as Error).message, variant: 'destructive' });
+    }
+  }, [user, toast]);
+
+
   const isAdmin = useCallback(() => user?.role === USER_ROLES.SUPERADMIN, [user]);
   const isOwnerOrRenter = useCallback(() => user?.role === USER_ROLES.OWNER || user?.role === USER_ROLES.RENTER, [user]);
   const isGuard = useCallback(() => user?.role === USER_ROLES.GUARD, [user]);
@@ -370,6 +422,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         cancelGatePass,
         markGatePassUsed,
         fetchGatePassByToken,
+        myComplaints,
+        submitComplaint,
+        fetchMyComplaints,
     }}>
       {children}
     </AuthContext.Provider>
