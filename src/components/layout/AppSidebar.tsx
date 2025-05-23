@@ -1,5 +1,6 @@
-'use client';
 
+'use client';
+import React from 'react'; // Added React for useMemo
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
@@ -76,12 +77,19 @@ export function AppSidebar() {
             {navItems.map((item) => {
               if (item.role && user.role !== item.role) return null;
               const isActive = pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href));
+              
+              // Memoize tooltipProps to prevent re-creation on every render
+              const tooltipProps = React.useMemo(() => ({
+                children: item.label,
+                className: "ml-2"
+              }), [item.label]);
+
               return (
                 <SidebarMenuItem key={item.href}>
                   <SidebarMenuButton
                     asChild
                     isActive={isActive}
-                    tooltip={{children: item.label, className: "ml-2"}}
+                    tooltip={tooltipProps} // Use memoized props
                     disabled={item.disabled}
                     className={cn(
                       "justify-start",
