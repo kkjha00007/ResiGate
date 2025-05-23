@@ -1,9 +1,22 @@
 
+'use client';
+
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Megaphone, CalendarClock, Phone, Shield, Flame, Ambulance, UserCheck } from "lucide-react";
+import { Megaphone, CalendarClock, Phone, Shield, Flame, Ambulance, UserCheck, Newspaper } from "lucide-react";
+import { useAuth } from "@/lib/auth-provider";
+import React, { useEffect } from "react";
+import { format, parseISO } from "date-fns";
 
 export default function DashboardPage() {
+  const { activeNotices, fetchActiveNotices, isLoading: authLoading } = useAuth();
+
+  useEffect(() => {
+    fetchActiveNotices();
+  }, [fetchActiveNotices]);
+
+  const displayedNotices = activeNotices.slice(0, 3); // Show top 3 notices
+
   return (
     <div className="space-y-6">
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
@@ -12,7 +25,7 @@ export default function DashboardPage() {
             <div className="flex items-start justify-between">
               <div>
                 <CardTitle className="flex items-center gap-2 text-xl font-semibold text-primary">
-                  <Megaphone className="h-6 w-6" />
+                  <Newspaper className="h-6 w-6" /> {/* Changed icon to Newspaper */}
                   Important Announcements
                 </CardTitle>
                 <CardDescription>Stay updated with the latest society news.</CardDescription>
@@ -20,19 +33,31 @@ export default function DashboardPage() {
             </div>
           </CardHeader>
           <CardContent className="space-y-3">
-            <div className="p-4 bg-secondary/50 rounded-md border border-secondary">
-              <h4 className="font-semibold text-foreground mb-1">Water Supply Disruption - 25th Dec</h4>
-              <p className="text-sm text-muted-foreground">
-                Please note there will be a temporary disruption in water supply on December 25th from 10 AM to 2 PM due to essential maintenance work.
-              </p>
-            </div>
-            <div className="p-4 bg-secondary/50 rounded-md border border-secondary">
-              <h4 className="font-semibold text-foreground mb-1">Annual General Meeting (AGM) Notice</h4>
-              <p className="text-sm text-muted-foreground">
-                The AGM is scheduled for January 15th. Details will be shared soon.
-              </p>
-            </div>
-             <Button variant="link" className="p-0 h-auto text-primary">View All Announcements</Button>
+            {authLoading && displayedNotices.length === 0 && (
+              <div className="text-center p-4">
+                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary mx-auto mb-2"></div>
+                <p className="text-sm text-muted-foreground">Loading announcements...</p>
+              </div>
+            )}
+            {!authLoading && displayedNotices.length === 0 && (
+               <div className="p-4 bg-secondary/50 rounded-md border border-secondary text-center">
+                <p className="text-sm text-muted-foreground">No active announcements at the moment.</p>
+              </div>
+            )}
+            {displayedNotices.map(notice => (
+              <div key={notice.id} className="p-4 bg-secondary/50 rounded-md border border-secondary">
+                <h4 className="font-semibold text-foreground mb-1">{notice.title}</h4>
+                <p className="text-xs text-muted-foreground mb-1.5">Posted by {notice.postedByName} on {format(parseISO(notice.createdAt), 'PP')}</p>
+                <p className="text-sm text-muted-foreground line-clamp-3">
+                  {notice.content}
+                </p>
+              </div>
+            ))}
+            {activeNotices.length > 3 && (
+                <Button variant="link" className="p-0 h-auto text-primary">View All Announcements</Button> 
+                // TODO: Link to a full notices page for users later
+            )}
+             {activeNotices.length === 0 && !authLoading && null}
           </CardContent>
         </Card>
 

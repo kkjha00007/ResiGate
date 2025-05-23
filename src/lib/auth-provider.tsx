@@ -2,7 +2,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
-import type { User, UserProfile, VisitorEntry, GatePass, UserRole, Complaint, Notice } from './types'; // Added Notice
+import type { User, UserProfile, VisitorEntry, GatePass, UserRole, Complaint, Notice } from './types';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 import { USER_ROLES, PUBLIC_ENTRY_SOURCE } from './constants'; 
@@ -13,7 +13,7 @@ interface AuthContextType {
   isLoading: boolean;
   login: (email: string, password: string) => Promise<boolean>;
   logout: () => void;
-  register: (userData: Omit<User, 'id' | 'isApproved' | 'registrationDate' | 'password'> & {password: string, role: Exclude<UserRole, "superadmin">}) => Promise<boolean>;
+  register: (userData: Omit<User, 'id' | 'isApproved' | 'registrationDate' | 'password'> & {password: string, role: Exclude<UserRole, "superadmin" | "guard"> | "guard" }) => Promise<boolean>;
   approveResident: (userId: string) => Promise<boolean>;
   rejectUser: (userId: string) => Promise<boolean>;
   updateUserProfile: (userId: string, updates: { name?: string; secondaryPhoneNumber1?: string; secondaryPhoneNumber2?: string }) => Promise<UserProfile | null>;
@@ -37,11 +37,10 @@ interface AuthContextType {
   activeNotices: Notice[];
   fetchActiveNotices: () => Promise<void>;
   createNotice: (noticeData: { title: string; content: string; }) => Promise<Notice | null>;
-  // Future notice management functions for admin:
-  // allNoticesAdmin: Notice[];
-  // fetchAllNoticesAdmin: () => Promise<void>;
-  // updateNotice: (noticeId: string, updates: Partial<Omit<Notice, 'id' | 'postedByUserId' | 'postedByName' | 'createdAt' | 'monthYear'>>) => Promise<Notice | null>;
-  // deleteNotice: (noticeId: string) => Promise<boolean>;
+  allNoticesForAdmin: Notice[];
+  fetchAllNoticesForAdmin: () => Promise<void>;
+  updateNotice: (noticeId: string, currentMonthYear: string, updates: Partial<Omit<Notice, 'id' | 'postedByUserId' | 'postedByName' | 'createdAt' | 'monthYear' | 'updatedAt'>>) => Promise<Notice | null>;
+  deleteNotice: (noticeId: string, currentMonthYear: string) => Promise<boolean>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -52,17 +51,38 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [visitorEntries, setVisitorEntriesState] = useState<VisitorEntry[]>([]);
   const [gatePasses, setGatePassesState] = useState<GatePass[]>([]);
   const [myComplaints, setMyComplaintsState] = useState<Complaint[]>([]);
-  const [activeNotices, setActiveNoticesState] = useState<Notice[]>([]); // New state for active notices
+  const [activeNotices, setActiveNoticesState] = useState<Notice[]>([]);
+  const [allNoticesForAdmin, setAllNoticesForAdminState] = useState<Notice[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
   const { toast } = useToast();
 
   useEffect(() => {
     setIsLoading(false);
+    // Initial data fetch for active notices when app loads (for dashboard)
+    // We might also want to do this if user becomes available
+    _fetchActiveNotices();
+  }, []);
+
+  const _fetchActiveNotices = useCallback(async () => {
+    try {
+      const response = await fetch('/api/notices'); // Fetches active notices
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ message: 'Failed to fetch active notices.' }));
+        throw new Error(errorData.message || 'Server error.');
+      }
+      const noticesData: Notice[] = await response.json();
+      setActiveNoticesState(noticesData);
+    } catch (error) {
+      console.error("Failed to fetch active notices:", error);
+      // Potentially a silent fail for dashboard, or a subtle toast
+      // toast({ title: 'Could not load notices', description: (error as Error).message, variant: 'destructive' });
+    }
   }, []);
 
 
   const fetchAllUsers = useCallback(async () => {
+    // setIsLoading(true); // Consider if individual loading states are needed
     try {
       const response = await fetch('/api/users');
       if (!response.ok) {
@@ -74,6 +94,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     } catch (error) {
       console.error("Failed to fetch users:", error);
       toast({ title: 'Error Loading Users', description: (error as Error).message, variant: 'destructive' });
+    } finally {
+      // setIsLoading(false);
     }
   }, [toast]);
 
@@ -169,9 +191,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         toast({ title: 'Gate Pass Update Failed', description: data.message || 'Could not mark pass as used.', variant: 'destructive' });
         return null;
       }
-      // Toast message can be more concise or specific here
       toast({ title: 'Gate Pass Processed', description: `Visitor entry created. Pass marked as used.` });
-      await fetchGatePasses(); 
+      if (user?.role === USER_ROLES.GUARD) {
+          // If a guard is marking it used, they wouldn't typically see "My Gate Passes"
+          // but we should refresh the visitor entries log if they can see it.
+      } else {
+          await fetchGatePasses(); 
+      }
       await fetchVisitorEntries(); 
       return data;
     } catch (error) {
@@ -200,13 +226,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
 
-  const login = async (email: string, password: string): Promise<boolean> => {
+  const login = async (email: string, passwordString: string): Promise<boolean> => {
     setIsLoading(true);
     try {
       const response = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ email, password: passwordString }),
       });
 
       const data = await response.json();
@@ -225,6 +251,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
       setUser(loggedInUser);
       toast({ title: 'Login Successful', description: `Welcome back, ${loggedInUser.name}!` });
+      await _fetchActiveNotices(); // Fetch notices on login for dashboard
       router.push('/dashboard');
       return true;
     } catch (error) {
@@ -241,12 +268,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setVisitorEntriesState([]);
     setGatePassesState([]);
     setMyComplaintsState([]); 
-    setActiveNoticesState([]); // Clear notices on logout
+    setActiveNoticesState([]);
+    setAllNoticesForAdminState([]);
     router.push('/');
     toast({ title: 'Logged Out', description: 'You have been successfully logged out.' });
   };
 
-  const register = async (userData: Omit<User, 'id' | 'isApproved' | 'registrationDate' | 'password'> & {password: string, role: Exclude<UserRole, "superadmin">}): Promise<boolean> => {
+  const register = async (userData: Omit<User, 'id' | 'isApproved' | 'registrationDate' | 'password'> & {password: string, role: Exclude<UserRole, "superadmin" | "guard"> | "guard"}): Promise<boolean> => {
     setIsLoading(true);
     try {
       const response = await fetch('/api/users', {
@@ -405,21 +433,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [user, toast]);
 
-  // Notice Functions
-  const fetchActiveNotices = useCallback(async () => {
-    try {
-      const response = await fetch('/api/notices');
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ message: 'Failed to fetch active notices.' }));
-        throw new Error(errorData.message || 'Server error.');
-      }
-      const noticesData: Notice[] = await response.json();
-      setActiveNoticesState(noticesData);
-    } catch (error) {
-      console.error("Failed to fetch active notices:", error);
-      toast({ title: 'Error Loading Notices', description: (error as Error).message, variant: 'destructive' });
-    }
-  }, [toast]);
+  // Notice Functions (Phase 1)
+  const fetchActiveNotices = _fetchActiveNotices; // Expose the memoized version
 
   const createNotice = async (noticeData: { title: string; content: string; }): Promise<Notice | null> => {
     if (!user || user.role !== USER_ROLES.SUPERADMIN) {
@@ -443,12 +458,81 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             return null;
         }
         toast({ title: 'Notice Created', description: `Notice "${data.title}" has been posted.` });
-        await fetchActiveNotices(); // Refresh active notices for all
-        // await fetchAllNoticesAdmin(); // If admin needs to see all notices immediately
+        await fetchActiveNotices(); 
+        if (isAdmin()) {
+          await fetchAllNoticesForAdmin();
+        }
         return data as Notice;
     } catch (error) {
         toast({ title: 'Notice Creation Error', description: (error as Error).message || 'An unexpected error occurred.', variant: 'destructive' });
         return null;
+    }
+  };
+
+  // Notice Functions (Phase 2 - Admin Management)
+  const fetchAllNoticesForAdmin = useCallback(async () => {
+    if (!isAdmin()) return;
+    try {
+      const response = await fetch('/api/notices/admin/all');
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ message: 'Failed to fetch notices for admin.' }));
+        throw new Error(errorData.message || 'Server error.');
+      }
+      const noticesData: Notice[] = await response.json();
+      setAllNoticesForAdminState(noticesData);
+    } catch (error) {
+      console.error("Failed to fetch all notices for admin:", error);
+      toast({ title: 'Error Loading Admin Notices', description: (error as Error).message, variant: 'destructive' });
+    }
+  }, [toast, user]); // Added user dependency for isAdmin check consistency
+
+  const updateNotice = async (noticeId: string, currentMonthYear: string, updates: Partial<Omit<Notice, 'id' | 'postedByUserId' | 'postedByName' | 'createdAt' | 'monthYear' | 'updatedAt'>>): Promise<Notice | null> => {
+    if (!isAdmin()) {
+      toast({ title: 'Unauthorized', description: 'Only super admins can update notices.', variant: 'destructive' });
+      return null;
+    }
+    try {
+      const response = await fetch(`/api/notices/${noticeId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...updates, monthYear: currentMonthYear }), // Send monthYear for partition key
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        toast({ title: 'Notice Update Failed', description: data.message || 'Could not update notice.', variant: 'destructive' });
+        return null;
+      }
+      toast({ title: 'Notice Updated', description: `Notice "${data.title}" has been updated.` });
+      await fetchActiveNotices();
+      await fetchAllNoticesForAdmin();
+      return data as Notice;
+    } catch (error) {
+      toast({ title: 'Notice Update Error', description: (error as Error).message || 'An unexpected error occurred.', variant: 'destructive' });
+      return null;
+    }
+  };
+
+  const deleteNotice = async (noticeId: string, currentMonthYear: string): Promise<boolean> => {
+    if (!isAdmin()) {
+      toast({ title: 'Unauthorized', description: 'Only super admins can delete notices.', variant: 'destructive' });
+      return false;
+    }
+    try {
+      const response = await fetch(`/api/notices/${noticeId}?monthYear=${encodeURIComponent(currentMonthYear)}`, {
+        method: 'DELETE',
+      });
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({ message: 'Failed to delete notice.' }));
+        toast({ title: 'Notice Deletion Failed', description: data.message || 'Could not delete notice.', variant: 'destructive' });
+        return false;
+      }
+      toast({ title: 'Notice Deleted', description: 'The notice has been successfully deleted.' });
+      await fetchActiveNotices();
+      await fetchAllNoticesForAdmin();
+      return true;
+    } catch (error) {
+      toast({ title: 'Notice Deletion Error', description: (error as Error).message || 'An unexpected error occurred.', variant: 'destructive' });
+      return false;
     }
   };
 
@@ -487,6 +571,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         activeNotices,
         fetchActiveNotices,
         createNotice,
+        allNoticesForAdmin,
+        fetchAllNoticesForAdmin,
+        updateNotice,
+        deleteNotice,
     }}>
       {children}
     </AuthContext.Provider>

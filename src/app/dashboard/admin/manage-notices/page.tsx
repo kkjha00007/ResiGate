@@ -4,10 +4,8 @@ import { CreateNoticeForm } from '@/components/dashboard/admin/CreateNoticeForm'
 import { useAuth } from '@/lib/auth-provider';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-// Import NoticesTable and Separator later when implemented
-// import { NoticesTable } from '@/components/dashboard/admin/NoticesTable';
-// import { Separator } from '@/components/ui/separator';
+import { NoticesTable } from '@/components/dashboard/admin/NoticesTable';
+import { Separator } from '@/components/ui/separator';
 
 export default function ManageNoticesPage() {
   const { user, isLoading, isAdmin } = useAuth();
@@ -30,22 +28,8 @@ export default function ManageNoticesPage() {
   return (
     <div className="space-y-8">
       <CreateNoticeForm />
-      {/* 
       <Separator />
-      <NoticesTable /> 
-      */}
-      {/* Placeholder for listing/managing existing notices */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Manage Existing Notices</CardTitle>
-          <CardDescription>
-            Functionality to list, edit, and delete existing notices will be added here in Phase 2.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <p className="text-muted-foreground">Coming soon...</p>
-        </CardContent>
-      </Card>
+      <NoticesTable />
     </div>
   );
 }
