@@ -4,6 +4,8 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import type { VisitorEntry } from '@/lib/types';
 import { getVisitorEntries } from '@/lib/store';
+import { useAuth } from '@/lib/auth-provider'; // Added useAuth
+import { USER_ROLES } from '@/lib/constants'; // Added USER_ROLES
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -11,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { format, isValid } from 'date-fns';
-import { CalendarIcon, Search, ArrowUpDown, Trash2, Edit3, FileDown } from 'lucide-react';
+import { CalendarIcon, Search, ClipboardList } from 'lucide-react'; // Changed icon for title
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import Image from 'next/image';
 import {
@@ -22,7 +24,7 @@ import {
   PaginationLink,
   PaginationNext,
   PaginationPrevious,
-} from "@/components/ui/pagination"; // Corrected path
+} from "@/components/ui/pagination";
 
 const ITEMS_PER_PAGE = 10;
 
@@ -32,6 +34,7 @@ export function RecentEntriesTable() {
   const [filterFlat, setFilterFlat] = useState('');
   const [filterDate, setFilterDate] = useState<Date | undefined>(undefined);
   const [currentPage, setCurrentPage] = useState(1);
+  const { user, isAdmin } = useAuth(); // Get user and isAdmin function
 
   useEffect(() => {
     setAllEntries(getVisitorEntries());
@@ -47,7 +50,7 @@ export function RecentEntriesTable() {
       .filter(entry => {
         const searchMatch =
           entry.visitorName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          entry.mobileNumber.includes(searchTerm) ||
+          entry.mobileNumber.includes(searchTerm) || // Search still works on mobile for admin
           (entry.vehicleNumber && entry.vehicleNumber.toLowerCase().includes(searchTerm.toLowerCase()));
         const flatMatch = filterFlat ? entry.flatNumber === filterFlat : true;
         const dateMatch = filterDate ? format(new Date(entry.entryTimestamp), 'yyyy-MM-dd') === format(filterDate, 'yyyy-MM-dd') : true;
@@ -69,9 +72,9 @@ export function RecentEntriesTable() {
   
   const renderPaginationItems = () => {
     const items = [];
-    const maxVisiblePages = 5; // Max number of page links to show (excluding prev/next/ellipsis)
+    const maxVisiblePages = 5;
     
-    if (totalPages <= maxVisiblePages + 2) { // Show all pages if not too many
+    if (totalPages <= maxVisiblePages + 2) {
       for (let i = 1; i <= totalPages; i++) {
         items.push(
           <PaginationItem key={i}>
@@ -82,7 +85,6 @@ export function RecentEntriesTable() {
         );
       }
     } else {
-      // Logic for showing ellipsis
       let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
       let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
 
@@ -127,12 +129,21 @@ export function RecentEntriesTable() {
     return items;
   };
 
+  const maskMobileNumber = (mobile: string) => {
+    if (mobile.length === 10) {
+      return `******${mobile.substring(6)}`;
+    }
+    return '••••••••••';
+  };
 
   return (
     <Card className="shadow-lg">
       <CardHeader>
-        <CardTitle className="text-2xl font-semibold text-primary">Visitor Entry Log</CardTitle>
-        <CardDescription>Browse and manage recent visitor entries.</CardDescription>
+        <div className="flex items-center gap-2">
+            <ClipboardList className="h-7 w-7 text-primary" />
+            <CardTitle className="text-2xl font-semibold text-primary">Visitor Entry Log</CardTitle>
+        </div>
+        <CardDescription>Browse and manage recent visitor entries. Mobile numbers are visible only to administrators.</CardDescription>
       </CardHeader>
       <CardContent>
         <div className="mb-6 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 items-end">
@@ -188,7 +199,6 @@ export function RecentEntriesTable() {
                 <TableHead>Entry Time</TableHead>
                 <TableHead>Vehicle No.</TableHead>
                 <TableHead className="text-center">Photo</TableHead>
-                {/* <TableHead>Actions</TableHead> */}
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -196,7 +206,7 @@ export function RecentEntriesTable() {
                 paginatedEntries.map((entry) => (
                   <TableRow key={entry.id}>
                     <TableCell className="font-medium">{entry.visitorName}</TableCell>
-                    <TableCell>{entry.mobileNumber}</TableCell>
+                    <TableCell>{isAdmin() ? entry.mobileNumber : maskMobileNumber(entry.mobileNumber)}</TableCell>
                     <TableCell>{entry.flatNumber}</TableCell>
                     <TableCell>{entry.purposeOfVisit}</TableCell>
                     <TableCell>{isValid(new Date(entry.entryTimestamp)) ? format(new Date(entry.entryTimestamp), "PPpp") : 'Invalid Date'}</TableCell>
@@ -215,14 +225,6 @@ export function RecentEntriesTable() {
                         'N/A'
                       )}
                     </TableCell>
-                    {/* <TableCell>
-                       <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-primary" onClick={() => alert(`Edit ${entry.visitorName}`)}>
-                        <Edit3 className="h-4 w-4" />
-                      </Button>
-                      <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-destructive" onClick={() => alert(`Delete ${entry.visitorName}`)}>
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </TableCell> */}
                   </TableRow>
                 ))
               ) : (

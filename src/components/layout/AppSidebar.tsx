@@ -1,6 +1,6 @@
 
 'use client';
-import React from 'react'; // Added React for useMemo
+import React from 'react'; 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
@@ -11,16 +11,16 @@ import {
   LayoutDashboard,
   UserPlus,
   ListChecks,
-  ShieldCheck as AdminIcon, // Renamed to avoid conflict
+  ShieldCheck as AdminIcon, 
   LogOut,
   Users,
   Settings,
   LucideIcon,
   Home,
-  FileText
+  FileText,
+  ClipboardList // Added ClipboardList icon
 } from 'lucide-react';
 import {
-  // SidebarProvider, // Removed
   Sidebar,
   SidebarHeader,
   SidebarContent,
@@ -46,11 +46,9 @@ export interface NavItem {
 const getNavItems = (isAdminUser: boolean, isResidentUser: boolean): NavItem[] => [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/dashboard/add-visitor', label: 'Add Visitor Entry', icon: UserPlus },
+  { href: '/dashboard/visitor-log', label: 'Visitor Log', icon: ClipboardList }, // Added Visitor Log
   ...(isResidentUser ? [{ href: '/dashboard/personal-logs', label: 'My Visitor Logs', icon: FileText } as NavItem] : []),
   ...(isAdminUser ? [{ href: '/dashboard/admin-approvals', label: 'Resident Approvals', icon: Users } as NavItem] : []),
-  // Future items:
-  // { href: '/dashboard/reports', label: 'Reports', icon: BarChart3, disabled: true },
-  // { href: '/dashboard/settings', label: 'Settings', icon: Settings, role: USER_ROLES.SUPERADMIN, disabled: true },
 ];
 
 
@@ -69,8 +67,7 @@ export function AppSidebar() {
   if (!user) return null;
 
   return (
-    // <SidebarProvider defaultOpen> // Removed this line
-      <Sidebar collapsible="icon" className="border-r shadow-sm hidden md:flex"> {/* Added hidden md:flex to match original behavior from SidebarProvider */}
+      <Sidebar collapsible="icon" className="border-r shadow-sm hidden md:flex"> 
         <SidebarHeader className="p-4 border-b border-sidebar-border">
           <Link href="/dashboard" className="flex items-center gap-2 group-data-[collapsible=icon]:justify-center">
             <AdminIcon className="h-7 w-7 text-sidebar-primary" />
@@ -96,7 +93,7 @@ export function AppSidebar() {
                     isActive={isActive}
                     tooltip={tooltipProps} 
                     disabled={item.disabled}
-                    className="justify-start" // Simplified className, active state handled by data-active
+                    className="justify-start" 
                   >
                     <Link href={item.href}>
                       <item.icon className="h-5 w-5" />
@@ -111,7 +108,7 @@ export function AppSidebar() {
         
         <SidebarFooter className="p-2 border-t border-sidebar-border">
            <SidebarMenuButton
-              tooltip={logoutTooltipProps} // Use memoized props
+              tooltip={logoutTooltipProps} 
               className="justify-start"
               onClick={logout}
             >
@@ -122,6 +119,5 @@ export function AppSidebar() {
           </SidebarMenuButton>
         </SidebarFooter>
       </Sidebar>
-    // </SidebarProvider> // Removed this line
   );
 }
