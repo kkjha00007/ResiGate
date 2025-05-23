@@ -24,7 +24,8 @@ import {
   UsersRound,
   Store,
   ConciergeBell,
-  ListFilter, // Added for Manage Vendors
+  ListFilter,
+  // Users as CommitteeIcon, // Re-using Users icon for Committee Members
 } from 'lucide-react';
 import {
   Sidebar,
@@ -73,6 +74,10 @@ const getNavItems = (isAdminUser: boolean, isOwnerOrRenterUser: boolean, isGuard
   // Vendor Directory - All authenticated users
   { href: '/dashboard/vendors/directory', label: 'Vendor Directory', icon: Store, iconColor: 'text-cyan-500' },
   { href: '/dashboard/vendors/add', label: 'Add Vendor', icon: ConciergeBell, iconColor: 'text-purple-500' },
+  
+  // Committee Members - All authenticated users
+  { href: '/dashboard/committee-members', label: 'Committee Members', icon: Users, iconColor: 'text-green-500' },
+
 
   // Admin Specific
   ...(isAdminUser ? [
@@ -130,7 +135,7 @@ export function AppSidebar() {
                     className="justify-start group"
                   >
                     <Link href={item.href}>
-                      <item.icon className={cn("h-5 w-5", item.iconColor || 'text-sidebar-foreground')} />
+                      <item.icon className={cn("h-5 w-5", item.iconColor || 'text-sidebar-primary')} />
                       <span className="group-data-[collapsible=icon]:hidden group-hover:font-semibold">{item.label}</span>
                     </Link>
                   </SidebarMenuButton>

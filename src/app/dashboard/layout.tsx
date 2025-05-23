@@ -38,6 +38,9 @@ const getNavItemsForLayout = (isAdminUser: boolean, isOwnerOrRenterUser: boolean
   { href: '/dashboard/vendors/directory', label: 'Vendor Directory', icon: Store, iconColor: 'text-cyan-500' },
   { href: '/dashboard/vendors/add', label: 'Add Vendor', icon: ConciergeBell, iconColor: 'text-purple-500' },
 
+  // Committee Members - All authenticated users
+  { href: '/dashboard/committee-members', label: 'Committee Members', icon: Users, iconColor: 'text-green-500' },
+
   // Admin Specific
   ...(isAdminUser ? [
     { href: '/dashboard/admin-approvals', label: 'User Approvals', icon: Users, iconColor: 'text-pink-500' } as NavItem,
