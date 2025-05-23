@@ -1,27 +1,34 @@
+
 export type UserRole = "superadmin" | "resident";
 
 export interface User {
-  id: string;
+  id: string; // Will be the Cosmos DB item ID
   email: string;
-  password?: string; // Store hashed passwords in a real app
+  // IMPORTANT: Password should be HASHED in a real application.
+  // Storing plain text passwords is a major security risk.
+  password?: string;
   name: string;
   role: UserRole;
   flatNumber?: string; // Required for residents
-  isApproved: boolean; // For residents, determines if their registration is approved
-  registrationDate: Date;
+  isApproved: boolean; // For residents
+  registrationDate: string; // Store as ISO string (e.g., new Date().toISOString())
 }
 
+// For sending user data to client, omitting sensitive fields like password
+export type UserProfile = Omit<User, 'password'>;
+
+
 export interface VisitorEntry {
-  id: string;
+  id: string; // Will be the Cosmos DB item ID
   visitorName: string;
   mobileNumber: string;
   purposeOfVisit: string;
   flatNumber: string;
-  entryTimestamp: Date;
-  exitTimestamp?: Date;
+  entryTimestamp: string; // Store as ISO string
+  exitTimestamp?: string; // Store as ISO string
   vehicleNumber?: string;
-  visitorPhotoUrl?: string; // In a real app, this would be a URL to Azure Blob Storage
-  enteredBy?: string; // User ID of the guard, system, or public source
+  visitorPhotoUrl?: string;
+  enteredBy?: string; // User ID or public source
   notes?: string;
-  tokenCode?: string; // For public entries to show to guard
+  tokenCode?: string;
 }

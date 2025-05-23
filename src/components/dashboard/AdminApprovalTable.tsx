@@ -1,13 +1,14 @@
+
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import type { User } from '@/lib/types';
+import type { UserProfile } from '@/lib/types'; // Use UserProfile for client display
 import { USER_ROLES } from '@/lib/constants';
 import { useAuth } from '@/lib/auth-provider';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { CheckCircle, Users, XCircle } from 'lucide-react';
+import { CheckCircle, Users } from 'lucide-react';
 import { format } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -23,14 +24,14 @@ import {
 } from "@/components/ui/alert-dialog";
 
 export function AdminApprovalTable() {
-  const { allUsers, fetchUsers, approveResident, isAdmin } = useAuth();
-  const [pendingResidents, setPendingResidents] = useState<User[]>([]);
+  const { allUsers, fetchAllUsers, approveResident, isAdmin, isLoading } = useAuth();
+  const [pendingResidents, setPendingResidents] = useState<UserProfile[]>([]);
 
   useEffect(() => {
     if (isAdmin()) {
-      fetchUsers(); // Ensure user list is up-to-date
+      fetchAllUsers(); // Fetch users when component mounts or if admin status is confirmed
     }
-  }, [isAdmin, fetchUsers]);
+  }, [isAdmin, fetchAllUsers]);
 
   useEffect(() => {
      setPendingResidents(
@@ -42,10 +43,18 @@ export function AdminApprovalTable() {
 
   const handleApprove = async (userId: string) => {
     await approveResident(userId);
-    // The allUsers state in AuthProvider will update, triggering re-render via useEffect
+    // fetchAllUsers is called within approveResident in AuthProvider to refresh list
   };
 
-  if (!isAdmin()) {
+  if (isLoading && !allUsers.length) { // Show loader if loading and no users yet
+     return (
+      <div className="flex h-[calc(100vh-10rem)] items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
+  if (!isAdmin()) { // This check should ideally happen at page/layout level too
      return (
       <Card>
         <CardHeader>
@@ -116,14 +125,13 @@ export function AdminApprovalTable() {
                           </AlertDialogFooter>
                         </AlertDialogContent>
                       </AlertDialog>
-                      {/* Optional: Add a reject button here */}
                     </TableCell>
                   </TableRow>
                 ))
               ) : (
                 <TableRow>
                   <TableCell colSpan={6} className="h-24 text-center text-muted-foreground">
-                    No pending resident approvals.
+                    {isLoading ? 'Loading pending approvals...' : 'No pending resident approvals.'}
                   </TableCell>
                 </TableRow>
               )}

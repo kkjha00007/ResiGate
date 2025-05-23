@@ -1,67 +1,40 @@
+// This file is no longer needed as data persistence is handled by Azure Cosmos DB.
+// The application will interact with the live database via API routes.
+// For initial data seeding or testing with Cosmos DB, you would typically:
+// 1. Write a script to populate your Cosmos DB instance.
+// 2. Or, manually add a few records through the Azure portal or Cosmos DB Data Explorer.
+//
+// Keeping this file for reference or if you wish to adapt it for a seeding script later.
+// However, it's not actively used by the application anymore.
+
 import type { User, VisitorEntry } from './types';
 import { USER_ROLES } from './constants';
 
-// In a real app, passwords would be hashed. For mock, storing plain text (not recommended for production).
-export const MOCK_USERS: User[] = [
+// Example data, not used by the live application anymore.
+export const MOCK_USERS_LEGACY: User[] = [
   {
     id: 'user-superadmin-001',
     email: 'admin@resigate.com',
-    password: 'adminpassword',
+    // IMPORTANT: Passwords should be HASHED. This is for conceptual reference only.
+    password: 'adminpassword', 
     name: 'Super Admin',
     role: USER_ROLES.SUPERADMIN,
     isApproved: true,
-    registrationDate: new Date('2023-01-01T10:00:00Z'),
+    registrationDate: new Date('2023-01-01T10:00:00Z').toISOString(),
   },
-  {
-    id: 'user-resident-001',
-    email: 'resident101@resigate.com',
-    password: 'residentpassword',
-    name: 'Alice Smith',
-    role: USER_ROLES.RESIDENT,
-    flatNumber: 'A-101',
-    isApproved: true,
-    registrationDate: new Date('2023-01-15T11:00:00Z'),
-  },
-  {
-    id: 'user-resident-002',
-    email: 'resident202@resigate.com',
-    password: 'residentpassword',
-    name: 'Bob Johnson',
-    role: USER_ROLES.RESIDENT,
-    flatNumber: 'B-202',
-    isApproved: false, // Pending approval
-    registrationDate: new Date('2023-02-01T12:00:00Z'),
-  },
+  // Add other mock users if needed for a seeding script
 ];
 
-export const MOCK_VISITOR_ENTRIES: VisitorEntry[] = [
+export const MOCK_VISITOR_ENTRIES_LEGACY: VisitorEntry[] = [
   {
     id: 'visitor-001',
     visitorName: 'Charlie Brown',
     mobileNumber: '9876543210',
     purposeOfVisit: 'Delivery',
     flatNumber: 'A-101',
-    entryTimestamp: new Date(new Date().setDate(new Date().getDate() -1)), // Yesterday
+    entryTimestamp: new Date(new Date().setDate(new Date().getDate() -1)).toISOString(),
     vehicleNumber: 'DL1AB1234',
-    enteredBy: 'user-superadmin-001', // Or a guard ID
-  },
-  {
-    id: 'visitor-002',
-    visitorName: 'Diana Prince',
-    mobileNumber: '9876543211',
-    purposeOfVisit: 'Guest Visit',
-    flatNumber: 'A-101',
-    entryTimestamp: new Date(new Date().setHours(new Date().getHours() -2)), // 2 hours ago
     enteredBy: 'user-superadmin-001',
   },
-  {
-    id: 'visitor-003',
-    visitorName: 'Edward Nygma',
-    mobileNumber: '9876543212',
-    purposeOfVisit: 'Maintenance',
-    flatNumber: 'B-202',
-    entryTimestamp: new Date(new Date().setHours(new Date().getHours() - 5)), // 5 hours ago
-    vehicleNumber: 'MH2CD5678',
-    enteredBy: 'user-superadmin-001',
-  },
+  // Add other mock entries if needed for a seeding script
 ];

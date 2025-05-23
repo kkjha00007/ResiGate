@@ -1,127 +1,192 @@
+
 'use client';
 
-import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react'; // Added useCallback
-import type { User, UserRole } from './types';
-import { getUsers, setUsers, addUser, updateUser, getLoggedInUser, setLoggedInUser, initializeStores } from './store';
+import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
+import type { User, UserProfile, VisitorEntry } from './types'; // UserProfile for client-side
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 import { USER_ROLES } from './constants';
+// import { initializeCosmosDB } from './cosmosdb'; // Initialization is handled in cosmosdb.ts
 
 interface AuthContextType {
-  user: User | null;
+  user: UserProfile | null;
   isLoading: boolean;
   login: (email: string, password: string) => Promise<boolean>;
   logout: () => void;
-  register: (userData: Omit<User, 'id' | 'isApproved' | 'role' | 'registrationDate'>) => Promise<boolean>;
+  register: (userData: Omit<User, 'id' | 'isApproved' | 'role' | 'registrationDate'> & {password: string}) => Promise<boolean>;
   approveResident: (userId: string) => Promise<boolean>;
   isAdmin: () => boolean;
   isResident: () => boolean;
-  allUsers: User[]; // For admin approvals
-  fetchUsers: () => void; // To refresh users list
+  allUsers: UserProfile[];
+  fetchAllUsers: () => Promise<void>; // Renamed from fetchUsers for clarity
+  visitorEntries: VisitorEntry[];
+  fetchVisitorEntries: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
-  const [user, setUser] = useState<User | null>(null);
-  const [allUsers, setAllUsersState] = useState<User[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [user, setUser] = useState<UserProfile | null>(null);
+  const [allUsers, setAllUsersState] = useState<UserProfile[]>([]);
+  const [visitorEntries, setVisitorEntriesState] = useState<VisitorEntry[]>([]);
+  const [isLoading, setIsLoading] = useState(true); // Initial loading state
   const router = useRouter();
   const { toast } = useToast();
 
+  // Effect for initial setup (e.g. checking for a stored session, not implemented here)
   useEffect(() => {
-    initializeStores(); // Initialize localStorage with mock data if needed
-    const storedUser = getLoggedInUser();
-    if (storedUser) {
-      setUser(storedUser);
-    }
-    // Initial fetchUsers call might be problematic if fetchUsers itself is not stable yet
-    // and is a dependency of this useEffect. However, it's empty dependency array now.
-    // Consider if fetchUsers needs to be part of the initial useEffect logic or called differently.
-    // For now, it's fine as it's called once.
-    const localFetchUsers = () => setAllUsersState(getUsers());
-    localFetchUsers(); 
-    setIsLoading(false);
-  }, []); // Empty dependency means this runs once on mount
+    // initializeCosmosDB(); // CosmosDB initialization is now self-contained in its module
+    // For now, we assume no session persistence beyond client state.
+    // A real app would check for a session token here.
+    setIsLoading(false); // Done with initial "session" check
+  }, []);
 
-  // Memoize fetchUsers
-  const fetchUsers = useCallback(() => {
-    setAllUsersState(getUsers());
-  }, []); // fetchUsers now has a stable reference
+
+  const fetchAllUsers = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const response = await fetch('/api/users');
+      if (!response.ok) {
+        throw new Error('Failed to fetch users');
+      }
+      const usersData: UserProfile[] = await response.json();
+      setAllUsersState(usersData);
+    } catch (error) {
+      console.error("Failed to fetch users:", error);
+      toast({ title: 'Error', description: 'Could not load user data.', variant: 'destructive' });
+    } finally {
+      setIsLoading(false);
+    }
+  }, [toast]);
+
+  const fetchVisitorEntries = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const response = await fetch('/api/visitors');
+      if (!response.ok) {
+        throw new Error('Failed to fetch visitor entries');
+      }
+      const entriesData: VisitorEntry[] = await response.json();
+      setVisitorEntriesState(entriesData);
+    } catch (error) {
+      console.error("Failed to fetch visitor entries:", error);
+      toast({ title: 'Error', description: 'Could not load visitor entries.', variant: 'destructive' });
+    } finally {
+      setIsLoading(false);
+    }
+  }, [toast]);
+
 
   const login = async (email: string, password: string): Promise<boolean> => {
     setIsLoading(true);
-    const users = getUsers();
-    const foundUser = users.find(u => u.email === email && u.password === password); // Plain text compare for mock
+    try {
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      });
 
-    if (foundUser) {
-      if (foundUser.role === USER_ROLES.RESIDENT && !foundUser.isApproved) {
-        toast({ title: 'Login Failed', description: 'Your account is pending approval.', variant: 'destructive' });
-        setIsLoading(false);
+      const data = await response.json();
+
+      if (!response.ok) {
+        toast({ title: 'Login Failed', description: data.message || 'Invalid credentials.', variant: 'destructive' });
         return false;
       }
-      setUser(foundUser);
-      setLoggedInUser(foundUser);
-      toast({ title: 'Login Successful', description: `Welcome back, ${foundUser.name}!` });
+      
+      const loggedInUser = data as UserProfile;
+      if (loggedInUser.role === USER_ROLES.RESIDENT && !loggedInUser.isApproved) {
+        toast({ title: 'Login Failed', description: 'Your account is pending approval.', variant: 'destructive' });
+        setUser(null); // Ensure user is not set
+        return false;
+      }
+
+      setUser(loggedInUser);
+      toast({ title: 'Login Successful', description: `Welcome back, ${loggedInUser.name}!` });
       router.push('/dashboard');
-      setIsLoading(false);
       return true;
-    } else {
-      toast({ title: 'Login Failed', description: 'Invalid email or password.', variant: 'destructive' });
-      setIsLoading(false);
+    } catch (error) {
+      toast({ title: 'Login Error', description: 'An unexpected error occurred.', variant: 'destructive' });
       return false;
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const logout = () => {
     setUser(null);
-    setLoggedInUser(null);
+    // In a real app with server-side sessions, call an API to invalidate the session.
     router.push('/login');
     toast({ title: 'Logged Out', description: 'You have been successfully logged out.' });
   };
 
-  const register = async (userData: Omit<User, 'id' | 'isApproved' | 'role' | 'registrationDate' | 'password'> & {password: string, flatNumber: string}): Promise<boolean> => {
-    const users = getUsers();
-    if (users.some(u => u.email === userData.email)) {
-      toast({ title: 'Registration Failed', description: 'Email already exists.', variant: 'destructive' });
+  const register = async (userData: Omit<User, 'id' | 'isApproved' | 'role' | 'registrationDate'> & {password: string}): Promise<boolean> => {
+    setIsLoading(true);
+    try {
+      const response = await fetch('/api/users', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(userData),
+      });
+      const data = await response.json();
+
+      if (!response.ok) {
+        toast({ title: 'Registration Failed', description: data.message || 'Could not create account.', variant: 'destructive' });
+        return false;
+      }
+      toast({ title: 'Registration Successful', description: 'Your account has been created and is pending approval.' });
+      router.push('/login');
+      return true;
+    } catch (error) {
+      toast({ title: 'Registration Error', description: 'An unexpected error occurred.', variant: 'destructive' });
       return false;
+    } finally {
+      setIsLoading(false);
     }
-    const newUser: User = {
-      ...userData,
-      id: `user-resident-${Date.now()}`,
-      role: USER_ROLES.RESIDENT,
-      isApproved: false, // Residents need approval
-      registrationDate: new Date(),
-    };
-    addUser(newUser);
-    fetchUsers(); // refresh user list
-    toast({ title: 'Registration Successful', description: 'Your account has been created and is pending approval.' });
-    router.push('/login');
-    return true;
   };
 
   const approveResident = async (userId: string): Promise<boolean> => {
-    // Ensure allUsers is used from state if it's meant to be reactive from context,
-    // or fetch fresh if local storage is the source of truth for this operation.
-    // Current `allUsers` in scope is the state variable.
-    const userToApprove = allUsers.find(u => u.id === userId); 
-    if (userToApprove && userToApprove.role === USER_ROLES.RESIDENT) {
-      const updatedRes = { ...userToApprove, isApproved: true };
-      updateUser(updatedRes);
-      fetchUsers(); // refresh user list in state
-      toast({ title: 'Resident Approved', description: `${userToApprove.name} has been approved.` });
+    setIsLoading(true);
+    try {
+      const response = await fetch(`/api/users/${userId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ isApproved: true }),
+      });
+      const data = await response.json();
+
+      if (!response.ok) {
+        toast({ title: 'Approval Failed', description: data.message || 'Could not approve resident.', variant: 'destructive' });
+        return false;
+      }
+      toast({ title: 'Resident Approved', description: `${data.name} has been approved.` });
+      await fetchAllUsers(); // Refresh the list of users
       return true;
+    } catch (error) {
+      toast({ title: 'Approval Error', description: 'An unexpected error occurred.', variant: 'destructive' });
+      return false;
+    } finally {
+      setIsLoading(false);
     }
-    toast({ title: 'Approval Failed', description: 'User not found or cannot be approved.', variant: 'destructive' });
-    return false;
   };
   
-  // Memoize isAdmin and isResident
   const isAdmin = useCallback(() => user?.role === USER_ROLES.SUPERADMIN, [user]);
   const isResident = useCallback(() => user?.role === USER_ROLES.RESIDENT, [user]);
 
   return (
-    <AuthContext.Provider value={{ user, isLoading, login, logout, register, approveResident, isAdmin, isResident, allUsers, fetchUsers }}>
+    <AuthContext.Provider value={{ 
+        user, 
+        isLoading, 
+        login, 
+        logout, 
+        register, 
+        approveResident, 
+        isAdmin, 
+        isResident, 
+        allUsers, 
+        fetchAllUsers,
+        visitorEntries,
+        fetchVisitorEntries
+    }}>
       {children}
     </AuthContext.Provider>
   );

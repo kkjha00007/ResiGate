@@ -24,29 +24,32 @@ import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { CalendarIcon, User, Phone, Home, Car, Camera, Send, FilePlus, ListChecks } from 'lucide-react';
 import { useAuth } from '@/lib/auth-provider';
-import { addVisitorEntry } from '@/lib/store';
-import type { VisitorEntry } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import React, { useState } from 'react';
-import { VISIT_PURPOSES } from '@/lib/constants'; // Import shared purposes
+import { VISIT_PURPOSES } from '@/lib/constants';
+import type { VisitorEntry } from '@/lib/types';
+
 
 const visitorEntrySchema = z.object({
   visitorName: z.string().min(2, { message: 'Visitor name must be at least 2 characters.' }),
   mobileNumber: z.string().regex(/^\d{10}$/, { message: 'Mobile number must be 10 digits.' }),
   flatNumber: z.string().min(1, { message: 'Flat number is required.' }),
   purposeOfVisit: z.enum(VISIT_PURPOSES, { required_error: 'Purpose of visit is required.' }),
-  entryTimestamp: z.date({ required_error: 'Entry date and time are required.' }),
+  // entryTimestamp is now set server-side, but we might keep it for display or pre-fill
+  // For this form, we will let backend set entryTimestamp.
+  // entryTimestamp: z.date({ required_error: 'Entry date and time are required.' }),
   vehicleNumber: z.string().optional(),
-  visitorPhoto: z.instanceof(FileList).optional(), // For file upload
+  visitorPhoto: z.instanceof(FileList).optional(), 
   notes: z.string().optional(),
 });
 
 type VisitorEntryFormValues = z.infer<typeof visitorEntrySchema>;
 
 export function VisitorEntryForm() {
-  const { user } = useAuth();
+  const { user, fetchVisitorEntries } = useAuth(); // fetchVisitorEntries to refresh log
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [entryDateTime, setEntryDateTime] = useState(new Date()); // For local display and if needed for submission
 
   const form = useForm<VisitorEntryFormValues>({
     resolver: zodResolver(visitorEntrySchema),
@@ -54,8 +57,7 @@ export function VisitorEntryForm() {
       visitorName: '',
       mobileNumber: '',
       flatNumber: '',
-      // purposeOfVisit: '', // Default will be handled by Select placeholder
-      entryTimestamp: new Date(),
+      purposeOfVisit: undefined,
       vehicleNumber: '',
       notes: '',
     },
@@ -70,39 +72,54 @@ export function VisitorEntryForm() {
 
     let visitorPhotoUrl: string | undefined = undefined;
     if (data.visitorPhoto && data.visitorPhoto.length > 0) {
-      const file = data.visitorPhoto[0];
-      // In a real app, upload to a service and get URL.
-      // For now, create a blob URL or placeholder.
-      // visitorPhotoUrl = URL.createObjectURL(file); // This creates a temporary local URL
+      // const file = data.visitorPhoto[0];
+      // In a real app, upload to a service (e.g., Azure Blob Storage) and get URL.
       visitorPhotoUrl = `https://placehold.co/400x400.png?text=${encodeURIComponent(data.visitorName.substring(0,2).toUpperCase())}`;
-      toast({ title: 'Photo "Handling"', description: 'Photo handling is mocked. Using placeholder.' });
+      toast({ title: 'Photo "Handling"', description: 'Photo upload is mocked. Using placeholder.' });
     }
 
-
-    const newEntry: VisitorEntry = {
-      id: `visitor-${Date.now()}`,
+    // entryTimestamp is now primarily set by the backend.
+    // We are constructing the payload without it, backend will add it.
+    const submissionData: Omit<VisitorEntry, 'id' | 'entryTimestamp' | 'enteredBy'> & { visitorPhotoUrl?: string } = {
       ...data,
       visitorPhotoUrl,
-      enteredBy: user.id,
-      entryTimestamp: data.entryTimestamp,
+      // enteredBy will be set by backend based on authenticated user if needed
     };
+    // Remove visitorPhoto FileList from submissionData if it exists
+    delete (submissionData as any).visitorPhoto;
 
-    delete (newEntry as any).visitorPhoto;
 
+    try {
+      const response = await fetch('/api/visitors', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(submissionData),
+      });
 
-    addVisitorEntry(newEntry);
-    toast({ title: 'Visitor Entry Added', description: `${data.visitorName} has been logged.` });
-    form.reset({ 
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to add visitor entry');
+      }
+
+      toast({ title: 'Visitor Entry Added', description: `${data.visitorName} has been logged.` });
+      form.reset({ 
         visitorName: '',
         mobileNumber: '',
         flatNumber: '',
-        purposeOfVisit: undefined, // Reset select to placeholder
-        entryTimestamp: new Date(),
+        purposeOfVisit: undefined,
         vehicleNumber: '',
         notes: '',
         visitorPhoto: undefined,
-     });
-    setIsSubmitting(false);
+      });
+      setEntryDateTime(new Date()); // Reset local date time picker
+      await fetchVisitorEntries(); // Refresh the visitor log
+    } catch (error) {
+      console.error("Failed to submit visitor entry:", error);
+      const message = error instanceof Error ? error.message : 'An unexpected error occurred.';
+      toast({ title: 'Submission Error', description: message, variant: 'destructive' });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -112,7 +129,7 @@ export function VisitorEntryForm() {
             <FilePlus className="h-8 w-8 text-primary" />
             <CardTitle className="text-2xl font-semibold text-primary">New Visitor Entry</CardTitle>
         </div>
-        <CardDescription>Fill in the details of the visitor. Fields marked with * are required.</CardDescription>
+        <CardDescription>Fill in the details of the visitor. Fields marked with * are required. Entry time is recorded automatically.</CardDescription>
       </CardHeader>
       <CardContent>
         <Form {...form}>
@@ -169,67 +186,63 @@ export function VisitorEntryForm() {
                   </FormItem>
                 )}
               />
-              <FormField
-                control={form.control}
-                name="entryTimestamp"
-                render={({ field }) => (
-                  <FormItem className="flex flex-col">
-                    <FormLabel>Entry Date & Time *</FormLabel>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <FormControl>
-                          <Button
-                            variant={"outline"}
-                            className={cn(
-                              "w-full pl-3 text-left font-normal",
-                              !field.value && "text-muted-foreground"
-                            )}
-                          >
-                            {field.value ? (
-                              format(field.value, "PPP HH:mm")
-                            ) : (
-                              <span>Pick a date and time</span>
-                            )}
-                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                          </Button>
-                        </FormControl>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar
-                          mode="single"
-                          selected={field.value}
-                          onSelect={(date) => {
-                            if (date) {
-                              const currentTime = field.value || new Date();
-                              date.setHours(currentTime.getHours());
-                              date.setMinutes(currentTime.getMinutes());
-                              field.onChange(date);
-                            }
+              {/* Entry Date & Time Picker - For display or if submitting a specific past time, now mostly for show */}
+              <FormItem className="flex flex-col">
+                <FormLabel>Entry Date & Time (Recorded Automatically)</FormLabel>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <FormControl>
+                      <Button
+                        variant={"outline"}
+                        disabled // Disabled as it's auto-set
+                        className={cn(
+                          "w-full pl-3 text-left font-normal",
+                          !entryDateTime && "text-muted-foreground"
+                        )}
+                      >
+                        {entryDateTime ? (
+                          format(entryDateTime, "PPP HH:mm")
+                        ) : (
+                          <span>Current date and time</span>
+                        )}
+                        <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                      </Button>
+                    </FormControl>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={entryDateTime}
+                      onSelect={(date) => {
+                        if (date) {
+                          const currentTime = entryDateTime || new Date();
+                          date.setHours(currentTime.getHours());
+                          date.setMinutes(currentTime.getMinutes());
+                          setEntryDateTime(date);
+                        }
+                      }}
+                      disabled // Keep disabled if backend sets it
+                      initialFocus
+                    />
+                     <div className="p-2 border-t border-border">
+                        <Input 
+                          type="time"
+                          className="mt-1"
+                          disabled // Keep disabled if backend sets it
+                          value={entryDateTime ? format(entryDateTime, "HH:mm") : format(new Date(), "HH:mm")}
+                          onChange={(e) => {
+                              const [hours, minutes] = e.target.value.split(':').map(Number);
+                              const newDate = entryDateTime ? new Date(entryDateTime) : new Date();
+                              newDate.setHours(hours);
+                              newDate.setMinutes(minutes);
+                              setEntryDateTime(newDate);
                           }}
-                          disabled={(date) => date > new Date() || date < new Date("1900-01-01")}
-                          initialFocus
-                        />
-                        <div className="p-2 border-t border-border">
-                          <label className="text-sm font-medium">Time:</label>
-                          <Input 
-                            type="time"
-                            className="mt-1"
-                            defaultValue={field.value ? format(field.value, "HH:mm") : format(new Date(), "HH:mm")}
-                            onChange={(e) => {
-                               const [hours, minutes] = e.target.value.split(':').map(Number);
-                               const newDate = field.value ? new Date(field.value) : new Date();
-                               newDate.setHours(hours);
-                               newDate.setMinutes(minutes);
-                               field.onChange(newDate);
-                            }}
-                           />
-                        </div>
-                      </PopoverContent>
-                    </Popover>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+                          />
+                      </div>
+                  </PopoverContent>
+                </Popover>
+                <FormDescription>Entry time is set automatically by the server upon submission.</FormDescription>
+              </FormItem>
             </div>
             
             <FormField
@@ -238,7 +251,7 @@ export function VisitorEntryForm() {
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Purpose of Visit *</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <Select onValueChange={field.onChange} value={field.value} defaultValue={field.value}>
                       <FormControl>
                         <div className="relative">
                           <ListChecks className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -283,7 +296,7 @@ export function VisitorEntryForm() {
               <FormField
                 control={form.control}
                 name="visitorPhoto"
-                render={({ field: { onChange, value, ...rest } }) => ( // Destructure field to handle file input
+                render={({ field: { onChange, value, ...rest } }) => (
                   <FormItem>
                     <FormLabel>Visitor Photo (Optional)</FormLabel>
                     <FormControl>
@@ -292,7 +305,7 @@ export function VisitorEntryForm() {
                         <Input 
                           type="file" 
                           accept="image/*" 
-                          onChange={(e) => onChange(e.target.files)} // Pass FileList to react-hook-form
+                          onChange={(e) => onChange(e.target.files)}
                           className="pl-10 file:text-sm file:font-medium file:bg-primary/10 file:text-primary file:border-0 file:rounded-md file:py-1 file:px-2 hover:file:bg-primary/20"
                           {...rest}
                         />

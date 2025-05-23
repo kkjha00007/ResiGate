@@ -3,17 +3,16 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
 import type { VisitorEntry } from '@/lib/types';
-import { getVisitorEntries } from '@/lib/store';
-import { useAuth } from '@/lib/auth-provider'; // Added useAuth
-import { USER_ROLES } from '@/lib/constants'; // Added USER_ROLES
+import { useAuth } from '@/lib/auth-provider';
+import { USER_ROLES } from '@/lib/constants';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
-import { format, isValid } from 'date-fns';
-import { CalendarIcon, Search, ClipboardList } from 'lucide-react'; // Changed icon for title
+import { format, isValid, parseISO } from 'date-fns'; // Added parseISO
+import { CalendarIcon, Search, ClipboardList } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import Image from 'next/image';
 import {
@@ -29,35 +28,35 @@ import {
 const ITEMS_PER_PAGE = 10;
 
 export function RecentEntriesTable() {
-  const [allEntries, setAllEntries] = useState<VisitorEntry[]>([]);
+  // const [allEntries, setAllEntries] = useState<VisitorEntry[]>([]); // From local state before
+  const { visitorEntries, fetchVisitorEntries, user, isAdmin, isLoading } = useAuth(); // Get entries from AuthContext
   const [searchTerm, setSearchTerm] = useState('');
   const [filterFlat, setFilterFlat] = useState('');
   const [filterDate, setFilterDate] = useState<Date | undefined>(undefined);
   const [currentPage, setCurrentPage] = useState(1);
-  const { user, isAdmin } = useAuth(); // Get user and isAdmin function
 
   useEffect(() => {
-    setAllEntries(getVisitorEntries());
-  }, []);
+    fetchVisitorEntries(); // Fetch entries when component mounts
+  }, [fetchVisitorEntries]);
   
   const uniqueFlatNumbers = useMemo(() => {
-    const flats = new Set(allEntries.map(entry => entry.flatNumber));
+    const flats = new Set(visitorEntries.map(entry => entry.flatNumber));
     return Array.from(flats).sort();
-  }, [allEntries]);
+  }, [visitorEntries]);
 
   const filteredEntries = useMemo(() => {
-    return allEntries
+    return visitorEntries
       .filter(entry => {
         const searchMatch =
           entry.visitorName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          entry.mobileNumber.includes(searchTerm) || // Search still works on mobile for admin
+          (isAdmin() && entry.mobileNumber.includes(searchTerm)) || // Search mobile only if admin
           (entry.vehicleNumber && entry.vehicleNumber.toLowerCase().includes(searchTerm.toLowerCase()));
         const flatMatch = filterFlat ? entry.flatNumber === filterFlat : true;
-        const dateMatch = filterDate ? format(new Date(entry.entryTimestamp), 'yyyy-MM-dd') === format(filterDate, 'yyyy-MM-dd') : true;
+        const dateMatch = filterDate ? format(parseISO(entry.entryTimestamp), 'yyyy-MM-dd') === format(filterDate, 'yyyy-MM-dd') : true;
         return searchMatch && flatMatch && dateMatch;
       })
       .sort((a, b) => new Date(b.entryTimestamp).getTime() - new Date(a.entryTimestamp).getTime());
-  }, [allEntries, searchTerm, filterFlat, filterDate]);
+  }, [visitorEntries, searchTerm, filterFlat, filterDate, isAdmin]);
 
   const paginatedEntries = useMemo(() => {
     const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
@@ -73,6 +72,7 @@ export function RecentEntriesTable() {
   const renderPaginationItems = () => {
     const items = [];
     const maxVisiblePages = 5;
+    if (totalPages <= 1) return null; // No pagination if only one page or less
     
     if (totalPages <= maxVisiblePages + 2) {
       for (let i = 1; i <= totalPages; i++) {
@@ -130,11 +130,19 @@ export function RecentEntriesTable() {
   };
 
   const maskMobileNumber = (mobile: string) => {
-    if (mobile.length === 10) {
-      return `******${mobile.substring(6)}`;
+    if (mobile && mobile.length >= 10) { // check mobile is not undefined
+      return `******${mobile.substring(mobile.length - 4)}`;
     }
     return '••••••••••';
   };
+  
+  if (isLoading && !visitorEntries.length) {
+     return (
+      <div className="flex h-[calc(100vh-10rem)] items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
 
   return (
     <Card className="shadow-lg">
@@ -143,14 +151,14 @@ export function RecentEntriesTable() {
             <ClipboardList className="h-7 w-7 text-primary" />
             <CardTitle className="text-2xl font-semibold text-primary">Visitor Entry Log</CardTitle>
         </div>
-        <CardDescription>Browse and manage recent visitor entries. Mobile numbers are visible only to administrators.</CardDescription>
+        <CardDescription>Browse and manage recent visitor entries. Mobile numbers are fully visible only to administrators.</CardDescription>
       </CardHeader>
       <CardContent>
         <div className="mb-6 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 items-end">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
             <Input
-              placeholder="Search by name, mobile, vehicle..."
+              placeholder={isAdmin() ? "Search by name, mobile, vehicle..." : "Search by name, vehicle..."}
               value={searchTerm}
               onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
               className="pl-10 w-full"
@@ -199,6 +207,7 @@ export function RecentEntriesTable() {
                 <TableHead>Entry Time</TableHead>
                 <TableHead>Vehicle No.</TableHead>
                 <TableHead className="text-center">Photo</TableHead>
+                 <TableHead>Token</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -209,7 +218,7 @@ export function RecentEntriesTable() {
                     <TableCell>{isAdmin() ? entry.mobileNumber : maskMobileNumber(entry.mobileNumber)}</TableCell>
                     <TableCell>{entry.flatNumber}</TableCell>
                     <TableCell>{entry.purposeOfVisit}</TableCell>
-                    <TableCell>{isValid(new Date(entry.entryTimestamp)) ? format(new Date(entry.entryTimestamp), "PPpp") : 'Invalid Date'}</TableCell>
+                    <TableCell>{isValid(parseISO(entry.entryTimestamp)) ? format(parseISO(entry.entryTimestamp), "PPpp") : 'Invalid Date'}</TableCell>
                     <TableCell>{entry.vehicleNumber || 'N/A'}</TableCell>
                     <TableCell className="text-center">
                       {entry.visitorPhotoUrl ? (
@@ -225,12 +234,13 @@ export function RecentEntriesTable() {
                         'N/A'
                       )}
                     </TableCell>
+                    <TableCell>{entry.tokenCode || 'N/A'}</TableCell>
                   </TableRow>
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={7} className="h-24 text-center text-muted-foreground">
-                    No visitor entries found.
+                  <TableCell colSpan={8} className="h-24 text-center text-muted-foreground">
+                    {isLoading ? 'Loading visitor entries...' : 'No visitor entries found.'}
                   </TableCell>
                 </TableRow>
               )}
