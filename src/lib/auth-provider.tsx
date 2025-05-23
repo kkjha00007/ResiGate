@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 import { USER_ROLES, PUBLIC_ENTRY_SOURCE } from './constants'; 
 import { GATE_PASS_STATUSES } from './types';
+import { format, parseISO } from 'date-fns';
 
 interface AuthContextType {
   user: UserProfile | null;
@@ -44,6 +45,10 @@ interface AuthContextType {
   upcomingMeetings: Meeting[];
   fetchUpcomingMeetings: () => Promise<void>;
   createMeeting: (meetingData: Omit<Meeting, 'id' | 'postedByUserId' | 'postedByName' | 'createdAt' | 'isActive' | 'monthYear' | 'updatedAt'>) => Promise<Meeting | null>;
+  allMeetingsForAdmin: Meeting[];
+  fetchAllMeetingsForAdmin: () => Promise<void>;
+  updateMeeting: (meetingId: string, currentMonthYear: string, updates: Partial<Omit<Meeting, 'id' | 'postedByUserId' | 'postedByName' | 'createdAt' | 'monthYear' | 'updatedAt'>>) => Promise<Meeting | null>;
+  deleteMeeting: (meetingId: string, currentMonthYear: string) => Promise<boolean>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -57,6 +62,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [activeNotices, setActiveNoticesState] = useState<Notice[]>([]);
   const [allNoticesForAdmin, setAllNoticesForAdminState] = useState<Notice[]>([]);
   const [upcomingMeetings, setUpcomingMeetingsState] = useState<Meeting[]>([]);
+  const [allMeetingsForAdmin, setAllMeetingsForAdminState] = useState<Meeting[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
   const { toast } = useToast();
@@ -90,7 +96,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   useEffect(() => {
-    setIsLoading(false);
+    const checkUserSession = () => {
+      // Basic session check could be implemented here if using tokens stored in localStorage
+      // For now, simply ensures data is fetched if user object exists (e.g., after login)
+      // Or clear user if session is invalid
+      // For this example, we'll rely on the user object being set on login
+      // and cleared on logout.
+      setIsLoading(false); 
+    };
+    checkUserSession();
     _fetchActiveNotices();
     _fetchUpcomingMeetings();
   }, [_fetchActiveNotices, _fetchUpcomingMeetings]);
@@ -205,6 +219,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
       
       if (user?.role === USER_ROLES.GUARD) {
+          // Guard might not need to re-fetch their own passes list, but global entries list
       } else {
           await fetchGatePasses(); 
       }
@@ -282,6 +297,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setActiveNoticesState([]);
     setAllNoticesForAdminState([]);
     setUpcomingMeetingsState([]);
+    setAllMeetingsForAdminState([]);
     router.push('/');
     toast({ title: 'Logged Out', description: 'You have been successfully logged out.' });
   };
@@ -301,7 +317,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         return false;
       }
       toast({ title: 'Registration Successful', description: 'Your account has been created and is pending approval.' });
-      router.push('/'); // Redirect to home/login page after registration
+      router.push('/'); 
       return true;
     } catch (error) {
       toast({ title: 'Registration Error', description: (error as Error).message || 'An unexpected error occurred during registration.', variant: 'destructive' });
@@ -492,7 +508,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       console.error("Failed to fetch all notices for admin:", error);
       toast({ title: 'Error Loading Admin Notices', description: (error as Error).message, variant: 'destructive' });
     }
-  }, [toast, user]); 
+  }, [toast, user]); // isAdmin() depends on user, so include user
 
   const updateNotice = async (noticeId: string, currentMonthYear: string, updates: Partial<Omit<Notice, 'id' | 'postedByUserId' | 'postedByName' | 'createdAt' | 'monthYear' | 'updatedAt'>>): Promise<Notice | null> => {
     if (!isAdmin()) {
@@ -569,11 +585,93 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         }
         toast({ title: 'Meeting Created', description: `Meeting "${data.title}" has been scheduled.` });
         await fetchUpcomingMeetings();
-        // Later, if there's an admin table for meetings: await fetchAllMeetingsForAdmin();
+        await fetchAllMeetingsForAdmin();
         return data as Meeting;
     } catch (error) {
         toast({ title: 'Meeting Creation Error', description: (error as Error).message || 'An unexpected error occurred.', variant: 'destructive' });
         return null;
+    }
+  };
+
+  const fetchAllMeetingsForAdmin = useCallback(async () => {
+    if (!isAdmin()) return;
+    try {
+      const response = await fetch('/api/meetings/admin/all');
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ message: 'Failed to fetch meetings for admin.' }));
+        throw new Error(errorData.message || 'Server error.');
+      }
+      const meetingsData: Meeting[] = await response.json();
+      setAllMeetingsForAdminState(meetingsData);
+    } catch (error) {
+      console.error("Failed to fetch all meetings for admin:", error);
+      toast({ title: 'Error Loading Admin Meetings', description: (error as Error).message, variant: 'destructive' });
+    }
+  }, [toast, user]); // isAdmin() depends on user
+
+  const updateMeeting = async (meetingId: string, currentMonthYear: string, updates: Partial<Omit<Meeting, 'id' | 'postedByUserId' | 'postedByName' | 'createdAt' | 'monthYear' | 'updatedAt'>>): Promise<Meeting | null> => {
+    if (!isAdmin()) {
+      toast({ title: 'Unauthorized', description: 'Only super admins can update meetings.', variant: 'destructive' });
+      return null;
+    }
+    
+    let newMonthYear = currentMonthYear;
+    if (updates.dateTime) {
+        try {
+            const newMeetingDateTime = parseISO(updates.dateTime);
+            if (isNaN(newMeetingDateTime.getTime())) {
+                 toast({ title: 'Invalid Date', description: 'New meeting date/time is invalid.', variant: 'destructive' });
+                return null;
+            }
+            newMonthYear = format(newMeetingDateTime, 'yyyy-MM');
+        } catch (e) {
+            toast({ title: 'Invalid Date Format', description: 'Error parsing new meeting date/time.', variant: 'destructive' });
+            return null;
+        }
+    }
+
+    try {
+      const response = await fetch(`/api/meetings/${meetingId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...updates, monthYear: currentMonthYear }), // Send original monthYear for lookup
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        toast({ title: 'Meeting Update Failed', description: data.message || 'Could not update meeting.', variant: 'destructive' });
+        return null;
+      }
+      toast({ title: 'Meeting Updated', description: `Meeting "${data.title}" has been updated.` });
+      await fetchUpcomingMeetings();
+      await fetchAllMeetingsForAdmin();
+      return data as Meeting;
+    } catch (error) {
+      toast({ title: 'Meeting Update Error', description: (error as Error).message || 'An unexpected error occurred.', variant: 'destructive' });
+      return null;
+    }
+  };
+
+  const deleteMeeting = async (meetingId: string, currentMonthYear: string): Promise<boolean> => {
+    if (!isAdmin()) {
+      toast({ title: 'Unauthorized', description: 'Only super admins can delete meetings.', variant: 'destructive' });
+      return false;
+    }
+    try {
+      const response = await fetch(`/api/meetings/${meetingId}?monthYear=${encodeURIComponent(currentMonthYear)}`, {
+        method: 'DELETE',
+      });
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({ message: 'Failed to delete meeting.' }));
+        toast({ title: 'Meeting Deletion Failed', description: data.message || 'Could not delete meeting.', variant: 'destructive' });
+        return false;
+      }
+      toast({ title: 'Meeting Deleted', description: 'The meeting has been successfully deleted.' });
+      await fetchUpcomingMeetings();
+      await fetchAllMeetingsForAdmin();
+      return true;
+    } catch (error) {
+      toast({ title: 'Meeting Deletion Error', description: (error as Error).message || 'An unexpected error occurred.', variant: 'destructive' });
+      return false;
     }
   };
 
@@ -618,6 +716,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         upcomingMeetings,
         fetchUpcomingMeetings,
         createMeeting,
+        allMeetingsForAdmin,
+        fetchAllMeetingsForAdmin,
+        updateMeeting,
+        deleteMeeting,
     }}>
       {children}
     </AuthContext.Provider>

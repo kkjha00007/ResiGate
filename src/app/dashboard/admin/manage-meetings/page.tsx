@@ -5,8 +5,7 @@ import { useAuth } from '@/lib/auth-provider';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import { Separator } from '@/components/ui/separator';
-// Import a MeetingsTable component if you create one for managing meetings
-// import { MeetingsTable } from '@/components/dashboard/admin/MeetingsTable';
+import { MeetingsTable } from '@/components/dashboard/admin/MeetingsTable';
 
 export default function ManageMeetingsPage() {
   const { user, isLoading, isAdmin } = useAuth();
@@ -29,10 +28,8 @@ export default function ManageMeetingsPage() {
   return (
     <div className="space-y-8">
       <CreateMeetingForm />
-      {/* 
       <Separator />
-      <MeetingsTable /> // Placeholder for when you implement meeting management table
-      */}
+      <MeetingsTable />
     </div>
   );
 }

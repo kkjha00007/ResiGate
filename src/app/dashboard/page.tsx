@@ -3,19 +3,21 @@
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Megaphone, CalendarClock, Phone, Shield, Flame, Ambulance, UserCheck, Newspaper } from "lucide-react";
+import { Megaphone, CalendarClock, Phone, Shield, Flame, Ambulance, UserCheck, Newspaper, UsersRound } from "lucide-react";
 import { useAuth } from "@/lib/auth-provider";
 import React, { useEffect } from "react";
 import { format, parseISO } from "date-fns";
 
 export default function DashboardPage() {
-  const { activeNotices, fetchActiveNotices, isLoading: authLoading } = useAuth();
+  const { activeNotices, upcomingMeetings, fetchActiveNotices, fetchUpcomingMeetings, isLoading: authLoading } = useAuth();
 
   useEffect(() => {
     fetchActiveNotices();
-  }, [fetchActiveNotices]);
+    fetchUpcomingMeetings();
+  }, [fetchActiveNotices, fetchUpcomingMeetings]);
 
-  const displayedNotices = activeNotices.slice(0, 3); // Show top 3 notices
+  const displayedNotices = activeNotices.slice(0, 3);
+  const displayedMeetings = upcomingMeetings.slice(0, 3);
 
   return (
     <div className="space-y-6">
@@ -25,7 +27,7 @@ export default function DashboardPage() {
             <div className="flex items-start justify-between">
               <div>
                 <CardTitle className="flex items-center gap-2 text-xl font-semibold text-primary">
-                  <Newspaper className="h-6 w-6" /> {/* Changed icon to Newspaper */}
+                  <Newspaper className="h-6 w-6" />
                   Important Announcements
                 </CardTitle>
                 <CardDescription>Stay updated with the latest society news.</CardDescription>
@@ -55,7 +57,6 @@ export default function DashboardPage() {
             ))}
             {activeNotices.length > 3 && (
                 <Button variant="link" className="p-0 h-auto text-primary">View All Announcements</Button> 
-                // TODO: Link to a full notices page for users later
             )}
              {activeNotices.length === 0 && !authLoading && null}
           </CardContent>
@@ -66,7 +67,7 @@ export default function DashboardPage() {
              <div className="flex items-start justify-between">
                 <div>
                     <CardTitle className="flex items-center gap-2 text-xl font-semibold text-primary">
-                    <CalendarClock className="h-6 w-6" />
+                    <UsersRound className="h-6 w-6" /> {/* Changed icon */}
                     Upcoming Meetings
                     </CardTitle>
                     <CardDescription>Society meetings and events schedule.</CardDescription>
@@ -74,19 +75,32 @@ export default function DashboardPage() {
             </div>
           </CardHeader>
           <CardContent className="space-y-3">
-            <div className="p-4 bg-secondary/50 rounded-md border border-secondary">
-              <h4 className="font-semibold text-foreground mb-1">Committee Meeting - 10th Dec, 7 PM</h4>
-              <p className="text-sm text-muted-foreground">
-                Agenda: Security review and budget planning. Venue: Community Hall.
-              </p>
-            </div>
-             <div className="p-4 bg-secondary/50 rounded-md border border-secondary">
-              <h4 className="font-semibold text-foreground mb-1">Festival Celebration Planning - 18th Dec, 6 PM</h4>
-              <p className="text-sm text-muted-foreground">
-                Volunteers meet to discuss upcoming festival arrangements.
-              </p>
-            </div>
-            <Button variant="link" className="p-0 h-auto text-primary">View Full Calendar</Button>
+            {authLoading && displayedMeetings.length === 0 && (
+                <div className="text-center p-4">
+                    <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary mx-auto mb-2"></div>
+                    <p className="text-sm text-muted-foreground">Loading upcoming meetings...</p>
+                </div>
+            )}
+            {!authLoading && displayedMeetings.length === 0 && (
+                <div className="p-4 bg-secondary/50 rounded-md border border-secondary text-center">
+                    <p className="text-sm text-muted-foreground">No upcoming meetings scheduled.</p>
+                </div>
+            )}
+            {displayedMeetings.map(meeting => (
+              <div key={meeting.id} className="p-4 bg-secondary/50 rounded-md border border-secondary">
+                <h4 className="font-semibold text-foreground mb-1">{meeting.title}</h4>
+                <p className="text-xs text-muted-foreground mb-1.5">
+                  {format(parseISO(meeting.dateTime), 'PPpp')}
+                </p>
+                <p className="text-sm text-muted-foreground line-clamp-2">
+                  {meeting.locationOrLink} - {meeting.description}
+                </p>
+              </div>
+            ))}
+            {upcomingMeetings.length > 3 && (
+                <Button variant="link" className="p-0 h-auto text-primary">View Full Calendar</Button>
+            )}
+            {upcomingMeetings.length === 0 && !authLoading && null}
           </CardContent>
         </Card>
 
