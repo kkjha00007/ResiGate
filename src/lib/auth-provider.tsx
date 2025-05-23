@@ -14,8 +14,9 @@ interface AuthContextType {
   logout: () => void;
   register: (userData: Omit<User, 'id' | 'isApproved' | 'registrationDate' | 'password'> & {password: string, role: Exclude<UserRole, "superadmin">}) => Promise<boolean>;
   approveResident: (userId: string) => Promise<boolean>;
+  rejectUser: (userId: string) => Promise<boolean>; // New function
   isAdmin: () => boolean;
-  isOwnerOrRenter: () => boolean; // Replaced isResident
+  isOwnerOrRenter: () => boolean;
   isGuard: () => boolean;
   allUsers: UserProfile[];
   fetchAllUsers: () => Promise<void>;
@@ -36,16 +37,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [allUsers, setAllUsersState] = useState<UserProfile[]>([]);
   const [visitorEntries, setVisitorEntriesState] = useState<VisitorEntry[]>([]);
   const [gatePasses, setGatePassesState] = useState<GatePass[]>([]);
-  const [isLoading, setIsLoading] = useState(true); 
+  const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
   const { toast } = useToast();
 
   useEffect(() => {
-    setIsLoading(false); 
+    setIsLoading(false);
   }, []);
 
 
   const fetchAllUsers = useCallback(async () => {
+    // setIsLoading(true); // Consider if global loading is needed here
     try {
       const response = await fetch('/api/users');
       if (!response.ok) {
@@ -57,6 +59,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     } catch (error) {
       console.error("Failed to fetch users:", error);
       toast({ title: 'Error Loading Users', description: (error as Error).message, variant: 'destructive' });
+    } finally {
+      // setIsLoading(false);
     }
   }, [toast]);
 
@@ -113,7 +117,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             return null;
         }
         toast({ title: 'Gate Pass Created', description: `Pass for ${data.visitorName} created. Token: ${data.tokenCode}` });
-        await fetchGatePasses(); 
+        await fetchGatePasses();
         return data as GatePass;
     } catch (error) {
         toast({ title: 'Gate Pass Creation Error', description: (error as Error).message || 'An unexpected error occurred.', variant: 'destructive' });
@@ -132,7 +136,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             return false;
         }
         toast({ title: 'Gate Pass Cancelled', description: `Pass ID ${passId} has been cancelled.` });
-        await fetchGatePasses(); 
+        await fetchGatePasses();
         return true;
     } catch (error) {
         toast({ title: 'Gate Pass Cancellation Error', description: (error as Error).message || 'An unexpected error occurred.', variant: 'destructive' });
@@ -153,8 +157,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         return null;
       }
       toast({ title: 'Gate Pass Marked as Used', description: `Pass for ${data.updatedPass.visitorName} processed.` });
-      await fetchGatePasses(); 
-      await fetchVisitorEntries(); 
+      await fetchGatePasses();
+      await fetchVisitorEntries();
       return data;
     } catch (error) {
       toast({ title: 'Gate Pass Update Error', description: (error as Error).message || 'An unexpected error occurred.', variant: 'destructive' });
@@ -197,11 +201,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         toast({ title: 'Login Failed', description: data.message || 'Invalid credentials.', variant: 'destructive' });
         return false;
       }
-      
+
       const loggedInUser = data as UserProfile;
       if ((loggedInUser.role === USER_ROLES.OWNER || loggedInUser.role === USER_ROLES.RENTER || loggedInUser.role === USER_ROLES.GUARD) && !loggedInUser.isApproved) {
         toast({ title: 'Login Failed', description: 'Your account is pending approval.', variant: 'destructive' });
-        setUser(null); 
+        setUser(null);
         return false;
       }
 
@@ -227,7 +231,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const register = async (userData: Omit<User, 'id' | 'isApproved' | 'registrationDate' | 'password'> & {password: string, role: Exclude<UserRole, "superadmin">}): Promise<boolean> => {
-    setIsLoading(true); 
+    setIsLoading(true);
     try {
       const response = await fetch('/api/users', {
         method: 'POST',
@@ -251,12 +255,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const approveResident = async (userId: string): Promise<boolean> => { // Renaming to approveUser might be more accurate but keeping for now
+  const approveResident = async (userId: string): Promise<boolean> => {
     try {
       const response = await fetch(`/api/users/${userId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ isApproved: true }), 
+        body: JSON.stringify({ isApproved: true }),
       });
       const data = await response.json();
 
@@ -265,30 +269,52 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         return false;
       }
       toast({ title: 'User Approved', description: `${data.name} (${data.role}) has been approved.` });
-      await fetchAllUsers(); 
+      await fetchAllUsers();
       return true;
     } catch (error) {
       toast({ title: 'Approval Error', description: (error as Error).message || 'An unexpected error occurred during approval.', variant: 'destructive' });
       return false;
     }
   };
-  
+
+  const rejectUser = async (userId: string): Promise<boolean> => {
+    try {
+      const response = await fetch(`/api/users/${userId}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({ message: 'Failed to reject user.' }));
+        toast({ title: 'Rejection Failed', description: data.message || 'Could not reject user.', variant: 'destructive' });
+        return false;
+      }
+      // const data = await response.json(); // User profile of deleted user
+      toast({ title: 'User Rejected', description: `The user registration has been rejected and removed.` });
+      await fetchAllUsers(); // Refresh the list
+      return true;
+    } catch (error) {
+      toast({ title: 'Rejection Error', description: (error as Error).message || 'An unexpected error occurred during rejection.', variant: 'destructive' });
+      return false;
+    }
+  };
+
   const isAdmin = useCallback(() => user?.role === USER_ROLES.SUPERADMIN, [user]);
   const isOwnerOrRenter = useCallback(() => user?.role === USER_ROLES.OWNER || user?.role === USER_ROLES.RENTER, [user]);
   const isGuard = useCallback(() => user?.role === USER_ROLES.GUARD, [user]);
 
   return (
-    <AuthContext.Provider value={{ 
-        user, 
-        isLoading, 
-        login, 
-        logout, 
-        register, 
-        approveResident, 
-        isAdmin, 
-        isOwnerOrRenter, 
-        isGuard, 
-        allUsers, 
+    <AuthContext.Provider value={{
+        user,
+        isLoading,
+        login,
+        logout,
+        register,
+        approveResident,
+        rejectUser, // Added rejectUser
+        isAdmin,
+        isOwnerOrRenter,
+        isGuard,
+        allUsers,
         fetchAllUsers,
         visitorEntries,
         fetchVisitorEntries,

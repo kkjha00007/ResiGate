@@ -1,3 +1,4 @@
+
 // src/app/api/users/[userId]/route.ts
 import { NextResponse, type NextRequest } from 'next/server';
 import { usersContainer } from '@/lib/cosmosdb';
@@ -14,12 +15,6 @@ export async function GET(
       return NextResponse.json({ message: 'User ID is required' }, { status: 400 });
     }
 
-    // In Cosmos DB, if you use 'id' as the primary key, you can read directly.
-    // However, partition key is also needed for direct read if it's not 'id'.
-    // For this example, assuming 'id' is unique and we query.
-    // If you know the partition key, direct read is more efficient:
-    // const { resource: user } = await usersContainer.item(userId, PARTITION_KEY_VALUE_HERE).read<User>();
-
     const querySpec = {
       query: "SELECT * FROM c WHERE c.id = @userId",
       parameters: [{ name: "@userId", value: userId }]
@@ -32,7 +27,6 @@ export async function GET(
     }
     
     const user = foundUsers[0];
-    // IMPORTANT: Remove password before sending user data to client
     const { password, ...userProfile } = user;
 
     return NextResponse.json(userProfile, { status: 200 });
@@ -56,14 +50,6 @@ export async function PUT(
       return NextResponse.json({ message: 'User ID is required' }, { status: 400 });
     }
     
-    // Fetch the existing user to get its partition key value if needed and to merge updates.
-    // A more direct way:
-    // const { resource: itemToUpdate } = await usersContainer.item(userId, PARTITION_KEY_FOR_USERID).read<User>();
-    // if (!itemToUpdate) return NextResponse.json({ message: 'User not found' }, { status: 404 });
-    // const updatedItem = { ...itemToUpdate, ...updates };
-    // const { resource: updatedUser } = await usersContainer.item(userId, PARTITION_KEY_FOR_USERID).replace(updatedItem);
-    
-    // For now, using a query to find and then update. This is less efficient than direct replace with partition key.
     const querySpec = {
       query: "SELECT * FROM c WHERE c.id = @userId",
       parameters: [{ name: "@userId", value: userId }]
@@ -76,20 +62,27 @@ export async function PUT(
     
     const userToUpdate = foundUsers[0];
 
-    // Merge updates, ensuring not to allow changing ID or critical fields unintentionally
     const updatedUserData: User = {
       ...userToUpdate,
       ...updates,
-      id: userToUpdate.id, // Ensure ID remains the same
-      email: userToUpdate.email, // সাধারণত ইমেইল পরিবর্তন করা উচিত না PUT এ, যদি না বিশেষ কোনো এন্ডপয়েন্ট থাকে
-      role: userToUpdate.role, // ভূমিকা ও সাধারণত সরাসরি পরিবর্তন করা উচিত না
+      id: userToUpdate.id, 
+      email: userToUpdate.email, 
+      // role: userToUpdate.role, // Role should generally not be changed via this generic PUT
     };
 
-    // If password is part of updates, it should be re-hashed.
-    // For this example, we're directly setting it if provided.
-    // delete updatedUserData.password; // Or handle password update specifically
+    // Do not allow password updates through this generic PUT endpoint
+    // Password updates should have a dedicated, more secure mechanism if needed.
+    if (updates.password) {
+        delete updatedUserData.password;
+    }
+    
+    // Ensure role is part of the updates if it's being changed, otherwise use existing
+    // However, typically role changes might go through a more specific process.
+    // For approval, we are primarily updating `isApproved`.
+    const partitionKey = updatedUserData.role || userToUpdate.role;
 
-    const { resource: replacedUser } = await usersContainer.item(userId, userToUpdate.role).replace(updatedUserData); // Assuming role is partition key
+
+    const { resource: replacedUser } = await usersContainer.item(userId, partitionKey).replace(updatedUserData); 
 
     if (!replacedUser) {
         return NextResponse.json({ message: 'Failed to update user' }, { status: 500 });
@@ -100,6 +93,51 @@ export async function PUT(
 
   } catch (error) {
     console.error(`Update User ${params.userId} API error:`, error);
+    const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
+    return NextResponse.json({ message: 'Internal server error', error: errorMessage }, { status: 500 });
+  }
+}
+
+// Delete a user (e.g., reject registration)
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: { userId: string } }
+) {
+  try {
+    const userId = params.userId;
+    if (!userId) {
+      return NextResponse.json({ message: 'User ID is required' }, { status: 400 });
+    }
+
+    // To delete an item in Cosmos DB, you need its ID and its partition key value.
+    // First, we need to fetch the user to find their role (which is the partition key).
+    const querySpec = {
+      query: "SELECT * FROM c WHERE c.id = @userId",
+      parameters: [{ name: "@userId", value: userId }]
+    };
+    const { resources: foundUsers } = await usersContainer.items.query<User>(querySpec).fetchAll();
+
+    if (foundUsers.length === 0) {
+      return NextResponse.json({ message: 'User not found to delete' }, { status: 404 });
+    }
+    const userToDelete = foundUsers[0];
+    const userRoleForPartitionKey = userToDelete.role;
+
+    // Now delete the item using its ID and partition key value
+    const { resource: deletedUser } = await usersContainer.item(userId, userRoleForPartitionKey).delete();
+
+    if (!deletedUser) {
+        // This case might not be hit if the item is not found, as the query above would catch it.
+        // However, if delete operation itself fails for other reasons.
+        return NextResponse.json({ message: 'Failed to delete user' }, { status: 500 });
+    }
+    
+    // Omit password from the returned deleted user profile for consistency
+    const { password, ...userProfile } = userToDelete; 
+    return NextResponse.json(userProfile, { status: 200 }); // Or return status 204 No Content
+
+  } catch (error) {
+    console.error(`Delete User ${params.userId} API error:`, error);
     const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
     return NextResponse.json({ message: 'Internal server error', error: errorMessage }, { status: 500 });
   }

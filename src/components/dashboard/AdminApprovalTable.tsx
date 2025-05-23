@@ -8,7 +8,7 @@ import { useAuth } from '@/lib/auth-provider';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { CheckCircle, Users } from 'lucide-react';
+import { CheckCircle, Users, XCircle } from 'lucide-react';
 import { format } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -24,18 +24,18 @@ import {
 } from "@/components/ui/alert-dialog";
 
 export function AdminApprovalTable() {
-  const { allUsers, fetchAllUsers, approveResident, isAdmin, isLoading } = useAuth();
-  const [pendingUsers, setPendingUsers] = useState<UserProfile[]>([]); // Renamed from pendingResidents
+  const { allUsers, fetchAllUsers, approveResident, rejectUser, isAdmin, isLoading } = useAuth();
+  const [pendingUsers, setPendingUsers] = useState<UserProfile[]>([]);
 
   useEffect(() => {
     if (isAdmin()) {
-      fetchAllUsers(); 
+      fetchAllUsers();
     }
   }, [isAdmin, fetchAllUsers]);
 
   useEffect(() => {
      setPendingUsers(
-        allUsers.filter(u => u.role !== USER_ROLES.SUPERADMIN && !u.isApproved) // All non-superadmin unapproved users
+        allUsers.filter(u => u.role !== USER_ROLES.SUPERADMIN && !u.isApproved)
                 .sort((a,b) => new Date(a.registrationDate).getTime() - new Date(b.registrationDate).getTime())
       );
   }, [allUsers]);
@@ -45,7 +45,11 @@ export function AdminApprovalTable() {
     await approveResident(userId);
   };
 
-  if (isLoading && !allUsers.length) { 
+  const handleReject = async (userId: string) => {
+    await rejectUser(userId);
+  };
+
+  if (isLoading && !allUsers.length) {
      return (
       <div className="flex h-[calc(100vh-10rem)] items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
@@ -53,7 +57,7 @@ export function AdminApprovalTable() {
     );
   }
 
-  if (!isAdmin()) { 
+  if (!isAdmin()) {
      return (
       <Card>
         <CardHeader>
@@ -73,7 +77,7 @@ export function AdminApprovalTable() {
             <Users className="h-7 w-7 text-primary" />
             <CardTitle className="text-2xl font-semibold text-primary">User Account Approvals</CardTitle>
         </div>
-        <CardDescription>Review and approve pending user registrations (Owners, Renters, Guards).</CardDescription>
+        <CardDescription>Review and approve or reject pending user registrations (Owners, Renters, Guards).</CardDescription>
       </CardHeader>
       <CardContent>
         <div className="overflow-x-auto rounded-md border">
@@ -91,17 +95,17 @@ export function AdminApprovalTable() {
             </TableHeader>
             <TableBody>
               {pendingUsers.length > 0 ? (
-                pendingUsers.map((userToApprove) => (
-                  <TableRow key={userToApprove.id}>
-                    <TableCell className="font-medium">{userToApprove.name}</TableCell>
-                    <TableCell>{userToApprove.email}</TableCell>
-                    <TableCell className="capitalize">{userToApprove.role}</TableCell>
-                    <TableCell>{userToApprove.flatNumber}</TableCell>
-                    <TableCell>{format(new Date(userToApprove.registrationDate), 'PPpp')}</TableCell>
+                pendingUsers.map((userToProcess) => (
+                  <TableRow key={userToProcess.id}>
+                    <TableCell className="font-medium">{userToProcess.name}</TableCell>
+                    <TableCell>{userToProcess.email}</TableCell>
+                    <TableCell className="capitalize">{userToProcess.role}</TableCell>
+                    <TableCell>{userToProcess.flatNumber}</TableCell>
+                    <TableCell>{format(new Date(userToProcess.registrationDate), 'PPpp')}</TableCell>
                     <TableCell>
                       <Badge variant="secondary">Pending Approval</Badge>
                     </TableCell>
-                    <TableCell className="text-right">
+                    <TableCell className="text-right space-x-2">
                       <AlertDialog>
                         <AlertDialogTrigger asChild>
                           <Button size="sm" variant="outline" className="text-green-600 border-green-600 hover:bg-green-50 hover:text-green-700">
@@ -112,17 +116,42 @@ export function AdminApprovalTable() {
                           <AlertDialogHeader>
                             <AlertDialogTitle>Confirm Approval</AlertDialogTitle>
                             <AlertDialogDescription>
-                              Are you sure you want to approve {userToApprove.name} ({userToApprove.role}) 
-                              {userToApprove.flatNumber !== 'NA' ? ` for flat ${userToApprove.flatNumber}` : ''}?
+                              Are you sure you want to approve {userToProcess.name} ({userToProcess.role})
+                              {userToProcess.flatNumber !== 'NA' ? ` for flat ${userToProcess.flatNumber}` : ''}?
                             </AlertDialogDescription>
                           </AlertDialogHeader>
                           <AlertDialogFooter>
                             <AlertDialogCancel>Cancel</AlertDialogCancel>
                             <AlertDialogAction
-                              onClick={() => handleApprove(userToApprove.id)}
+                              onClick={() => handleApprove(userToProcess.id)}
                               className="bg-primary hover:bg-primary/90"
                             >
-                              Approve
+                              Approve User
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                           <Button size="sm" variant="destructive">
+                            <XCircle className="mr-2 h-4 w-4" /> Reject
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Confirm Rejection</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              Are you sure you want to reject the registration for {userToProcess.name} ({userToProcess.role})
+                              {userToProcess.flatNumber !== 'NA' ? ` for flat ${userToProcess.flatNumber}` : ''}? This action will permanently delete their registration.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction
+                              onClick={() => handleReject(userToProcess.id)}
+                              className="bg-destructive hover:bg-destructive/90"
+                            >
+                              Reject User
                             </AlertDialogAction>
                           </AlertDialogFooter>
                         </AlertDialogContent>
