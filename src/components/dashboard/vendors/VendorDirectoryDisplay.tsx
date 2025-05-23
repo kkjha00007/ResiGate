@@ -8,15 +8,18 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { VENDOR_CATEGORIES } from '@/lib/constants';
+import { VENDOR_CATEGORIES }
+from '@/lib/constants'; // Corrected import path
 import { Store, Search, Filter, Phone, User, MapPin, ListChecks, Info, PhoneForwarded } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 
+const ALL_CATEGORIES_SENTINEL_VALUE = "__ALL_CATEGORIES__"; // Sentinel value for "All Categories"
+
 export function VendorDirectoryDisplay() {
   const { approvedVendors, fetchApprovedVendors, isLoading: authLoading } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
-  const [categoryFilter, setCategoryFilter] = useState<VendorCategory | ''>('');
+  const [categoryFilter, setCategoryFilter] = useState<VendorCategory | ''>(''); // '' means all categories
 
   useEffect(() => {
     fetchApprovedVendors();
@@ -27,7 +30,7 @@ export function VendorDirectoryDisplay() {
       .filter(vendor => {
         const nameMatch = vendor.name.toLowerCase().includes(searchTerm.toLowerCase());
         const servicesMatch = vendor.servicesOffered.toLowerCase().includes(searchTerm.toLowerCase());
-        const categoryMatch = categoryFilter ? vendor.category === categoryFilter : true;
+        const categoryMatch = categoryFilter ? vendor.category === categoryFilter : true; // categoryFilter === '' means no filter
         return (nameMatch || servicesMatch) && categoryMatch;
       })
       .sort((a, b) => a.name.localeCompare(b.name));
@@ -70,13 +73,22 @@ export function VendorDirectoryDisplay() {
                 className="pl-10 w-full"
               />
             </div>
-            <Select value={categoryFilter} onValueChange={(value) => setCategoryFilter(value as VendorCategory | '')}>
+            <Select
+              value={categoryFilter === '' ? ALL_CATEGORIES_SENTINEL_VALUE : categoryFilter}
+              onValueChange={(value) => {
+                if (value === ALL_CATEGORIES_SENTINEL_VALUE) {
+                  setCategoryFilter('');
+                } else {
+                  setCategoryFilter(value as VendorCategory);
+                }
+              }}
+            >
               <SelectTrigger className="w-full">
                 <Filter className="mr-2 h-4 w-4 text-muted-foreground" />
                 <SelectValue placeholder="Filter by Category" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All Categories</SelectItem>
+                <SelectItem value={ALL_CATEGORIES_SENTINEL_VALUE}>All Categories</SelectItem>
                 {VENDOR_CATEGORIES.map(cat => (
                   <SelectItem key={cat} value={cat}>{cat}</SelectItem>
                 ))}
@@ -91,7 +103,7 @@ export function VendorDirectoryDisplay() {
                 No vendors found matching your criteria.
                 {approvedVendors.length === 0 && " The directory is currently empty."}
               </p>
-              {approvedVendors.length > 0 && searchTerm && (
+              {approvedVendors.length > 0 && (searchTerm || categoryFilter) && (
                 <Button variant="link" onClick={() => { setSearchTerm(''); setCategoryFilter(''); }}>Clear filters</Button>
               )}
             </div>
