@@ -1,3 +1,4 @@
+
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -14,25 +15,37 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
-import { CalendarIcon, User, Phone, Home, Car, Camera, Sparkles, Send, FilePlus } from 'lucide-react';
+import { CalendarIcon, User, Phone, Home, Car, Camera, Send, FilePlus, ListChecks } from 'lucide-react';
 import { useAuth } from '@/lib/auth-provider';
 import { addVisitorEntry } from '@/lib/store';
 import type { VisitorEntry } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import React, { useState } from 'react';
-import { suggestVisitPurpose, type SuggestVisitPurposeInput } from '@/ai/flows/suggest-visit-purpose'; // Assuming this path is correct
+
+const visitPurposes = [
+  "Delivery",
+  "Guest Visit",
+  "Maintenance/Service",
+  "Enquiry",
+  "Staff/Employee",
+  "Cab/Taxi",
+  "Sales/Vendor",
+  "Interview",
+  "Other",
+] as const;
 
 const visitorEntrySchema = z.object({
   visitorName: z.string().min(2, { message: 'Visitor name must be at least 2 characters.' }),
   mobileNumber: z.string().regex(/^\d{10}$/, { message: 'Mobile number must be 10 digits.' }),
   flatNumber: z.string().min(1, { message: 'Flat number is required.' }),
-  purposeOfVisit: z.string().min(3, { message: 'Purpose of visit is required.' }),
+  purposeOfVisit: z.enum(visitPurposes, { required_error: 'Purpose of visit is required.' }),
   entryTimestamp: z.date({ required_error: 'Entry date and time are required.' }),
   vehicleNumber: z.string().optional(),
   visitorPhoto: z.instanceof(FileList).optional(), // For file upload
@@ -45,7 +58,6 @@ export function VisitorEntryForm() {
   const { user } = useAuth();
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isSuggestingPurpose, setIsSuggestingPurpose] = useState(false);
 
   const form = useForm<VisitorEntryFormValues>({
     resolver: zodResolver(visitorEntrySchema),
@@ -53,54 +65,12 @@ export function VisitorEntryForm() {
       visitorName: '',
       mobileNumber: '',
       flatNumber: '',
-      purposeOfVisit: '',
+      // purposeOfVisit: '', // Default will be handled by Select placeholder
       entryTimestamp: new Date(),
       vehicleNumber: '',
       notes: '',
     },
   });
-
-  const handleSuggestPurpose = async () => {
-    const visitorName = form.getValues('visitorName');
-    const flatNumber = form.getValues('flatNumber');
-
-    if (!visitorName || !flatNumber) {
-      toast({
-        title: 'Missing Information',
-        description: 'Please enter Visitor Name and Flat Number to suggest purpose.',
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    setIsSuggestingPurpose(true);
-    try {
-      const input: SuggestVisitPurposeInput = { visitorName, flatNumber };
-      const result = await suggestVisitPurpose(input);
-      if (result.purpose) {
-        form.setValue('purposeOfVisit', result.purpose, { shouldValidate: true });
-        toast({
-          title: 'Purpose Suggested',
-          description: `AI suggested: "${result.purpose}"`,
-        });
-      } else {
-        toast({
-          title: 'Suggestion Failed',
-          description: 'AI could not suggest a purpose.',
-          variant: 'destructive',
-        });
-      }
-    } catch (error) {
-      console.error('Error suggesting purpose:', error);
-      toast({
-        title: 'Error',
-        description: 'An error occurred while suggesting the purpose.',
-        variant: 'destructive',
-      });
-    } finally {
-      setIsSuggestingPurpose(false);
-    }
-  };
 
   const onSubmit = async (data: VisitorEntryFormValues) => {
     if (!user) {
@@ -109,14 +79,14 @@ export function VisitorEntryForm() {
     }
     setIsSubmitting(true);
 
-    // Simulate photo upload - in real app, upload to Azure Blob and get URL
     let visitorPhotoUrl: string | undefined = undefined;
     if (data.visitorPhoto && data.visitorPhoto.length > 0) {
-      // For mock, just use a placeholder. In real app, this would be an async upload call.
-      // const uploadedFile = await uploadToAzureBlob(data.visitorPhoto[0]);
-      // visitorPhotoUrl = uploadedFile.url;
-      visitorPhotoUrl = `https://placehold.co/400x400.png?text=${data.visitorName.substring(0,1)}`; // Simple placeholder
-       toast({ title: 'Photo "Uploaded"', description: 'Photo handling is mocked for this demo.' });
+      const file = data.visitorPhoto[0];
+      // In a real app, upload to a service and get URL.
+      // For now, create a blob URL or placeholder.
+      // visitorPhotoUrl = URL.createObjectURL(file); // This creates a temporary local URL
+      visitorPhotoUrl = `https://placehold.co/400x400.png?text=${encodeURIComponent(data.visitorName.substring(0,2).toUpperCase())}`;
+      toast({ title: 'Photo "Handling"', description: 'Photo handling is mocked. Using placeholder.' });
     }
 
 
@@ -125,16 +95,24 @@ export function VisitorEntryForm() {
       ...data,
       visitorPhotoUrl,
       enteredBy: user.id,
-      entryTimestamp: data.entryTimestamp, // Already a Date object
+      entryTimestamp: data.entryTimestamp,
     };
 
-    // Remove visitorPhoto from newEntry as it's a FileList and not part of VisitorEntry type
     delete (newEntry as any).visitorPhoto;
 
 
     addVisitorEntry(newEntry);
     toast({ title: 'Visitor Entry Added', description: `${data.visitorName} has been logged.` });
-    form.reset(); // Reset form after submission
+    form.reset({ 
+        visitorName: '',
+        mobileNumber: '',
+        flatNumber: '',
+        purposeOfVisit: undefined, // Reset select to placeholder
+        entryTimestamp: new Date(),
+        vehicleNumber: '',
+        notes: '',
+        visitorPhoto: undefined,
+     });
     setIsSubmitting(false);
   };
 
@@ -219,7 +197,7 @@ export function VisitorEntryForm() {
                             )}
                           >
                             {field.value ? (
-                              format(field.value, "PPP HH:mm") // Display date and time
+                              format(field.value, "PPP HH:mm")
                             ) : (
                               <span>Pick a date and time</span>
                             )}
@@ -233,7 +211,6 @@ export function VisitorEntryForm() {
                           selected={field.value}
                           onSelect={(date) => {
                             if (date) {
-                              // Preserve time if already set, or default to current time
                               const currentTime = field.value || new Date();
                               date.setHours(currentTime.getHours());
                               date.setMinutes(currentTime.getMinutes());
@@ -243,7 +220,6 @@ export function VisitorEntryForm() {
                           disabled={(date) => date > new Date() || date < new Date("1900-01-01")}
                           initialFocus
                         />
-                        {/* Basic Time Picker - can be improved with dedicated component */}
                         <div className="p-2 border-t border-border">
                           <label className="text-sm font-medium">Time:</label>
                           <Input 
@@ -273,28 +249,25 @@ export function VisitorEntryForm() {
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Purpose of Visit *</FormLabel>
-                  <div className="flex gap-2">
-                    <FormControl>
-                      <Textarea placeholder="e.g., Delivery, Guest, Maintenance" {...field} className="resize-none" />
-                    </FormControl>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="icon"
-                      onClick={handleSuggestPurpose}
-                      disabled={isSuggestingPurpose}
-                      title="Suggest Purpose (AI)"
-                      className="shrink-0 h-auto"
-                    >
-                      {isSuggestingPurpose ? (
-                        <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary"></div>
-                      ) : (
-                        <Sparkles className="h-5 w-5 text-primary" />
-                      )}
-                    </Button>
-                  </div>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormControl>
+                        <div className="relative">
+                          <ListChecks className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                          <SelectTrigger className="pl-10">
+                            <SelectValue placeholder="Select purpose of visit" />
+                          </SelectTrigger>
+                        </div>
+                      </FormControl>
+                      <SelectContent>
+                        {visitPurposes.map((purpose) => (
+                          <SelectItem key={purpose} value={purpose}>
+                            {purpose}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                    <FormDescription>
-                    Describe the reason for the visit. Use the ✨ button for AI suggestions (requires Name & Flat No.).
+                    Select the primary reason for the visit.
                   </FormDescription>
                   <FormMessage />
                 </FormItem>
@@ -321,7 +294,7 @@ export function VisitorEntryForm() {
               <FormField
                 control={form.control}
                 name="visitorPhoto"
-                render={({ field }) => (
+                render={({ field: { onChange, value, ...rest } }) => ( // Destructure field to handle file input
                   <FormItem>
                     <FormLabel>Visitor Photo (Optional)</FormLabel>
                     <FormControl>
@@ -330,8 +303,9 @@ export function VisitorEntryForm() {
                         <Input 
                           type="file" 
                           accept="image/*" 
-                          onChange={(e) => field.onChange(e.target.files)} 
+                          onChange={(e) => onChange(e.target.files)} // Pass FileList to react-hook-form
                           className="pl-10 file:text-sm file:font-medium file:bg-primary/10 file:text-primary file:border-0 file:rounded-md file:py-1 file:px-2 hover:file:bg-primary/20"
+                          {...rest}
                         />
                       </div>
                     </FormControl>
@@ -355,7 +329,7 @@ export function VisitorEntryForm() {
                 )}
               />
 
-            <Button type="submit" className="w-full" disabled={isSubmitting || isSuggestingPurpose}>
+            <Button type="submit" className="w-full" disabled={isSubmitting}>
               {isSubmitting ? (
                 <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary-foreground"></div>
               ) : (
@@ -370,3 +344,5 @@ export function VisitorEntryForm() {
     </Card>
   );
 }
+
+    
