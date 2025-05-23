@@ -14,7 +14,9 @@ interface AuthContextType {
   logout: () => void;
   register: (userData: Omit<User, 'id' | 'isApproved' | 'registrationDate' | 'password'> & {password: string, role: Exclude<UserRole, "superadmin">}) => Promise<boolean>;
   approveResident: (userId: string) => Promise<boolean>;
-  rejectUser: (userId: string) => Promise<boolean>; // New function
+  rejectUser: (userId: string) => Promise<boolean>;
+  updateUserProfile: (userId: string, updates: { name?: string; secondaryPhoneNumber1?: string; secondaryPhoneNumber2?: string }) => Promise<UserProfile | null>;
+  changePassword: (userId: string, currentPassword: string, newPassword: string) => Promise<boolean>;
   isAdmin: () => boolean;
   isOwnerOrRenter: () => boolean;
   isGuard: () => boolean;
@@ -149,7 +151,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const response = await fetch(`/api/gate-passes/${passId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: 'Used', markedUsedBy: guardId }),
+        body: JSON.stringify({ status: GATE_PASS_STATUSES.USED, markedUsedBy: guardId }),
       });
       const data = await response.json();
       if (!response.ok) {
@@ -157,8 +159,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         return null;
       }
       toast({ title: 'Gate Pass Marked as Used', description: `Pass for ${data.updatedPass.visitorName} processed.` });
-      await fetchGatePasses();
-      await fetchVisitorEntries();
+      await fetchGatePasses(); // Refresh user's gate passes
+      await fetchVisitorEntries(); // Refresh visitor entries log
       return data;
     } catch (error) {
       toast({ title: 'Gate Pass Update Error', description: (error as Error).message || 'An unexpected error occurred.', variant: 'destructive' });
@@ -226,7 +228,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setAllUsersState([]);
     setVisitorEntriesState([]);
     setGatePassesState([]);
-    router.push('/login');
+    router.push('/');
     toast({ title: 'Logged Out', description: 'You have been successfully logged out.' });
   };
 
@@ -288,12 +290,54 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         toast({ title: 'Rejection Failed', description: data.message || 'Could not reject user.', variant: 'destructive' });
         return false;
       }
-      // const data = await response.json(); // User profile of deleted user
       toast({ title: 'User Rejected', description: `The user registration has been rejected and removed.` });
-      await fetchAllUsers(); // Refresh the list
+      await fetchAllUsers(); 
       return true;
     } catch (error) {
       toast({ title: 'Rejection Error', description: (error as Error).message || 'An unexpected error occurred during rejection.', variant: 'destructive' });
+      return false;
+    }
+  };
+
+  const updateUserProfile = async (userId: string, updates: { name?: string; secondaryPhoneNumber1?: string; secondaryPhoneNumber2?: string }): Promise<UserProfile | null> => {
+    try {
+      const response = await fetch(`/api/users/${userId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updates),
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        toast({ title: 'Profile Update Failed', description: data.message || 'Could not update profile.', variant: 'destructive' });
+        return null;
+      }
+      toast({ title: 'Profile Updated', description: 'Your profile has been successfully updated.' });
+      if (user && user.id === userId) { // If current user updated their profile
+        setUser(prevUser => prevUser ? { ...prevUser, ...data } : null);
+      }
+      return data as UserProfile;
+    } catch (error) {
+      toast({ title: 'Profile Update Error', description: (error as Error).message || 'An unexpected error occurred.', variant: 'destructive' });
+      return null;
+    }
+  };
+
+  const changePassword = async (userId: string, currentPassword: string, newPassword: string): Promise<boolean> => {
+    try {
+      const response = await fetch(`/api/users/${userId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ currentPassword, newPassword }),
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        toast({ title: 'Password Change Failed', description: data.message || 'Could not change password.', variant: 'destructive' });
+        return false;
+      }
+      toast({ title: 'Password Changed', description: 'Your password has been successfully changed.' });
+      return true;
+    } catch (error) {
+      toast({ title: 'Password Change Error', description: (error as Error).message || 'An unexpected error occurred.', variant: 'destructive' });
       return false;
     }
   };
@@ -310,7 +354,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         logout,
         register,
         approveResident,
-        rejectUser, // Added rejectUser
+        rejectUser,
+        updateUserProfile,
+        changePassword,
         isAdmin,
         isOwnerOrRenter,
         isGuard,

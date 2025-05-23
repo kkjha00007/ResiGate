@@ -10,6 +10,8 @@ export interface User {
   flatNumber?: string; // Required for owners and renters
   isApproved: boolean;
   registrationDate: string; // Store as ISO string (e.g., new Date().toISOString())
+  secondaryPhoneNumber1?: string;
+  secondaryPhoneNumber2?: string;
 }
 
 // For sending user data to client, omitting sensitive fields like password
@@ -65,3 +67,4 @@ export interface GatePass {
   createdAt: string; // ISO DateTime string
   updatedAt?: string; // ISO DateTime string
 }
+

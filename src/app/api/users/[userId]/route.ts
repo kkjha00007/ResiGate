@@ -3,6 +3,9 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { usersContainer } from '@/lib/cosmosdb';
 import type { User } from '@/lib/types';
+import bcrypt from 'bcryptjs';
+
+const SALT_ROUNDS = 10;
 
 // Get a specific user by ID
 export async function GET(
@@ -37,14 +40,14 @@ export async function GET(
 }
 
 
-// Update a user (e.g., approve resident)
+// Update a user (e.g., approve resident, update profile, change password)
 export async function PUT(
   request: NextRequest,
   { params }: { params: { userId: string } }
 ) {
   try {
     const userId = params.userId;
-    const updates = await request.json() as Partial<User>;
+    const updates = await request.json() as Partial<User> & { currentPassword?: string, newPassword?: string };
 
     if (!userId) {
       return NextResponse.json({ message: 'User ID is required' }, { status: 400 });
@@ -60,29 +63,45 @@ export async function PUT(
       return NextResponse.json({ message: 'User not found' }, { status: 404 });
     }
     
-    const userToUpdate = foundUsers[0];
+    let userToUpdate = foundUsers[0];
 
+    // Handle password change separately
+    if (updates.currentPassword && updates.newPassword) {
+      if (!userToUpdate.password) {
+        return NextResponse.json({ message: 'Cannot change password for user without an existing password.' }, { status: 400 });
+      }
+      const isPasswordMatch = await bcrypt.compare(updates.currentPassword, userToUpdate.password);
+      if (!isPasswordMatch) {
+        return NextResponse.json({ message: 'Current password does not match.' }, { status: 400 });
+      }
+      const hashedNewPassword = await bcrypt.hash(updates.newPassword, SALT_ROUNDS);
+      userToUpdate.password = hashedNewPassword;
+      // Remove password fields from general updates to avoid conflicts
+      delete updates.currentPassword;
+      delete updates.newPassword;
+    } else if (updates.currentPassword || updates.newPassword) {
+      // If only one password field is sent, it's an invalid request for password change
+      return NextResponse.json({ message: 'Both current and new password are required to change password.' }, { status: 400 });
+    }
+
+    // Apply other profile updates
     const updatedUserData: User = {
       ...userToUpdate,
-      ...updates,
+      ...updates, // Apply general updates (name, secondary phones, isApproved)
       id: userToUpdate.id, 
-      email: userToUpdate.email, 
-      // role: userToUpdate.role, // Role should generally not be changed via this generic PUT
+      email: userToUpdate.email, // Email should not be changed here
+      role: userToUpdate.role, // Role should not be changed here
     };
-
-    // Do not allow password updates through this generic PUT endpoint
-    // Password updates should have a dedicated, more secure mechanism if needed.
-    if (updates.password) {
-        delete updatedUserData.password;
-    }
     
-    // Ensure role is part of the updates if it's being changed, otherwise use existing
-    // However, typically role changes might go through a more specific process.
-    // For approval, we are primarily updating `isApproved`.
-    const partitionKey = updatedUserData.role || userToUpdate.role;
+    // Ensure password is not accidentally overwritten by general updates if it wasn't a password change request
+    if (!userToUpdate.password && updates.password) { // if userToUpdate had no password and updates tries to set one (other than through newPassword flow)
+        delete updatedUserData.password;
+    } else if (userToUpdate.password && !updates.newPassword) { // if userToUpdate had a password but this isn't a newPassword request
+        updatedUserData.password = userToUpdate.password; // retain original hashed password
+    }
 
 
-    const { resource: replacedUser } = await usersContainer.item(userId, partitionKey).replace(updatedUserData); 
+    const { resource: replacedUser } = await usersContainer.item(userId, userToUpdate.role).replace(updatedUserData); 
 
     if (!replacedUser) {
         return NextResponse.json({ message: 'Failed to update user' }, { status: 500 });
@@ -109,8 +128,6 @@ export async function DELETE(
       return NextResponse.json({ message: 'User ID is required' }, { status: 400 });
     }
 
-    // To delete an item in Cosmos DB, you need its ID and its partition key value.
-    // First, we need to fetch the user to find their role (which is the partition key).
     const querySpec = {
       query: "SELECT * FROM c WHERE c.id = @userId",
       parameters: [{ name: "@userId", value: userId }]
@@ -123,18 +140,15 @@ export async function DELETE(
     const userToDelete = foundUsers[0];
     const userRoleForPartitionKey = userToDelete.role;
 
-    // Now delete the item using its ID and partition key value
-    const { resource: deletedUser } = await usersContainer.item(userId, userRoleForPartitionKey).delete();
-
-    if (!deletedUser) {
-        // This case might not be hit if the item is not found, as the query above would catch it.
-        // However, if delete operation itself fails for other reasons.
-        return NextResponse.json({ message: 'Failed to delete user' }, { status: 500 });
-    }
+    const { resource: deletedUserResponse } = await usersContainer.item(userId, userRoleForPartitionKey).delete();
     
-    // Omit password from the returned deleted user profile for consistency
+    // Cosmos DB delete operation returns a response, not necessarily the deleted item.
+    // If status code is 204 (No Content), it's successful.
+    // For the purpose of returning the userProfile, we use userToDelete found earlier.
+    // The actual response 'deletedUserResponse' could be checked for status code if needed.
+
     const { password, ...userProfile } = userToDelete; 
-    return NextResponse.json(userProfile, { status: 200 }); // Or return status 204 No Content
+    return NextResponse.json(userProfile, { status: 200 });
 
   } catch (error) {
     console.error(`Delete User ${params.userId} API error:`, error);
