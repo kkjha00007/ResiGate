@@ -5,11 +5,18 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth-provider';
 import { Button } from "@/components/ui/button";
 import { APP_NAME } from '@/lib/constants';
-import { LogIn, UserPlus, Building2, Heart } from 'lucide-react';
+import { LogIn, UserPlus, Building2, Heart, Info, Phone, Users, ListChecks, MapPin, Star } from 'lucide-react';
 import Link from 'next/link';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 
+const landingNavItems = [
+  { label: 'About Us', href: '#', icon: Info },
+  { label: 'Features', href: '#', icon: ListChecks },
+  { label: 'Services', href: '#', icon: Star },
+  // { label: 'Pricing', href: '#', icon: Tag }, // Example if you add pricing
+  { label: 'Contact Us', href: '#', icon: Phone },
+];
 
 export default function HomePage() {
   const router = useRouter();
@@ -38,7 +45,7 @@ export default function HomePage() {
   if (!isLoading && !user) {
     return (
       <div className="flex flex-col min-h-screen items-center bg-gradient-to-br from-background via-secondary/10 to-background py-12 px-4 sm:px-6 lg:px-8">
-        <header className="text-center mb-12 md:mb-16">
+        <header className="text-center mb-8 md:mb-12">
           <Building2 className="h-20 w-20 text-primary mx-auto mb-6" />
           <h1 className="text-5xl font-bold tracking-tight text-primary sm:text-6xl">
             {APP_NAME}
@@ -48,8 +55,23 @@ export default function HomePage() {
           </p>
         </header>
 
+        <nav className="mb-8 md:mb-12">
+          <ul className="flex flex-wrap justify-center gap-3 sm:gap-4">
+            {landingNavItems.map((item) => (
+              <li key={item.label}>
+                <Button variant="outline" asChild className="shadow-sm hover:shadow-md transition-shadow bg-card hover:bg-secondary/50">
+                  <Link href={item.href}>
+                    <item.icon className="mr-2 h-4 w-4 text-primary/80" />
+                    {item.label}
+                  </Link>
+                </Button>
+              </li>
+            ))}
+          </ul>
+        </nav>
+
         <main className="w-full max-w-2xl flex-grow flex flex-col items-center justify-center">
-          <Card className="w-full shadow-lg rounded-xl">
+          <Card className="w-full shadow-xl rounded-xl">
             <CardHeader className="text-center pb-4">
               <CardTitle className="text-3xl font-semibold text-foreground">Get Started</CardTitle>
               <CardDescription className="text-md text-muted-foreground pt-1">
@@ -90,6 +112,7 @@ export default function HomePage() {
     );
   }
 
+  // Fallback for when user object exists but routing hasn't completed yet
   return (
      <div className="flex flex-col h-screen items-center justify-center bg-background p-8">
       <Building2 className="h-16 w-16 text-primary mb-6 animate-pulse" />
