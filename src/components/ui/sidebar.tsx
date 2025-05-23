@@ -1,3 +1,4 @@
+
 "use client"
 
 import * as React from "react"
@@ -84,7 +85,9 @@ const SidebarProvider = React.forwardRef<
         }
 
         // This sets the cookie to keep the sidebar state.
-        document.cookie = `${SIDEBAR_COOKIE_NAME}=${openState}; path=/; max-age=${SIDEBAR_COOKIE_MAX_AGE}`
+        if (typeof document !== 'undefined') {
+          document.cookie = `${SIDEBAR_COOKIE_NAME}=${openState}; path=/; max-age=${SIDEBAR_COOKIE_MAX_AGE}`
+        }
       },
       [setOpenProp, open]
     )
@@ -534,8 +537,8 @@ const sidebarMenuButtonVariants = cva(
 )
 
 const SidebarMenuButton = React.forwardRef<
-  HTMLButtonElement,
-  React.ComponentProps<"button"> & {
+  HTMLElement, // Use HTMLElement for the ref type when asChild can render different elements
+  React.ComponentProps<"button"> & { // Still accept button props for base type
     asChild?: boolean
     isActive?: boolean
     tooltip?: string | React.ComponentProps<typeof TooltipContent>
@@ -548,43 +551,57 @@ const SidebarMenuButton = React.forwardRef<
       variant = "default",
       size = "default",
       tooltip,
-      className,
-      ...props
+      className: propsClassName, 
+      disabled: propsDisabled, 
+      ...otherProps 
     },
     ref
   ) => {
     const Comp = asChild ? Slot : "button"
     const { isMobile, state } = useSidebar()
 
-    const button = (
+    // Prepare props for the Comp (Slot or button)
+    // These props will be passed to Slot, which then merges them with its child's (e.g., Link) props.
+    // Or directly applied if Comp is 'button'.
+    const effectiveProps: React.AllHTMLAttributes<HTMLElement> & Record<string, any> = {
+      ...otherProps, // Spread other props like onClick, etc.
+    };
+
+    if (propsDisabled) {
+      if (asChild) {
+        // For Slot (and its non-button children like Link), use aria-disabled
+        effectiveProps['aria-disabled'] = true;
+      } else {
+        // For a direct button, use the disabled attribute
+        effectiveProps.disabled = true;
+      }
+    }
+    
+    const buttonElement = (
       <Comp
         ref={ref}
         data-sidebar="menu-button"
         data-size={size}
         data-active={isActive}
-        className={cn(sidebarMenuButtonVariants({ variant, size }), className)}
-        {...props}
+        className={cn(sidebarMenuButtonVariants({ variant, size }), propsClassName)}
+        {...effectiveProps}
       />
     )
 
     if (!tooltip) {
-      return button
+      return buttonElement
     }
 
-    if (typeof tooltip === "string") {
-      tooltip = {
-        children: tooltip,
-      }
-    }
+    const tooltipContentProps = typeof tooltip === "string" ? { children: tooltip } : tooltip;
 
     return (
       <Tooltip>
-        <TooltipTrigger asChild>{button}</TooltipTrigger>
+        <TooltipTrigger asChild>{buttonElement}</TooltipTrigger>
         <TooltipContent
           side="right"
           align="center"
           hidden={state !== "collapsed" || isMobile}
-          {...tooltip}
+          {...tooltipContentProps}
         />
       </Tooltip>
     )
@@ -761,3 +778,5 @@ export {
   SidebarTrigger,
   useSidebar,
 }
+
+    
