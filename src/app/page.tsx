@@ -60,7 +60,7 @@ export default function HomePage() {
               <li key={item.label}>
                 <Button
                   variant="outline"
-                  className="border-primary/50 text-primary hover:bg-secondary hover:text-secondary-foreground hover:border-secondary focus:ring-primary/50"
+                  className="border-primary/50 text-primary hover:bg-emerald-600 hover:text-white hover:border-emerald-700 focus:ring-primary/50"
                   asChild
                 >
                   <Link href={item.href}>
