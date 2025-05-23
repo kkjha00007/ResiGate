@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react'; // Added useCallback
 import type { User, UserRole } from './types';
 import { getUsers, setUsers, addUser, updateUser, getLoggedInUser, setLoggedInUser, initializeStores } from './store';
 import { useRouter } from 'next/navigation';
@@ -35,13 +35,19 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     if (storedUser) {
       setUser(storedUser);
     }
-    fetchUsers();
+    // Initial fetchUsers call might be problematic if fetchUsers itself is not stable yet
+    // and is a dependency of this useEffect. However, it's empty dependency array now.
+    // Consider if fetchUsers needs to be part of the initial useEffect logic or called differently.
+    // For now, it's fine as it's called once.
+    const localFetchUsers = () => setAllUsersState(getUsers());
+    localFetchUsers(); 
     setIsLoading(false);
-  }, []);
+  }, []); // Empty dependency means this runs once on mount
 
-  const fetchUsers = () => {
+  // Memoize fetchUsers
+  const fetchUsers = useCallback(() => {
     setAllUsersState(getUsers());
-  };
+  }, []); // fetchUsers now has a stable reference
 
   const login = async (email: string, password: string): Promise<boolean> => {
     setIsLoading(true);
@@ -95,11 +101,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const approveResident = async (userId: string): Promise<boolean> => {
-    const userToApprove = allUsers.find(u => u.id === userId);
+    // Ensure allUsers is used from state if it's meant to be reactive from context,
+    // or fetch fresh if local storage is the source of truth for this operation.
+    // Current `allUsers` in scope is the state variable.
+    const userToApprove = allUsers.find(u => u.id === userId); 
     if (userToApprove && userToApprove.role === USER_ROLES.RESIDENT) {
       const updatedRes = { ...userToApprove, isApproved: true };
       updateUser(updatedRes);
-      fetchUsers(); // refresh user list
+      fetchUsers(); // refresh user list in state
       toast({ title: 'Resident Approved', description: `${userToApprove.name} has been approved.` });
       return true;
     }
@@ -107,8 +116,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return false;
   };
   
-  const isAdmin = () => user?.role === USER_ROLES.SUPERADMIN;
-  const isResident = () => user?.role === USER_ROLES.RESIDENT;
+  // Memoize isAdmin and isResident
+  const isAdmin = useCallback(() => user?.role === USER_ROLES.SUPERADMIN, [user]);
+  const isResident = useCallback(() => user?.role === USER_ROLES.RESIDENT, [user]);
 
   return (
     <AuthContext.Provider value={{ user, isLoading, login, logout, register, approveResident, isAdmin, isResident, allUsers, fetchUsers }}>
