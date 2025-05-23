@@ -57,17 +57,23 @@ export default function HomePage() {
               </CardDescription>
             </CardHeader>
             <CardContent className="pt-2 pb-6">
-              <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mt-2">
-                  <Link href="/login" passHref>
-                      <Button size="lg" className="w-full sm:w-auto shadow-md hover:shadow-lg transition-shadow">
-                          <LogIn className="mr-2 h-5 w-5" /> Login to Your Account
-                      </Button>
-                  </Link>
-                  <Link href="/register" passHref>
-                      <Button variant="outline" size="lg" className="w-full sm:w-auto shadow-md hover:shadow-lg transition-shadow">
-                          <UserPlus className="mr-2 h-5 w-5" /> Register for an Account
-                      </Button>
-                  </Link>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mt-2 text-center">
+                <Link href="/login" passHref className="flex flex-col items-center group">
+                  <div className="p-4 bg-primary/10 rounded-full mb-3 group-hover:bg-primary/20 transition-colors">
+                    <LogIn className="h-12 w-12 text-primary" />
+                  </div>
+                  <Button size="lg" className="w-full shadow-md hover:shadow-lg transition-shadow">
+                     Login to Your Account
+                  </Button>
+                </Link>
+                <Link href="/register" passHref className="flex flex-col items-center group">
+                   <div className="p-4 bg-accent/10 rounded-full mb-3 group-hover:bg-accent/20 transition-colors">
+                    <UserPlus className="h-12 w-12 text-accent" />
+                  </div>
+                  <Button variant="outline" size="lg" className="w-full shadow-md hover:shadow-lg transition-shadow">
+                    Register for an Account
+                  </Button>
+                </Link>
               </div>
             </CardContent>
           </Card>
