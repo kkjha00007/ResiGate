@@ -8,6 +8,8 @@ import { APP_NAME } from '@/lib/constants';
 import { LogIn, UserPlus, Building2, Heart } from 'lucide-react';
 import Link from 'next/link';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+
 
 export default function HomePage() {
   const router = useRouter();
@@ -46,25 +48,29 @@ export default function HomePage() {
           </p>
         </header>
 
-        <main className="w-full max-w-4xl flex-grow flex flex-col items-center justify-center">
-          {/* Removed "Streamline Your Community" and "Key Features" section */}
-          
-          <div className="text-center space-y-4 mt-8 md:mt-12">
-            <h3 className="text-xl font-semibold text-foreground">Get Started</h3>
-            <p className="text-muted-foreground text-sm">Access your community portal or create a new account.</p>
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mt-4">
-                <Link href="/login" passHref>
-                    <Button size="lg" className="w-full sm:w-auto shadow-md hover:shadow-lg transition-shadow">
-                        <LogIn className="mr-2 h-5 w-5" /> Login to Your Account
-                    </Button>
-                </Link>
-                <Link href="/register" passHref>
-                    <Button variant="outline" size="lg" className="w-full sm:w-auto shadow-md hover:shadow-lg transition-shadow">
-                        <UserPlus className="mr-2 h-5 w-5" /> Register for an Account
-                    </Button>
-                </Link>
-            </div>
-          </div>
+        <main className="w-full max-w-2xl flex-grow flex flex-col items-center justify-center">
+          <Card className="w-full shadow-lg rounded-xl">
+            <CardHeader className="text-center pb-4">
+              <CardTitle className="text-3xl font-semibold text-foreground">Get Started</CardTitle>
+              <CardDescription className="text-md text-muted-foreground pt-1">
+                Access your community portal or create a new account.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="pt-2 pb-6">
+              <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mt-2">
+                  <Link href="/login" passHref>
+                      <Button size="lg" className="w-full sm:w-auto shadow-md hover:shadow-lg transition-shadow">
+                          <LogIn className="mr-2 h-5 w-5" /> Login to Your Account
+                      </Button>
+                  </Link>
+                  <Link href="/register" passHref>
+                      <Button variant="outline" size="lg" className="w-full sm:w-auto shadow-md hover:shadow-lg transition-shadow">
+                          <UserPlus className="mr-2 h-5 w-5" /> Register for an Account
+                      </Button>
+                  </Link>
+              </div>
+            </CardContent>
+          </Card>
         </main>
 
         <footer className="mt-16 md:mt-24 text-center text-muted-foreground">
