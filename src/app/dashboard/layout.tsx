@@ -7,20 +7,37 @@ import { useAuth } from '@/lib/auth-provider';
 import { AppHeader } from '@/components/layout/AppHeader';
 import { AppSidebar, NavItem } from '@/components/layout/AppSidebar'; 
 import { USER_ROLES } from '@/lib/constants';
-import { LayoutDashboard, UserPlus, FileText, Users, LogOut, LucideIcon, ClipboardList, CalendarPlus, Ticket } from 'lucide-react';
+import { LayoutDashboard, UserPlus, FileText, Users, LogOut, LucideIcon, ClipboardList, CalendarPlus, Ticket, ShieldCheckIcon } from 'lucide-react';
 import { SidebarProvider } from '@/components/ui/sidebar';
+import type { UserRole } from '@/lib/types';
 
 
 const getNavItemsForLayout = (isAdminUser: boolean, isResidentUser: boolean, isGuardUser: boolean): NavItem[] => [
-  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  ...(isGuardUser ? [{ href: '/dashboard/add-visitor', label: 'Add Visitor', icon: UserPlus } as NavItem] : []),
-  { href: '/dashboard/visitor-log', label: 'Visitor Log', icon: ClipboardList },
-  ...((isResidentUser || isAdminUser) ? [
-    { href: '/dashboard/gate-pass/create', label: 'Create Gate Pass', icon: CalendarPlus } as NavItem,
-    { href: '/dashboard/gate-pass/my-passes', label: 'My Gate Passes', icon: Ticket } as NavItem,
+  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, iconColor: 'text-sky-500' },
+  
+  // Guard Specific
+  ...(isGuardUser ? [
+    { href: '/dashboard/add-visitor', label: 'Add Visitor Entry', icon: UserPlus, iconColor: 'text-emerald-500' } as NavItem,
+    { href: '/dashboard/gate-pass/validate', label: 'Validate Gate Pass', icon: ShieldCheckIcon, iconColor: 'text-blue-500' } as NavItem,
   ] : []),
-  ...(isResidentUser ? [{ href: '/dashboard/personal-logs', label: 'My Visitor Logs', icon: FileText } as NavItem] : []),
-  ...(isAdminUser ? [{ href: '/dashboard/admin-approvals', label: 'Resident Approvals', icon: Users } as NavItem] : []),
+  
+  { href: '/dashboard/visitor-log', label: 'Visitor Log', icon: ClipboardList, iconColor: 'text-amber-500' },
+  
+  // Resident and Admin Specific
+  ...((isResidentUser || isAdminUser) ? [
+    { href: '/dashboard/gate-pass/create', label: 'Create Gate Pass', icon: CalendarPlus, iconColor: 'text-violet-500' } as NavItem,
+    { href: '/dashboard/gate-pass/my-passes', label: 'My Gate Passes', icon: Ticket, iconColor: 'text-rose-500' } as NavItem,
+  ] : []),
+  
+  // Resident Specific
+  ...(isResidentUser ? [
+    { href: '/dashboard/personal-logs', label: 'My Visitor Logs', icon: FileText, iconColor: 'text-teal-500' } as NavItem
+  ] : []),
+  
+  // Admin Specific
+  ...(isAdminUser ? [
+    { href: '/dashboard/admin-approvals', label: 'Resident Approvals', icon: Users, iconColor: 'text-pink-500' } as NavItem
+  ] : []),
 ];
 
 

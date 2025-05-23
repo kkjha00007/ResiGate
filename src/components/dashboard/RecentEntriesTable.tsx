@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
-import { format, isValid, parseISO } from 'date-fns'; // Added parseISO
+import { format, isValid, parseISO } from 'date-fns';
 import { CalendarIcon, Search, ClipboardList } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import Image from 'next/image';
@@ -28,15 +28,14 @@ import {
 const ITEMS_PER_PAGE = 10;
 
 export function RecentEntriesTable() {
-  // const [allEntries, setAllEntries] = useState<VisitorEntry[]>([]); // From local state before
-  const { visitorEntries, fetchVisitorEntries, user, isAdmin, isLoading } = useAuth(); // Get entries from AuthContext
+  const { visitorEntries, fetchVisitorEntries, user, isAdmin, isGuard, isLoading } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
   const [filterFlat, setFilterFlat] = useState('');
   const [filterDate, setFilterDate] = useState<Date | undefined>(undefined);
   const [currentPage, setCurrentPage] = useState(1);
 
   useEffect(() => {
-    fetchVisitorEntries(); // Fetch entries when component mounts
+    fetchVisitorEntries(); 
   }, [fetchVisitorEntries]);
   
   const uniqueFlatNumbers = useMemo(() => {
@@ -49,7 +48,7 @@ export function RecentEntriesTable() {
       .filter(entry => {
         const searchMatch =
           entry.visitorName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          (isAdmin() && entry.mobileNumber.includes(searchTerm)) || // Search mobile only if admin
+          (isAdmin() && entry.mobileNumber?.includes(searchTerm)) || // Search mobile only if admin
           (entry.vehicleNumber && entry.vehicleNumber.toLowerCase().includes(searchTerm.toLowerCase()));
         const flatMatch = filterFlat ? entry.flatNumber === filterFlat : true;
         const dateMatch = filterDate ? format(parseISO(entry.entryTimestamp), 'yyyy-MM-dd') === format(filterDate, 'yyyy-MM-dd') : true;
@@ -72,7 +71,7 @@ export function RecentEntriesTable() {
   const renderPaginationItems = () => {
     const items = [];
     const maxVisiblePages = 5;
-    if (totalPages <= 1) return null; // No pagination if only one page or less
+    if (totalPages <= 1) return null;
     
     if (totalPages <= maxVisiblePages + 2) {
       for (let i = 1; i <= totalPages; i++) {
@@ -129,11 +128,11 @@ export function RecentEntriesTable() {
     return items;
   };
 
-  const maskMobileNumber = (mobile: string) => {
-    if (mobile && mobile.length >= 10) { // check mobile is not undefined
+  const maskMobileNumber = (mobile: string | undefined) => {
+    if (mobile && mobile.length >= 10) { 
       return `******${mobile.substring(mobile.length - 4)}`;
     }
-    return '••••••••••';
+    return 'N/A'; // Or some other placeholder if mobile is undefined
   };
   
   if (isLoading && !visitorEntries.length) {
@@ -215,7 +214,7 @@ export function RecentEntriesTable() {
                 paginatedEntries.map((entry) => (
                   <TableRow key={entry.id}>
                     <TableCell className="font-medium">{entry.visitorName}</TableCell>
-                    <TableCell>{isAdmin() ? entry.mobileNumber : maskMobileNumber(entry.mobileNumber)}</TableCell>
+                    <TableCell>{isAdmin() ? entry.mobileNumber || 'N/A' : maskMobileNumber(entry.mobileNumber)}</TableCell>
                     <TableCell>{entry.flatNumber}</TableCell>
                     <TableCell>{entry.purposeOfVisit}</TableCell>
                     <TableCell>{isValid(parseISO(entry.entryTimestamp)) ? format(parseISO(entry.entryTimestamp), "PPpp") : 'Invalid Date'}</TableCell>

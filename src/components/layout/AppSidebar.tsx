@@ -6,7 +6,7 @@ import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/lib/auth-provider';
 import { APP_NAME, USER_ROLES } from '@/lib/constants';
-import type { UserRole } from '@/lib/types'; // Ensure UserRole is imported if it's defined in types.ts
+import type { UserRole } from '@/lib/types';
 import {
   LayoutDashboard,
   UserPlus,
@@ -17,6 +17,7 @@ import {
   LucideIcon,
   CalendarPlus,
   Ticket,
+  ShieldCheckIcon, // For Validate Gate Pass
 } from 'lucide-react';
 import {
   Sidebar,
@@ -33,21 +34,38 @@ export interface NavItem {
   href: string;
   label: string;
   icon: LucideIcon;
-  role?: UserRole[];
+  role?: UserRole[]; // Roles that can see this item
+  hideForRole?: UserRole[]; // Roles that explicitly cannot see this item
   disabled?: boolean;
-  iconColor?: string; // Added for specific icon colors
+  iconColor?: string;
 }
 
 const getNavItems = (isAdminUser: boolean, isResidentUser: boolean, isGuardUser: boolean): NavItem[] => [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, iconColor: 'text-sky-500' },
-  ...(isGuardUser ? [{ href: '/dashboard/add-visitor', label: 'Add Visitor Entry', icon: UserPlus, iconColor: 'text-emerald-500' } as NavItem] : []),
-  { href: '/dashboard/visitor-log', label: 'Visitor Log', icon: ClipboardList, iconColor: 'text-amber-500' },
+  
+  // Guard Specific
+  ...(isGuardUser ? [
+    { href: '/dashboard/add-visitor', label: 'Add Visitor Entry', icon: UserPlus, iconColor: 'text-emerald-500' } as NavItem,
+    { href: '/dashboard/gate-pass/validate', label: 'Validate Gate Pass', icon: ShieldCheckIcon, iconColor: 'text-blue-500' } as NavItem,
+  ] : []),
+  
+  { href: '/dashboard/visitor-log', label: 'Visitor Log', icon: ClipboardList, iconColor: 'text-amber-500' }, // Visible to all logged-in users for now
+  
+  // Resident and Admin Specific
   ...((isResidentUser || isAdminUser) ? [
     { href: '/dashboard/gate-pass/create', label: 'Create Gate Pass', icon: CalendarPlus, iconColor: 'text-violet-500' } as NavItem,
     { href: '/dashboard/gate-pass/my-passes', label: 'My Gate Passes', icon: Ticket, iconColor: 'text-rose-500' } as NavItem,
   ] : []),
-  ...(isResidentUser ? [{ href: '/dashboard/personal-logs', label: 'My Visitor Logs', icon: FileText, iconColor: 'text-teal-500' } as NavItem] : []),
-  ...(isAdminUser ? [{ href: '/dashboard/admin-approvals', label: 'Resident Approvals', icon: Users, iconColor: 'text-pink-500' } as NavItem] : []),
+  
+  // Resident Specific
+  ...(isResidentUser ? [
+    { href: '/dashboard/personal-logs', label: 'My Visitor Logs', icon: FileText, iconColor: 'text-teal-500' } as NavItem
+  ] : []),
+  
+  // Admin Specific
+  ...(isAdminUser ? [
+    { href: '/dashboard/admin-approvals', label: 'Resident Approvals', icon: Users, iconColor: 'text-pink-500' } as NavItem
+  ] : []),
 ];
 
 
@@ -77,7 +95,14 @@ export function AppSidebar() {
         <SidebarContent className="p-2">
           <SidebarMenu>
             {navItems.map((item) => {
-              const showItem = !item.role || (user?.role && item.role.includes(user.role as UserRole));
+              // Determine if item should be shown based on user role
+              let showItem = true;
+              if (item.role && user?.role && !item.role.includes(user.role as UserRole)) {
+                showItem = false;
+              }
+              if (item.hideForRole && user?.role && item.hideForRole.includes(user.role as UserRole)) {
+                  showItem = false;
+              }
               if (!showItem) return null;
 
               const isActive = pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href));
@@ -94,7 +119,7 @@ export function AppSidebar() {
                     isActive={isActive}
                     tooltip={tooltipProps}
                     disabled={item.disabled}
-                    className="justify-start"
+                    className="justify-start" 
                   >
                     <Link href={item.href}>
                       <item.icon className={cn("h-5 w-5", item.iconColor || 'text-sidebar-primary')} />

@@ -2,7 +2,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
-import type { User, UserProfile, VisitorEntry, GatePass } from './types'; // Added GatePass
+import type { User, UserProfile, VisitorEntry, GatePass } from './types';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 import { USER_ROLES } from './constants';
@@ -16,7 +16,7 @@ interface AuthContextType {
   approveResident: (userId: string) => Promise<boolean>;
   isAdmin: () => boolean;
   isResident: () => boolean;
-  isGuard: () => boolean; // Added for future guard role
+  isGuard: () => boolean;
   allUsers: UserProfile[];
   fetchAllUsers: () => Promise<void>;
   visitorEntries: VisitorEntry[];
@@ -25,6 +25,8 @@ interface AuthContextType {
   fetchGatePasses: () => Promise<void>;
   createGatePass: (passData: Omit<GatePass, 'id' | 'tokenCode' | 'status' | 'createdAt' | 'updatedAt' | 'residentUserId' | 'residentFlatNumber'>) => Promise<GatePass | null>;
   cancelGatePass: (passId: string) => Promise<boolean>;
+  markGatePassUsed: (passId: string, guardId: string) => Promise<{visitorEntry: VisitorEntry, updatedPass: GatePass} | null>;
+  fetchGatePassByToken: (tokenCode: string) => Promise<GatePass | null>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -76,6 +78,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const fetchGatePasses = useCallback(async () => {
     if (!user) return;
     try {
+      // For residents/admins, fetch their own passes
+      // For guards, this might fetch all pending passes or be handled differently
+      // For now, sticking to user-specific passes. Guards might need a different fetch.
       const response = await fetch(`/api/gate-passes/user/${user.id}`);
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ message: 'Failed to fetch gate passes.' }));
@@ -111,10 +116,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             return null;
         }
         toast({ title: 'Gate Pass Created', description: `Pass for ${data.visitorName} created. Token: ${data.tokenCode}` });
-        await fetchGatePasses(); // Refresh list
+        await fetchGatePasses(); 
         return data as GatePass;
     } catch (error) {
-        toast({ title: 'Gate Pass Creation Error', description: 'An unexpected error occurred.', variant: 'destructive' });
+        toast({ title: 'Gate Pass Creation Error', description: (error as Error).message || 'An unexpected error occurred.', variant: 'destructive' });
         return null;
     }
   };
@@ -130,11 +135,52 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             return false;
         }
         toast({ title: 'Gate Pass Cancelled', description: `Pass ID ${passId} has been cancelled.` });
-        await fetchGatePasses(); // Refresh list
+        await fetchGatePasses(); 
         return true;
     } catch (error) {
-        toast({ title: 'Gate Pass Cancellation Error', description: 'An unexpected error occurred.', variant: 'destructive' });
+        toast({ title: 'Gate Pass Cancellation Error', description: (error as Error).message || 'An unexpected error occurred.', variant: 'destructive' });
         return false;
+    }
+  };
+
+  const markGatePassUsed = async (passId: string, guardId: string): Promise<{visitorEntry: VisitorEntry, updatedPass: GatePass} | null> => {
+    try {
+      const response = await fetch(`/api/gate-passes/${passId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'Used', markedUsedBy: guardId }), // Pass guardId for audit
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        toast({ title: 'Gate Pass Update Failed', description: data.message || 'Could not mark pass as used.', variant: 'destructive' });
+        return null;
+      }
+      toast({ title: 'Gate Pass Marked as Used', description: `Pass for ${data.updatedPass.visitorName} processed.` });
+      await fetchGatePasses(); // Refresh resident's list if they are viewing
+      await fetchVisitorEntries(); // Refresh visitor log
+      return data;
+    } catch (error) {
+      toast({ title: 'Gate Pass Update Error', description: (error as Error).message || 'An unexpected error occurred.', variant: 'destructive' });
+      return null;
+    }
+  };
+
+  const fetchGatePassByToken = async (tokenCode: string): Promise<GatePass | null> => {
+    try {
+      const response = await fetch(`/api/gate-passes/by-token/${tokenCode}`);
+      if (!response.ok) {
+        if (response.status === 404) {
+          toast({ title: 'Not Found', description: 'No gate pass found with this token.', variant: 'destructive' });
+          return null;
+        }
+        const errorData = await response.json().catch(() => ({ message: 'Failed to fetch gate pass by token.' }));
+        throw new Error(errorData.message || 'Server error.');
+      }
+      return await response.json();
+    } catch (error) {
+      console.error("Failed to fetch gate pass by token:", error);
+      toast({ title: 'Error Fetching Pass', description: (error as Error).message, variant: 'destructive' });
+      return null;
     }
   };
 
@@ -167,7 +213,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       router.push('/dashboard');
       return true;
     } catch (error) {
-      toast({ title: 'Login Error', description: 'An unexpected error occurred during login.', variant: 'destructive' });
+      toast({ title: 'Login Error', description: (error as Error).message || 'An unexpected error occurred during login.', variant: 'destructive' });
       return false;
     } finally {
       setIsLoading(false);
@@ -201,7 +247,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       router.push('/login');
       return true;
     } catch (error) {
-      toast({ title: 'Registration Error', description: 'An unexpected error occurred during registration.', variant: 'destructive' });
+      toast({ title: 'Registration Error', description: (error as Error).message || 'An unexpected error occurred during registration.', variant: 'destructive' });
       return false;
     } finally {
       setIsLoading(false);
@@ -213,7 +259,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const response = await fetch(`/api/users/${userId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ isApproved: true }),
+        body: JSON.stringify({ isApproved: true }), // Only approving, role changes should be separate
       });
       const data = await response.json();
 
@@ -225,14 +271,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       await fetchAllUsers(); 
       return true;
     } catch (error) {
-      toast({ title: 'Approval Error', description: 'An unexpected error occurred during approval.', variant: 'destructive' });
+      toast({ title: 'Approval Error', description: (error as Error).message || 'An unexpected error occurred during approval.', variant: 'destructive' });
       return false;
     }
   };
   
   const isAdmin = useCallback(() => user?.role === USER_ROLES.SUPERADMIN, [user]);
   const isResident = useCallback(() => user?.role === USER_ROLES.RESIDENT, [user]);
-  const isGuard = useCallback(() => user?.role === USER_ROLES.GUARD, [user]); // Added
+  const isGuard = useCallback(() => user?.role === USER_ROLES.GUARD, [user]);
 
   return (
     <AuthContext.Provider value={{ 
@@ -244,7 +290,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         approveResident, 
         isAdmin, 
         isResident, 
-        isGuard, // Added
+        isGuard, 
         allUsers, 
         fetchAllUsers,
         visitorEntries,
@@ -252,7 +298,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         gatePasses,
         fetchGatePasses,
         createGatePass,
-        cancelGatePass
+        cancelGatePass,
+        markGatePassUsed,
+        fetchGatePassByToken,
     }}>
       {children}
     </AuthContext.Provider>

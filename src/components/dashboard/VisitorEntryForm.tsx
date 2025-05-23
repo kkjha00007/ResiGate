@@ -26,7 +26,7 @@ import { CalendarIcon, User, Phone, Home, Car, Camera, Send, FilePlus, ListCheck
 import { useAuth } from '@/lib/auth-provider';
 import { useToast } from '@/hooks/use-toast';
 import React, { useState, useEffect } from 'react';
-import { VISIT_PURPOSES, USER_ROLES } from '@/lib/constants'; // Added USER_ROLES
+import { VISIT_PURPOSES, USER_ROLES } from '@/lib/constants';
 import type { VisitorEntry } from '@/lib/types';
 
 
@@ -43,7 +43,7 @@ const visitorEntrySchema = z.object({
 type VisitorEntryFormValues = z.infer<typeof visitorEntrySchema>;
 
 export function VisitorEntryForm() {
-  const { user, fetchVisitorEntries, isResident } = useAuth(); 
+  const { user, fetchVisitorEntries, isResident, isGuard } = useAuth(); 
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [entryDateTime, setEntryDateTime] = useState(new Date()); 
@@ -53,19 +53,23 @@ export function VisitorEntryForm() {
     defaultValues: {
       visitorName: '',
       mobileNumber: '',
-      flatNumber: user?.flatNumber && isResident() ? user.flatNumber : '', // Pre-fill if resident
+      flatNumber: '', // Initial empty, will be set by useEffect if applicable
       purposeOfVisit: undefined,
       vehicleNumber: '',
       notes: '',
     },
   });
+  
+  const isFlatNumberDisabled = user?.flatNumber && isResident() && !isGuard() ? true : false;
 
   useEffect(() => {
-    // If user is a resident and has a flat number, set it and potentially disable field
-    if (user?.flatNumber && isResident()) {
+    // If user is a resident (and not a guard) and has a flat number, set it.
+    if (user?.flatNumber && isResident() && !isGuard()) {
       form.setValue('flatNumber', user.flatNumber);
+    } else {
+      form.setValue('flatNumber', ''); // Clear if guard or no flat number
     }
-  }, [user, form, isResident]);
+  }, [user, form, isResident, isGuard]);
 
 
   const onSubmit = async (data: VisitorEntryFormValues) => {
@@ -84,7 +88,7 @@ export function VisitorEntryForm() {
     const submissionData: Omit<VisitorEntry, 'id' | 'entryTimestamp' | 'tokenCode' | 'enteredBy'> & { visitorPhotoUrl?: string } = {
       ...data,
       visitorPhotoUrl,
-      enteredBy: user.id, // Logged in user is making this entry
+      enteredBy: user.id, 
     };
     delete (submissionData as any).visitorPhoto;
 
@@ -105,7 +109,7 @@ export function VisitorEntryForm() {
       form.reset({ 
         visitorName: '',
         mobileNumber: '',
-        flatNumber: user?.flatNumber && isResident() ? user.flatNumber : '', // Reset with pre-fill
+        flatNumber: isFlatNumberDisabled ? user.flatNumber : '', 
         purposeOfVisit: undefined,
         vehicleNumber: '',
         notes: '',
@@ -122,7 +126,6 @@ export function VisitorEntryForm() {
     }
   };
   
-  const isFlatNumberDisabled = !!(user?.flatNumber && isResident());
 
   return (
     <Card className="w-full max-w-2xl mx-auto shadow-xl">
