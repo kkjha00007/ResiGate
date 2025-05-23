@@ -1,4 +1,6 @@
 
+import type { VendorCategory } from "./types";
+
 export const APP_NAME = "ResiGate";
 
 export const USER_ROLES = {
@@ -56,3 +58,26 @@ export const COMPLAINT_CATEGORIES_LIST = [
   "Pet Related",
   "Other",
 ] as const;
+
+// Vendor Directory Constants
+export const VENDOR_CATEGORIES: VendorCategory[] = [
+  "Plumber",
+  "Electrician",
+  "Carpenter",
+  "Painter",
+  "Groceries",
+  "Milk Delivery",
+  "Newspaper Delivery",
+  "Laundry",
+  "House Keeping",
+  "Cook/Chef",
+  "Pest Control",
+  "Internet Provider",
+  "Cable TV",
+  "AC Repair",
+  "Appliance Repair",
+  "Pharmacy",
+  "Doctor/Clinic",
+  "Tiffin Service",
+  "Other Services",
+];

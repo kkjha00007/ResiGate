@@ -2,7 +2,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
-import type { User, UserProfile, VisitorEntry, GatePass, UserRole, Complaint, Notice, Meeting } from './types';
+import type { User, UserProfile, VisitorEntry, GatePass, UserRole, Complaint, Notice, Meeting, Vendor } from './types';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 import { USER_ROLES, PUBLIC_ENTRY_SOURCE } from './constants'; 
@@ -49,6 +49,9 @@ interface AuthContextType {
   fetchAllMeetingsForAdmin: () => Promise<void>;
   updateMeeting: (meetingId: string, currentMonthYear: string, updates: Partial<Omit<Meeting, 'id' | 'postedByUserId' | 'postedByName' | 'createdAt' | 'monthYear' | 'updatedAt'>>) => Promise<Meeting | null>;
   deleteMeeting: (meetingId: string, currentMonthYear: string) => Promise<boolean>;
+  approvedVendors: Vendor[];
+  fetchApprovedVendors: () => Promise<void>;
+  submitNewVendor: (vendorData: Omit<Vendor, 'id' | 'submittedAt' | 'isApproved' | 'submittedByUserId' | 'submittedByName' | 'approvedByUserId' | 'approvedAt'>) => Promise<Vendor | null>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -63,6 +66,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [allNoticesForAdmin, setAllNoticesForAdminState] = useState<Notice[]>([]);
   const [upcomingMeetings, setUpcomingMeetingsState] = useState<Meeting[]>([]);
   const [allMeetingsForAdmin, setAllMeetingsForAdminState] = useState<Meeting[]>([]);
+  const [approvedVendors, setApprovedVendorsState] = useState<Vendor[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
   const { toast } = useToast();
@@ -95,19 +99,30 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   }, []);
 
+  const _fetchApprovedVendors = useCallback(async () => {
+    try {
+      const response = await fetch('/api/vendors');
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ message: 'Failed to fetch approved vendors.' }));
+        throw new Error(errorData.message || 'Server error.');
+      }
+      const vendorsData: Vendor[] = await response.json();
+      setApprovedVendorsState(vendorsData);
+    } catch (error) {
+      console.error("Failed to fetch approved vendors:", error);
+      toast({ title: 'Error Loading Vendors', description: (error as Error).message, variant: 'destructive' });
+    }
+  }, [toast]);
+
   useEffect(() => {
     const checkUserSession = () => {
-      // Basic session check could be implemented here if using tokens stored in localStorage
-      // For now, simply ensures data is fetched if user object exists (e.g., after login)
-      // Or clear user if session is invalid
-      // For this example, we'll rely on the user object being set on login
-      // and cleared on logout.
       setIsLoading(false); 
     };
     checkUserSession();
     _fetchActiveNotices();
     _fetchUpcomingMeetings();
-  }, [_fetchActiveNotices, _fetchUpcomingMeetings]);
+    _fetchApprovedVendors();
+  }, [_fetchActiveNotices, _fetchUpcomingMeetings, _fetchApprovedVendors]);
 
 
   const fetchAllUsers = useCallback(async () => {
@@ -278,6 +293,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       toast({ title: 'Login Successful', description: `Welcome back, ${loggedInUser.name}!` });
       await _fetchActiveNotices();
       await _fetchUpcomingMeetings();
+      await _fetchApprovedVendors(); // Fetch vendors on login
       router.push('/dashboard');
       return true;
     } catch (error) {
@@ -298,6 +314,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setAllNoticesForAdminState([]);
     setUpcomingMeetingsState([]);
     setAllMeetingsForAdminState([]);
+    setApprovedVendorsState([]); // Clear vendors on logout
     router.push('/');
     toast({ title: 'Logged Out', description: 'You have been successfully logged out.' });
   };
@@ -675,6 +692,39 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  const fetchApprovedVendors = _fetchApprovedVendors;
+
+  const submitNewVendor = async (vendorData: Omit<Vendor, 'id' | 'submittedAt' | 'isApproved' | 'submittedByUserId' | 'submittedByName' | 'approvedByUserId' | 'approvedAt'>): Promise<Vendor | null> => {
+    if (!user) {
+      toast({ title: 'Error', description: 'You must be logged in to submit a vendor.', variant: 'destructive' });
+      return null;
+    }
+    const submissionData = {
+      ...vendorData,
+      submittedByUserId: user.id,
+      submittedByName: user.name,
+    };
+
+    try {
+      const response = await fetch('/api/vendors', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(submissionData),
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        toast({ title: 'Vendor Submission Failed', description: data.message || 'Could not submit vendor for review.', variant: 'destructive' });
+        return null;
+      }
+      toast({ title: 'Vendor Submitted', description: `Vendor "${data.name}" submitted for approval.` });
+      // No need to fetchApprovedVendors here, as it's a new unapproved vendor. Admin will see it in their queue.
+      return data as Vendor;
+    } catch (error) {
+      toast({ title: 'Vendor Submission Error', description: (error as Error).message || 'An unexpected error occurred.', variant: 'destructive' });
+      return null;
+    }
+  };
+
   const isAdmin = useCallback(() => user?.role === USER_ROLES.SUPERADMIN, [user]);
   const isOwnerOrRenter = useCallback(() => user?.role === USER_ROLES.OWNER || user?.role === USER_ROLES.RENTER, [user]);
   const isGuard = useCallback(() => user?.role === USER_ROLES.GUARD, [user]);
@@ -720,6 +770,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         fetchAllMeetingsForAdmin,
         updateMeeting,
         deleteMeeting,
+        approvedVendors,
+        fetchApprovedVendors,
+        submitNewVendor,
     }}>
       {children}
     </AuthContext.Provider>

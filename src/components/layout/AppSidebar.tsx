@@ -22,6 +22,8 @@ import {
   Megaphone,
   ClipboardEdit,
   UsersRound, // For Manage Meetings
+  Store, // For Vendor Directory
+  ConciergeBell, // For Add Vendor
 } from 'lucide-react';
 import {
   Sidebar,
@@ -66,12 +68,17 @@ const getNavItems = (isAdminUser: boolean, isOwnerOrRenterUser: boolean, isGuard
     { href: '/dashboard/personal-logs', label: 'My Visitor Logs', icon: FileText, iconColor: 'text-teal-500' } as NavItem,
     { href: '/dashboard/complaints', label: 'My Complaints', icon: Megaphone, iconColor: 'text-orange-500' } as NavItem,
   ] : []),
+
+  // Vendor Directory - All authenticated users
+  { href: '/dashboard/vendors/directory', label: 'Vendor Directory', icon: Store, iconColor: 'text-cyan-500' },
+  { href: '/dashboard/vendors/add', label: 'Add Vendor', icon: ConciergeBell, iconColor: 'text-purple-500' },
   
   // Admin Specific
   ...(isAdminUser ? [
     { href: '/dashboard/admin-approvals', label: 'User Approvals', icon: Users, iconColor: 'text-pink-500' } as NavItem,
     { href: '/dashboard/admin/manage-notices', label: 'Manage Notices', icon: ClipboardEdit, iconColor: 'text-indigo-500' } as NavItem,
     { href: '/dashboard/admin/manage-meetings', label: 'Manage Meetings', icon: UsersRound, iconColor: 'text-lime-500' } as NavItem,
+    // Add "Manage Vendors" link for admin in a later phase
   ] : []),
 
   // All logged-in users

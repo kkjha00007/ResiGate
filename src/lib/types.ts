@@ -132,3 +132,45 @@ export interface Meeting {
   isActive: boolean; // To easily enable/disable if needed
   monthYear: string; // For partitioning, e.g., "YYYY-MM" derived from dateTime
 }
+
+// Vendor Directory Types
+export const VENDOR_CATEGORIES_LIST = [
+  "Plumber",
+  "Electrician",
+  "Carpenter",
+  "Painter",
+  "Groceries",
+  "Milk Delivery",
+  "Newspaper Delivery",
+  "Laundry",
+  "House Keeping",
+  "Cook/Chef",
+  "Pest Control",
+  "Internet Provider",
+  "Cable TV",
+  "AC Repair",
+  "Appliance Repair",
+  "Pharmacy",
+  "Doctor/Clinic",
+  "Tiffin Service",
+  "Other Services",
+] as const;
+export type VendorCategory = (typeof VENDOR_CATEGORIES_LIST)[number];
+
+export interface Vendor {
+  id: string;
+  name: string;
+  category: VendorCategory;
+  contactPerson?: string;
+  phoneNumber: string;
+  alternatePhoneNumber?: string;
+  address?: string;
+  servicesOffered: string; // Could be a brief description or comma-separated list
+  submittedByUserId: string;
+  submittedByName: string;
+  submittedAt: string; // ISO DateTime string
+  isApproved: boolean;
+  approvedByUserId?: string; // Superadmin's ID
+  approvedAt?: string; // ISO DateTime string
+  notes?: string; // Any additional notes by submitter or admin
+}

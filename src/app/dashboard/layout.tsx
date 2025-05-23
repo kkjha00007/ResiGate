@@ -7,7 +7,7 @@ import { useAuth } from '@/lib/auth-provider';
 import { AppHeader } from '@/components/layout/AppHeader';
 import { AppSidebar, NavItem } from '@/components/layout/AppSidebar'; 
 import { USER_ROLES } from '@/lib/constants';
-import { LayoutDashboard, UserPlus, FileText, Users, LogOut, LucideIcon, ClipboardList, CalendarPlus, Ticket, ShieldCheckIcon, Settings2, Megaphone, ClipboardEdit, UsersRound } from 'lucide-react';
+import { LayoutDashboard, UserPlus, FileText, Users, LogOut, LucideIcon, ClipboardList, CalendarPlus, Ticket, ShieldCheckIcon, Settings2, Megaphone, ClipboardEdit, UsersRound, Store, ConciergeBell } from 'lucide-react';
 import { SidebarProvider } from '@/components/ui/sidebar';
 
 
@@ -34,11 +34,16 @@ const getNavItemsForLayout = (isAdminUser: boolean, isOwnerOrRenterUser: boolean
     { href: '/dashboard/complaints', label: 'My Complaints', icon: Megaphone, iconColor: 'text-orange-500' } as NavItem,
   ] : []),
   
+  // Vendor Directory - All authenticated users
+  { href: '/dashboard/vendors/directory', label: 'Vendor Directory', icon: Store, iconColor: 'text-cyan-500' },
+  { href: '/dashboard/vendors/add', label: 'Add Vendor', icon: ConciergeBell, iconColor: 'text-purple-500' },
+
   // Admin Specific
   ...(isAdminUser ? [
     { href: '/dashboard/admin-approvals', label: 'User Approvals', icon: Users, iconColor: 'text-pink-500' } as NavItem,
     { href: '/dashboard/admin/manage-notices', label: 'Manage Notices', icon: ClipboardEdit, iconColor: 'text-indigo-500' } as NavItem,
     { href: '/dashboard/admin/manage-meetings', label: 'Manage Meetings', icon: UsersRound, iconColor: 'text-lime-500' } as NavItem,
+     // Add "Manage Vendors" link for admin in a later phase
   ] : []),
   // All logged-in users
   { href: '/dashboard/my-profile', label: 'My Profile', icon: Settings2, iconColor: 'text-gray-400' },
