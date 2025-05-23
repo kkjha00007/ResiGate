@@ -1,8 +1,10 @@
+
 // src/app/api/auth/login/route.ts
 import { NextResponse, type NextRequest } from 'next/server';
-import { usersContainer } from '@/lib/cosmosdb';
-import type { User } from '@/lib/types';
+import { usersContainer, loginAuditsContainer } from '@/lib/cosmosdb'; // Added loginAuditsContainer
+import type { User, LoginAudit } from '@/lib/types'; // Added LoginAudit type
 import bcrypt from 'bcryptjs';
+import { v4 as uuidv4 } from 'uuid';
 
 export async function POST(request: NextRequest) {
   try {
@@ -12,7 +14,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ message: 'Email and password are required' }, { status: 400 });
     }
 
-    // Query Cosmos DB for the user by email
     const querySpec = {
       query: "SELECT * FROM c WHERE c.email = @email",
       parameters: [
@@ -28,8 +29,6 @@ export async function POST(request: NextRequest) {
 
     const user = foundUsers[0];
 
-    // User found, now compare the provided password with the stored hashed password
-    // Ensure user.password (the hash) exists
     if (!user.password) {
         console.error(`User ${email} found but has no password hash stored.`);
         return NextResponse.json({ message: 'Authentication error' }, { status: 500 });
@@ -44,6 +43,21 @@ export async function POST(request: NextRequest) {
     // Password matches
     // IMPORTANT: Remove password hash before sending user data to client
     const { password: _, ...userProfile } = user;
+
+    // Create login audit entry
+    try {
+      const loginAuditEntry: LoginAudit = {
+        id: uuidv4(),
+        userId: user.id,
+        userName: user.name,
+        userEmail: user.email,
+        loginTimestamp: new Date().toISOString(),
+      };
+      await loginAuditsContainer.items.create(loginAuditEntry);
+    } catch (auditError) {
+      // Log the audit error but don't fail the login
+      console.error('Failed to create login audit entry:', auditError);
+    }
 
     return NextResponse.json(userProfile, { status: 200 });
 

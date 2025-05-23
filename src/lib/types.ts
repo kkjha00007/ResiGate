@@ -4,9 +4,7 @@ export type UserRole = "superadmin" | "resident";
 export interface User {
   id: string; // Will be the Cosmos DB item ID
   email: string;
-  // IMPORTANT: Password should be HASHED in a real application.
-  // Storing plain text passwords is a major security risk.
-  password?: string;
+  password?: string; // Hashed password
   name: string;
   role: UserRole;
   flatNumber?: string; // Required for residents
@@ -31,4 +29,13 @@ export interface VisitorEntry {
   enteredBy?: string; // User ID or public source
   notes?: string;
   tokenCode?: string;
+}
+
+export interface LoginAudit {
+  id: string;
+  userId: string;
+  userName: string;
+  userEmail: string;
+  loginTimestamp: string; // ISO string
+  // ipAddress?: string; // Optional: consider privacy implications
 }

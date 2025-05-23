@@ -16,14 +16,15 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Textarea } from '@/components/ui/textarea'; // Keep for notes
+import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { User, Phone, Home, Car, Send, ListChecks, InfoIcon, CheckCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import React, { useState } from 'react';
-import { VISIT_PURPOSES } from '@/lib/constants'; // Import shared purposes
-import { format } from 'date-fns';
+import { VISIT_PURPOSES, PUBLIC_ENTRY_SOURCE, APP_NAME } from '@/lib/constants';
 import type { VisitorEntry } from '@/lib/types';
+import { User, Phone, Home, Car, Send, ListChecks, Info, RefreshCw, ShieldCheck } from 'lucide-react';
+import { format } from 'date-fns';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 
 const publicVisitorEntrySchema = z.object({
@@ -54,6 +55,7 @@ export function PublicVisitorEntryForm() {
       visitorName: '',
       mobileNumber: '',
       flatNumber: '',
+      purposeOfVisit: undefined,
       vehicleNumber: '',
       notes: '',
     },
@@ -61,13 +63,17 @@ export function PublicVisitorEntryForm() {
 
   const onSubmit = async (data: PublicVisitorEntryFormValues) => {
     setIsSubmitting(true);
-    setSuccessInfo(null);
+
+    const submissionData: Omit<VisitorEntry, 'id' | 'entryTimestamp' | 'tokenCode' | 'enteredBy' | 'visitorPhotoUrl'> = {
+      ...data,
+      // Backend will set timestamp, tokenCode, and enteredBy
+    };
 
     try {
       const response = await fetch('/api/public-visitors', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
+        body: JSON.stringify(submissionData),
       });
 
       const responseData = await response.json();
@@ -81,8 +87,8 @@ export function PublicVisitorEntryForm() {
         tokenCode: responseData.tokenCode,
         entryTimestamp: responseData.entryTimestamp,
       });
-      form.reset();
-      toast({ title: 'Entry Submitted Successfully!', description: 'Please show the token to the guard.' });
+      form.reset(); 
+      toast({ title: 'Entry Submitted Successfully!', description: `Your token code is ${responseData.tokenCode}.`});
 
     } catch (error) {
       console.error("Failed to submit public visitor entry:", error);
@@ -95,50 +101,47 @@ export function PublicVisitorEntryForm() {
 
   if (successInfo) {
     return (
-      <Card className="w-full max-w-md shadow-xl">
+      <Card className="w-full max-w-lg shadow-xl bg-card">
         <CardHeader className="text-center">
-          <div className="mx-auto mb-4">
-            <CheckCircle className="h-16 w-16 text-green-500" />
+          <div className="mx-auto mb-3">
+            <ShieldCheck className="h-12 w-12 text-green-500" />
           </div>
-          <CardTitle className="text-2xl font-bold text-primary">Entry Submitted!</CardTitle>
-          <CardDescription>Thank you, {successInfo.visitorName}. Your details have been recorded.</CardDescription>
+          <CardTitle className="text-2xl font-bold text-primary">Entry Submitted Successfully!</CardTitle>
+          <CardDescription>Thank you, {successInfo.visitorName}.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div>
-            <p className="text-sm text-muted-foreground">Your Token Code:</p>
-            <p className="text-3xl font-bold text-center py-2 bg-accent/20 text-accent-foreground rounded-md">{successInfo.tokenCode}</p>
-          </div>
-          <div>
-            <p className="text-sm text-muted-foreground">Entry Time:</p>
-            <p className="font-medium">{format(new Date(successInfo.entryTimestamp), "PPpp")}</p>
-          </div>
-          <div className="mt-6 p-3 bg-primary/10 border border-primary/30 rounded-md flex items-start gap-3">
-            <InfoIcon className="h-8 w-8 text-primary flex-shrink-0 mt-1" />
-            <div>
-                <h3 className="font-semibold text-primary text-lg">IMPORTANT</h3>
-                <p className="text-sm text-foreground font-medium">
-                Please show this token code to the security guard for verification.
-                </p>
+          <div className="bg-accent/20 border border-accent/50 text-accent-foreground p-4 rounded-md">
+            <div className="flex items-center gap-2 mb-2">
+              <Info className="h-5 w-5 text-accent" />
+              <strong className="text-accent">IMPORTANT: Show to Security</strong>
             </div>
+            <p className="text-sm">
+              Please show this information to the security guard for verification.
+            </p>
           </div>
-          <Button onClick={() => setSuccessInfo(null)} className="w-full mt-6">
-            Make Another Entry
+
+          <div className="space-y-2 text-sm text-foreground">
+            <p><strong>Token Code:</strong> <span className="text-lg font-semibold text-primary bg-primary/10 px-2 py-1 rounded">{successInfo.tokenCode}</span></p>
+            <p><strong>Entry Time:</strong> {format(new Date(successInfo.entryTimestamp), "PPpp")}</p>
+          </div>
+          
+          <Button onClick={() => setSuccessInfo(null)} className="w-full bg-accent hover:bg-accent/90 text-accent-foreground">
+            <RefreshCw className="mr-2 h-4 w-4" /> Make Another Entry
           </Button>
         </CardContent>
       </Card>
     );
   }
 
-
   return (
     <Card className="w-full max-w-lg shadow-xl">
       <CardHeader>
         <CardTitle className="text-2xl font-semibold text-primary">Visitor Self Entry</CardTitle>
-        <CardDescription>Please fill in your details to request entry. Entry time is recorded automatically.</CardDescription>
+        <CardDescription>Please fill in your details to generate an entry token. Fields marked * are required.</CardDescription>
       </CardHeader>
       <CardContent>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
             <FormField
               control={form.control}
               name="visitorName"
@@ -148,7 +151,7 @@ export function PublicVisitorEntryForm() {
                   <FormControl>
                     <div className="relative">
                       <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                      <Input placeholder="e.g., Jane Smith" {...field} className="pl-10" />
+                      <Input placeholder="e.g., John Doe" {...field} className="pl-10" />
                     </div>
                   </FormControl>
                   <FormMessage />
@@ -171,22 +174,22 @@ export function PublicVisitorEntryForm() {
                 </FormItem>
               )}
             />
-            <FormField
-              control={form.control}
-              name="flatNumber"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Flat Number to Visit *</FormLabel>
-                  <FormControl>
-                    <div className="relative">
-                      <Home className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                      <Input placeholder="e.g., A-101" {...field} className="pl-10" />
-                    </div>
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+             <FormField
+                control={form.control}
+                name="flatNumber"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Flat Number to Visit *</FormLabel>
+                    <FormControl>
+                      <div className="relative">
+                        <Home className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input placeholder="e.g., A-101 or B-203" {...field} className="pl-10" />
+                      </div>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
             <FormField
               control={form.control}
               name="purposeOfVisit"
@@ -196,7 +199,7 @@ export function PublicVisitorEntryForm() {
                     <Select onValueChange={field.onChange} value={field.value} defaultValue={field.value}>
                       <FormControl>
                         <div className="relative">
-                          <ListChecks className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                           <ListChecks className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                           <SelectTrigger className="pl-10">
                             <SelectValue placeholder="Select your purpose" />
                           </SelectTrigger>
@@ -219,11 +222,11 @@ export function PublicVisitorEntryForm() {
               name="vehicleNumber"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Vehicle Number (If applicable)</FormLabel>
+                  <FormLabel>Vehicle Number (Optional)</FormLabel>
                   <FormControl>
                     <div className="relative">
-                      <Car className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                      <Input placeholder="e.g., KA01XY1234" {...field} className="pl-10" />
+                       <Car className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input placeholder="e.g., DL1AB1234" {...field} className="pl-10" />
                     </div>
                   </FormControl>
                   <FormMessage />
@@ -237,19 +240,18 @@ export function PublicVisitorEntryForm() {
                   <FormItem>
                     <FormLabel>Additional Notes (Optional)</FormLabel>
                     <FormControl>
-                      <Textarea placeholder="e.g., Meeting with Mr. Sharma, parcel for Priya" {...field} />
+                      <Textarea placeholder="Any other relevant information..." {...field} rows={3} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
-
             <Button type="submit" className="w-full" disabled={isSubmitting}>
               {isSubmitting ? (
                 <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary-foreground"></div>
               ) : (
                 <>
-                 <Send className="mr-2 h-5 w-5" /> Submit Request
+                 <Send className="mr-2 h-5 w-5" /> Get Entry Token
                 </>
               )}
             </Button>

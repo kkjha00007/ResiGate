@@ -25,8 +25,8 @@ import { format } from 'date-fns';
 import { CalendarIcon, User, Phone, Home, Car, Camera, Send, FilePlus, ListChecks } from 'lucide-react';
 import { useAuth } from '@/lib/auth-provider';
 import { useToast } from '@/hooks/use-toast';
-import React, { useState } from 'react';
-import { VISIT_PURPOSES } from '@/lib/constants';
+import React, { useState, useEffect } from 'react';
+import { VISIT_PURPOSES, USER_ROLES } from '@/lib/constants'; // Added USER_ROLES
 import type { VisitorEntry } from '@/lib/types';
 
 
@@ -35,9 +35,6 @@ const visitorEntrySchema = z.object({
   mobileNumber: z.string().regex(/^\d{10}$/, { message: 'Mobile number must be 10 digits.' }),
   flatNumber: z.string().min(1, { message: 'Flat number is required.' }),
   purposeOfVisit: z.enum(VISIT_PURPOSES, { required_error: 'Purpose of visit is required.' }),
-  // entryTimestamp is now set server-side, but we might keep it for display or pre-fill
-  // For this form, we will let backend set entryTimestamp.
-  // entryTimestamp: z.date({ required_error: 'Entry date and time are required.' }),
   vehicleNumber: z.string().optional(),
   visitorPhoto: z.instanceof(FileList).optional(), 
   notes: z.string().optional(),
@@ -46,22 +43,30 @@ const visitorEntrySchema = z.object({
 type VisitorEntryFormValues = z.infer<typeof visitorEntrySchema>;
 
 export function VisitorEntryForm() {
-  const { user, fetchVisitorEntries } = useAuth(); // fetchVisitorEntries to refresh log
+  const { user, fetchVisitorEntries, isResident } = useAuth(); 
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [entryDateTime, setEntryDateTime] = useState(new Date()); // For local display and if needed for submission
+  const [entryDateTime, setEntryDateTime] = useState(new Date()); 
 
   const form = useForm<VisitorEntryFormValues>({
     resolver: zodResolver(visitorEntrySchema),
     defaultValues: {
       visitorName: '',
       mobileNumber: '',
-      flatNumber: '',
+      flatNumber: user?.flatNumber && isResident() ? user.flatNumber : '', // Pre-fill if resident
       purposeOfVisit: undefined,
       vehicleNumber: '',
       notes: '',
     },
   });
+
+  useEffect(() => {
+    // If user is a resident and has a flat number, set it and potentially disable field
+    if (user?.flatNumber && isResident()) {
+      form.setValue('flatNumber', user.flatNumber);
+    }
+  }, [user, form, isResident]);
+
 
   const onSubmit = async (data: VisitorEntryFormValues) => {
     if (!user) {
@@ -72,20 +77,15 @@ export function VisitorEntryForm() {
 
     let visitorPhotoUrl: string | undefined = undefined;
     if (data.visitorPhoto && data.visitorPhoto.length > 0) {
-      // const file = data.visitorPhoto[0];
-      // In a real app, upload to a service (e.g., Azure Blob Storage) and get URL.
       visitorPhotoUrl = `https://placehold.co/400x400.png?text=${encodeURIComponent(data.visitorName.substring(0,2).toUpperCase())}`;
       toast({ title: 'Photo "Handling"', description: 'Photo upload is mocked. Using placeholder.' });
     }
 
-    // entryTimestamp is now primarily set by the backend.
-    // We are constructing the payload without it, backend will add it.
-    const submissionData: Omit<VisitorEntry, 'id' | 'entryTimestamp' | 'enteredBy'> & { visitorPhotoUrl?: string } = {
+    const submissionData: Omit<VisitorEntry, 'id' | 'entryTimestamp' | 'tokenCode' | 'enteredBy'> & { visitorPhotoUrl?: string } = {
       ...data,
       visitorPhotoUrl,
-      // enteredBy will be set by backend based on authenticated user if needed
+      enteredBy: user.id, // Logged in user is making this entry
     };
-    // Remove visitorPhoto FileList from submissionData if it exists
     delete (submissionData as any).visitorPhoto;
 
 
@@ -105,14 +105,14 @@ export function VisitorEntryForm() {
       form.reset({ 
         visitorName: '',
         mobileNumber: '',
-        flatNumber: '',
+        flatNumber: user?.flatNumber && isResident() ? user.flatNumber : '', // Reset with pre-fill
         purposeOfVisit: undefined,
         vehicleNumber: '',
         notes: '',
         visitorPhoto: undefined,
       });
-      setEntryDateTime(new Date()); // Reset local date time picker
-      await fetchVisitorEntries(); // Refresh the visitor log
+      setEntryDateTime(new Date()); 
+      await fetchVisitorEntries(); 
     } catch (error) {
       console.error("Failed to submit visitor entry:", error);
       const message = error instanceof Error ? error.message : 'An unexpected error occurred.';
@@ -121,6 +121,8 @@ export function VisitorEntryForm() {
       setIsSubmitting(false);
     }
   };
+  
+  const isFlatNumberDisabled = !!(user?.flatNumber && isResident());
 
   return (
     <Card className="w-full max-w-2xl mx-auto shadow-xl">
@@ -179,14 +181,20 @@ export function VisitorEntryForm() {
                     <FormControl>
                       <div className="relative">
                         <Home className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                        <Input placeholder="e.g., A-101" {...field} className="pl-10" />
+                        <Input 
+                          placeholder="e.g., A-101" 
+                          {...field} 
+                          className="pl-10" 
+                          disabled={isFlatNumberDisabled} 
+                          readOnly={isFlatNumberDisabled}
+                        />
                       </div>
                     </FormControl>
+                    {isFlatNumberDisabled && <FormDescription>Your flat number is auto-filled.</FormDescription>}
                     <FormMessage />
                   </FormItem>
                 )}
               />
-              {/* Entry Date & Time Picker - For display or if submitting a specific past time, now mostly for show */}
               <FormItem className="flex flex-col">
                 <FormLabel>Entry Date & Time (Recorded Automatically)</FormLabel>
                 <Popover>
@@ -194,7 +202,7 @@ export function VisitorEntryForm() {
                     <FormControl>
                       <Button
                         variant={"outline"}
-                        disabled // Disabled as it's auto-set
+                        disabled 
                         className={cn(
                           "w-full pl-3 text-left font-normal",
                           !entryDateTime && "text-muted-foreground"
@@ -221,14 +229,14 @@ export function VisitorEntryForm() {
                           setEntryDateTime(date);
                         }
                       }}
-                      disabled // Keep disabled if backend sets it
+                      disabled 
                       initialFocus
                     />
                      <div className="p-2 border-t border-border">
                         <Input 
                           type="time"
                           className="mt-1"
-                          disabled // Keep disabled if backend sets it
+                          disabled 
                           value={entryDateTime ? format(entryDateTime, "HH:mm") : format(new Date(), "HH:mm")}
                           onChange={(e) => {
                               const [hours, minutes] = e.target.value.split(':').map(Number);

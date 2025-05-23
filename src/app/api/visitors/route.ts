@@ -1,3 +1,4 @@
+
 // src/app/api/visitors/route.ts
 import { NextResponse, type NextRequest } from 'next/server';
 import { visitorEntriesContainer } from '@/lib/cosmosdb';
@@ -21,7 +22,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     // TODO: Add authentication to ensure only authorized users can add entries
-    const entryData = await request.json() as Omit<VisitorEntry, 'id' | 'entryTimestamp'>;
+    const entryData = await request.json() as Omit<VisitorEntry, 'id' | 'entryTimestamp' | 'tokenCode'>;
 
     if (!entryData.visitorName || !entryData.mobileNumber || !entryData.flatNumber || !entryData.purposeOfVisit) {
       return NextResponse.json({ message: 'Missing required fields for visitor entry' }, { status: 400 });
@@ -31,7 +32,8 @@ export async function POST(request: NextRequest) {
       id: uuidv4(),
       ...entryData,
       entryTimestamp: new Date().toISOString(), // Set server-side timestamp
-      // enteredBy: from authenticated user context
+      tokenCode: "SYSTEM", // Default token for entries made by system/guard
+      // enteredBy: from authenticated user context if needed
     };
 
     const { resource: createdEntry } = await visitorEntriesContainer.items.create(newEntry);
