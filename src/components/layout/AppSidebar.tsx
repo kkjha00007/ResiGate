@@ -32,14 +32,14 @@ import {
   SidebarSeparator,
   SidebarGroup,
   SidebarGroupLabel
-} from '@/components/ui/sidebar'; // Assuming this is the custom sidebar from components/ui
+} from '@/components/ui/sidebar'; 
 
 
 export interface NavItem {
   href: string;
   label: string;
   icon: LucideIcon;
-  role?: UserRole; // Optional: restrict item by role
+  role?: UserRole; 
   disabled?: boolean;
 }
 
@@ -60,6 +60,11 @@ export function AppSidebar() {
   
   const navItems = getNavItems(isAdmin(), isResident());
 
+  const logoutTooltipProps = React.useMemo(() => ({
+    children: "Logout",
+    className: "ml-2"
+  }), []);
+
   if (!user) return null;
 
   return (
@@ -78,7 +83,6 @@ export function AppSidebar() {
               if (item.role && user.role !== item.role) return null;
               const isActive = pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href));
               
-              // Memoize tooltipProps to prevent re-creation on every render
               const tooltipProps = React.useMemo(() => ({
                 children: item.label,
                 className: "ml-2"
@@ -89,12 +93,9 @@ export function AppSidebar() {
                   <SidebarMenuButton
                     asChild
                     isActive={isActive}
-                    tooltip={tooltipProps} // Use memoized props
+                    tooltip={tooltipProps} 
                     disabled={item.disabled}
-                    className={cn(
-                      "justify-start",
-                      isActive && "bg-sidebar-accent text-sidebar-accent-foreground"
-                    )}
+                    className="justify-start" // Simplified className, active state handled by data-active
                   >
                     <Link href={item.href}>
                       <item.icon className="h-5 w-5" />
@@ -109,12 +110,11 @@ export function AppSidebar() {
         
         <SidebarFooter className="p-2 border-t border-sidebar-border">
            <SidebarMenuButton
-              asChild
-              tooltip={{children: "Logout", className: "ml-2"}}
+              tooltip={logoutTooltipProps} // Use memoized props
               className="justify-start"
               onClick={logout}
             >
-            <div> {/* Using div because Link/Button asChild needs a single child */}
+            <div> 
               <LogOut className="h-5 w-5" />
               <span className="group-data-[collapsible=icon]:hidden">Logout</span>
             </div>
@@ -124,3 +124,4 @@ export function AppSidebar() {
     </SidebarProvider>
   );
 }
+
