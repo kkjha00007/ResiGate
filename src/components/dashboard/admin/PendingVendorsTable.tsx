@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { format, parseISO } from 'date-fns';
-import { CheckCircle, XCircle, UsersCog, Info, Store, User, Phone, MapPin, ListChecks, Briefcase } from 'lucide-react';
+import { CheckCircle, XCircle, UserCog, Info, Store, User, Phone, MapPin, ListChecks, Briefcase } from 'lucide-react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -62,7 +62,7 @@ export function PendingVendorsTable() {
     <Card className="shadow-lg">
       <CardHeader>
         <div className="flex items-center gap-3">
-          <UsersCog className="h-8 w-8 text-primary" />
+          <UserCog className="h-8 w-8 text-primary" />
           <div>
             <CardTitle className="text-2xl font-semibold text-primary">Pending Vendor Approvals</CardTitle>
             <CardDescription>Review and approve or reject new vendor submissions.</CardDescription>
