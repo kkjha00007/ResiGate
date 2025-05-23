@@ -2,7 +2,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
-import type { User, UserProfile, VisitorEntry, GatePass } from './types';
+import type { User, UserProfile, VisitorEntry, GatePass, UserRole } from './types';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 import { USER_ROLES } from './constants';
@@ -12,10 +12,10 @@ interface AuthContextType {
   isLoading: boolean;
   login: (email: string, password: string) => Promise<boolean>;
   logout: () => void;
-  register: (userData: Omit<User, 'id' | 'isApproved' | 'role' | 'registrationDate'> & {password: string}) => Promise<boolean>;
+  register: (userData: Omit<User, 'id' | 'isApproved' | 'registrationDate' | 'password'> & {password: string, role: Exclude<UserRole, "superadmin">}) => Promise<boolean>;
   approveResident: (userId: string) => Promise<boolean>;
   isAdmin: () => boolean;
-  isResident: () => boolean;
+  isOwnerOrRenter: () => boolean; // Replaced isResident
   isGuard: () => boolean;
   allUsers: UserProfile[];
   fetchAllUsers: () => Promise<void>;
@@ -78,9 +78,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const fetchGatePasses = useCallback(async () => {
     if (!user) return;
     try {
-      // For residents/admins, fetch their own passes
-      // For guards, this might fetch all pending passes or be handled differently
-      // For now, sticking to user-specific passes. Guards might need a different fetch.
       const response = await fetch(`/api/gate-passes/user/${user.id}`);
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ message: 'Failed to fetch gate passes.' }));
@@ -148,7 +145,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const response = await fetch(`/api/gate-passes/${passId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: 'Used', markedUsedBy: guardId }), // Pass guardId for audit
+        body: JSON.stringify({ status: 'Used', markedUsedBy: guardId }),
       });
       const data = await response.json();
       if (!response.ok) {
@@ -156,8 +153,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         return null;
       }
       toast({ title: 'Gate Pass Marked as Used', description: `Pass for ${data.updatedPass.visitorName} processed.` });
-      await fetchGatePasses(); // Refresh resident's list if they are viewing
-      await fetchVisitorEntries(); // Refresh visitor log
+      await fetchGatePasses(); 
+      await fetchVisitorEntries(); 
       return data;
     } catch (error) {
       toast({ title: 'Gate Pass Update Error', description: (error as Error).message || 'An unexpected error occurred.', variant: 'destructive' });
@@ -202,7 +199,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
       
       const loggedInUser = data as UserProfile;
-      if (loggedInUser.role === USER_ROLES.RESIDENT && !loggedInUser.isApproved) {
+      if ((loggedInUser.role === USER_ROLES.OWNER || loggedInUser.role === USER_ROLES.RENTER || loggedInUser.role === USER_ROLES.GUARD) && !loggedInUser.isApproved) {
         toast({ title: 'Login Failed', description: 'Your account is pending approval.', variant: 'destructive' });
         setUser(null); 
         return false;
@@ -229,7 +226,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     toast({ title: 'Logged Out', description: 'You have been successfully logged out.' });
   };
 
-  const register = async (userData: Omit<User, 'id' | 'isApproved' | 'role' | 'registrationDate'> & {password: string}): Promise<boolean> => {
+  const register = async (userData: Omit<User, 'id' | 'isApproved' | 'registrationDate' | 'password'> & {password: string, role: Exclude<UserRole, "superadmin">}): Promise<boolean> => {
     setIsLoading(true); 
     try {
       const response = await fetch('/api/users', {
@@ -254,20 +251,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const approveResident = async (userId: string): Promise<boolean> => {
+  const approveResident = async (userId: string): Promise<boolean> => { // Renaming to approveUser might be more accurate but keeping for now
     try {
       const response = await fetch(`/api/users/${userId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ isApproved: true }), // Only approving, role changes should be separate
+        body: JSON.stringify({ isApproved: true }), 
       });
       const data = await response.json();
 
       if (!response.ok) {
-        toast({ title: 'Approval Failed', description: data.message || 'Could not approve resident.', variant: 'destructive' });
+        toast({ title: 'Approval Failed', description: data.message || 'Could not approve user.', variant: 'destructive' });
         return false;
       }
-      toast({ title: 'Resident Approved', description: `${data.name} has been approved.` });
+      toast({ title: 'User Approved', description: `${data.name} (${data.role}) has been approved.` });
       await fetchAllUsers(); 
       return true;
     } catch (error) {
@@ -277,7 +274,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
   
   const isAdmin = useCallback(() => user?.role === USER_ROLES.SUPERADMIN, [user]);
-  const isResident = useCallback(() => user?.role === USER_ROLES.RESIDENT, [user]);
+  const isOwnerOrRenter = useCallback(() => user?.role === USER_ROLES.OWNER || user?.role === USER_ROLES.RENTER, [user]);
   const isGuard = useCallback(() => user?.role === USER_ROLES.GUARD, [user]);
 
   return (
@@ -289,7 +286,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         register, 
         approveResident, 
         isAdmin, 
-        isResident, 
+        isOwnerOrRenter, 
         isGuard, 
         allUsers, 
         fetchAllUsers,

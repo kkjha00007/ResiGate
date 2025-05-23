@@ -2,7 +2,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import type { UserProfile } from '@/lib/types'; // Use UserProfile for client display
+import type { UserProfile } from '@/lib/types';
 import { USER_ROLES } from '@/lib/constants';
 import { useAuth } from '@/lib/auth-provider';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -25,17 +25,17 @@ import {
 
 export function AdminApprovalTable() {
   const { allUsers, fetchAllUsers, approveResident, isAdmin, isLoading } = useAuth();
-  const [pendingResidents, setPendingResidents] = useState<UserProfile[]>([]);
+  const [pendingUsers, setPendingUsers] = useState<UserProfile[]>([]); // Renamed from pendingResidents
 
   useEffect(() => {
     if (isAdmin()) {
-      fetchAllUsers(); // Fetch users when component mounts or if admin status is confirmed
+      fetchAllUsers(); 
     }
   }, [isAdmin, fetchAllUsers]);
 
   useEffect(() => {
-     setPendingResidents(
-        allUsers.filter(u => u.role === USER_ROLES.RESIDENT && !u.isApproved)
+     setPendingUsers(
+        allUsers.filter(u => u.role !== USER_ROLES.SUPERADMIN && !u.isApproved) // All non-superadmin unapproved users
                 .sort((a,b) => new Date(a.registrationDate).getTime() - new Date(b.registrationDate).getTime())
       );
   }, [allUsers]);
@@ -43,10 +43,9 @@ export function AdminApprovalTable() {
 
   const handleApprove = async (userId: string) => {
     await approveResident(userId);
-    // fetchAllUsers is called within approveResident in AuthProvider to refresh list
   };
 
-  if (isLoading && !allUsers.length) { // Show loader if loading and no users yet
+  if (isLoading && !allUsers.length) { 
      return (
       <div className="flex h-[calc(100vh-10rem)] items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
@@ -54,7 +53,7 @@ export function AdminApprovalTable() {
     );
   }
 
-  if (!isAdmin()) { // This check should ideally happen at page/layout level too
+  if (!isAdmin()) { 
      return (
       <Card>
         <CardHeader>
@@ -72,9 +71,9 @@ export function AdminApprovalTable() {
       <CardHeader>
         <div className="flex items-center gap-2">
             <Users className="h-7 w-7 text-primary" />
-            <CardTitle className="text-2xl font-semibold text-primary">Resident Approvals</CardTitle>
+            <CardTitle className="text-2xl font-semibold text-primary">User Account Approvals</CardTitle>
         </div>
-        <CardDescription>Review and approve pending resident registrations.</CardDescription>
+        <CardDescription>Review and approve pending user registrations (Owners, Renters, Guards).</CardDescription>
       </CardHeader>
       <CardContent>
         <div className="overflow-x-auto rounded-md border">
@@ -83,6 +82,7 @@ export function AdminApprovalTable() {
               <TableRow>
                 <TableHead>Name</TableHead>
                 <TableHead>Email</TableHead>
+                <TableHead>Role</TableHead>
                 <TableHead>Flat No.</TableHead>
                 <TableHead>Registered On</TableHead>
                 <TableHead>Status</TableHead>
@@ -90,13 +90,14 @@ export function AdminApprovalTable() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {pendingResidents.length > 0 ? (
-                pendingResidents.map((resident) => (
-                  <TableRow key={resident.id}>
-                    <TableCell className="font-medium">{resident.name}</TableCell>
-                    <TableCell>{resident.email}</TableCell>
-                    <TableCell>{resident.flatNumber}</TableCell>
-                    <TableCell>{format(new Date(resident.registrationDate), 'PPpp')}</TableCell>
+              {pendingUsers.length > 0 ? (
+                pendingUsers.map((userToApprove) => (
+                  <TableRow key={userToApprove.id}>
+                    <TableCell className="font-medium">{userToApprove.name}</TableCell>
+                    <TableCell>{userToApprove.email}</TableCell>
+                    <TableCell className="capitalize">{userToApprove.role}</TableCell>
+                    <TableCell>{userToApprove.flatNumber}</TableCell>
+                    <TableCell>{format(new Date(userToApprove.registrationDate), 'PPpp')}</TableCell>
                     <TableCell>
                       <Badge variant="secondary">Pending Approval</Badge>
                     </TableCell>
@@ -111,13 +112,14 @@ export function AdminApprovalTable() {
                           <AlertDialogHeader>
                             <AlertDialogTitle>Confirm Approval</AlertDialogTitle>
                             <AlertDialogDescription>
-                              Are you sure you want to approve resident {resident.name} for flat {resident.flatNumber}?
+                              Are you sure you want to approve {userToApprove.name} ({userToApprove.role}) 
+                              {userToApprove.flatNumber !== 'NA' ? ` for flat ${userToApprove.flatNumber}` : ''}?
                             </AlertDialogDescription>
                           </AlertDialogHeader>
                           <AlertDialogFooter>
                             <AlertDialogCancel>Cancel</AlertDialogCancel>
                             <AlertDialogAction
-                              onClick={() => handleApprove(resident.id)}
+                              onClick={() => handleApprove(userToApprove.id)}
                               className="bg-primary hover:bg-primary/90"
                             >
                               Approve
@@ -130,8 +132,8 @@ export function AdminApprovalTable() {
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={6} className="h-24 text-center text-muted-foreground">
-                    {isLoading ? 'Loading pending approvals...' : 'No pending resident approvals.'}
+                  <TableCell colSpan={7} className="h-24 text-center text-muted-foreground">
+                    {isLoading ? 'Loading pending approvals...' : 'No pending user approvals.'}
                   </TableCell>
                 </TableRow>
               )}

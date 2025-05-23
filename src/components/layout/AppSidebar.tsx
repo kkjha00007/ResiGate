@@ -17,7 +17,7 @@ import {
   LucideIcon,
   CalendarPlus,
   Ticket,
-  ShieldCheckIcon, // For Validate Gate Pass
+  ShieldCheckIcon, 
 } from 'lucide-react';
 import {
   Sidebar,
@@ -34,13 +34,13 @@ export interface NavItem {
   href: string;
   label: string;
   icon: LucideIcon;
-  role?: UserRole[]; // Roles that can see this item
-  hideForRole?: UserRole[]; // Roles that explicitly cannot see this item
+  role?: UserRole[]; 
+  hideForRole?: UserRole[]; 
   disabled?: boolean;
   iconColor?: string;
 }
 
-const getNavItems = (isAdminUser: boolean, isResidentUser: boolean, isGuardUser: boolean): NavItem[] => [
+const getNavItems = (isAdminUser: boolean, isOwnerOrRenterUser: boolean, isGuardUser: boolean): NavItem[] => [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, iconColor: 'text-sky-500' },
   
   // Guard Specific
@@ -49,31 +49,31 @@ const getNavItems = (isAdminUser: boolean, isResidentUser: boolean, isGuardUser:
     { href: '/dashboard/gate-pass/validate', label: 'Validate Gate Pass', icon: ShieldCheckIcon, iconColor: 'text-blue-500' } as NavItem,
   ] : []),
   
-  { href: '/dashboard/visitor-log', label: 'Visitor Log', icon: ClipboardList, iconColor: 'text-amber-500' }, // Visible to all logged-in users for now
+  { href: '/dashboard/visitor-log', label: 'Visitor Log', icon: ClipboardList, iconColor: 'text-amber-500' }, 
   
-  // Resident and Admin Specific
-  ...((isResidentUser || isAdminUser) ? [
+  // Owner/Renter and Admin Specific
+  ...((isOwnerOrRenterUser || isAdminUser) ? [
     { href: '/dashboard/gate-pass/create', label: 'Create Gate Pass', icon: CalendarPlus, iconColor: 'text-violet-500' } as NavItem,
     { href: '/dashboard/gate-pass/my-passes', label: 'My Gate Passes', icon: Ticket, iconColor: 'text-rose-500' } as NavItem,
   ] : []),
   
-  // Resident Specific
-  ...(isResidentUser ? [
+  // Owner/Renter Specific
+  ...(isOwnerOrRenterUser ? [
     { href: '/dashboard/personal-logs', label: 'My Visitor Logs', icon: FileText, iconColor: 'text-teal-500' } as NavItem
   ] : []),
   
   // Admin Specific
   ...(isAdminUser ? [
-    { href: '/dashboard/admin-approvals', label: 'Resident Approvals', icon: Users, iconColor: 'text-pink-500' } as NavItem
+    { href: '/dashboard/admin-approvals', label: 'User Approvals', icon: Users, iconColor: 'text-pink-500' } as NavItem // Changed label
   ] : []),
 ];
 
 
 export function AppSidebar() {
   const pathname = usePathname();
-  const { user, logout, isAdmin, isResident, isGuard } = useAuth();
+  const { user, logout, isAdmin, isOwnerOrRenter, isGuard } = useAuth();
 
-  const navItems = React.useMemo(() => getNavItems(isAdmin(), isResident(), isGuard()), [isAdmin, isResident, isGuard, user?.role]);
+  const navItems = React.useMemo(() => getNavItems(isAdmin(), isOwnerOrRenter(), isGuard()), [isAdmin, isOwnerOrRenter, isGuard, user?.role]);
 
 
   const logoutTooltipProps = React.useMemo(() => ({
@@ -95,16 +95,6 @@ export function AppSidebar() {
         <SidebarContent className="p-2">
           <SidebarMenu>
             {navItems.map((item) => {
-              // Determine if item should be shown based on user role
-              let showItem = true;
-              if (item.role && user?.role && !item.role.includes(user.role as UserRole)) {
-                showItem = false;
-              }
-              if (item.hideForRole && user?.role && item.hideForRole.includes(user.role as UserRole)) {
-                  showItem = false;
-              }
-              if (!showItem) return null;
-
               const isActive = pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href));
 
               const tooltipProps = React.useMemo(() => ({

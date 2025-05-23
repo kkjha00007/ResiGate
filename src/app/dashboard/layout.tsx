@@ -12,7 +12,7 @@ import { SidebarProvider } from '@/components/ui/sidebar';
 import type { UserRole } from '@/lib/types';
 
 
-const getNavItemsForLayout = (isAdminUser: boolean, isResidentUser: boolean, isGuardUser: boolean): NavItem[] => [
+const getNavItemsForLayout = (isAdminUser: boolean, isOwnerOrRenterUser: boolean, isGuardUser: boolean): NavItem[] => [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, iconColor: 'text-sky-500' },
   
   // Guard Specific
@@ -23,20 +23,20 @@ const getNavItemsForLayout = (isAdminUser: boolean, isResidentUser: boolean, isG
   
   { href: '/dashboard/visitor-log', label: 'Visitor Log', icon: ClipboardList, iconColor: 'text-amber-500' },
   
-  // Resident and Admin Specific
-  ...((isResidentUser || isAdminUser) ? [
+  // Owner/Renter and Admin Specific
+  ...((isOwnerOrRenterUser || isAdminUser) ? [
     { href: '/dashboard/gate-pass/create', label: 'Create Gate Pass', icon: CalendarPlus, iconColor: 'text-violet-500' } as NavItem,
     { href: '/dashboard/gate-pass/my-passes', label: 'My Gate Passes', icon: Ticket, iconColor: 'text-rose-500' } as NavItem,
   ] : []),
   
-  // Resident Specific
-  ...(isResidentUser ? [
+  // Owner/Renter Specific
+  ...(isOwnerOrRenterUser ? [
     { href: '/dashboard/personal-logs', label: 'My Visitor Logs', icon: FileText, iconColor: 'text-teal-500' } as NavItem
   ] : []),
   
   // Admin Specific
   ...(isAdminUser ? [
-    { href: '/dashboard/admin-approvals', label: 'Resident Approvals', icon: Users, iconColor: 'text-pink-500' } as NavItem
+    { href: '/dashboard/admin-approvals', label: 'User Approvals', icon: Users, iconColor: 'text-pink-500' } as NavItem // Changed label
   ] : []),
 ];
 
@@ -46,7 +46,7 @@ export default function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const { user, isLoading, logout, isAdmin, isResident, isGuard } = useAuth();
+  const { user, isLoading, logout, isAdmin, isOwnerOrRenter, isGuard } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
@@ -55,7 +55,7 @@ export default function DashboardLayout({
     }
   }, [user, isLoading, router]);
 
-  const navItemsForHeader = useMemo(() => getNavItemsForLayout(isAdmin(), isResident(), isGuard()), [isAdmin, isResident, isGuard, user?.role]);
+  const navItemsForHeader = useMemo(() => getNavItemsForLayout(isAdmin(), isOwnerOrRenter(), isGuard()), [isAdmin, isOwnerOrRenter, isGuard, user?.role]);
 
 
   if (isLoading || !user) {

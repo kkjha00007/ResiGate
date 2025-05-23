@@ -2,9 +2,9 @@
 // src/app/api/users/route.ts
 import { NextResponse, type NextRequest } from 'next/server';
 import { usersContainer } from '@/lib/cosmosdb';
-import type { User } from '@/lib/types';
+import type { User, UserRole } from '@/lib/types';
 import { v4 as uuidv4 } from 'uuid';
-import { USER_ROLES } from '@/lib/constants';
+import { USER_ROLES, SELECTABLE_USER_ROLES } from '@/lib/constants';
 import bcrypt from 'bcryptjs';
 
 const SALT_ROUNDS = 10; // Cost factor for bcrypt hashing
@@ -25,7 +25,6 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error('Get Users API error:', error);
     const detail = error instanceof Error ? error.message : String(error);
-    // Return a more specific error message to the client
     return NextResponse.json({ message: `Failed to retrieve user list from database. Detail: ${detail}` }, { status: 500 });
   }
 }
@@ -33,11 +32,23 @@ export async function GET(request: NextRequest) {
 // Register (create) a new user
 export async function POST(request: NextRequest) {
   try {
-    const userData = await request.json() as Omit<User, 'id' | 'isApproved' | 'role' | 'registrationDate'> & {password: string, flatNumber: string};
+    const userData = await request.json() as Omit<User, 'id' | 'isApproved' | 'registrationDate'> & {password: string, role: Exclude<UserRole, "superadmin">};
 
-    if (!userData.email || !userData.password || !userData.name || !userData.flatNumber) {
+    if (!userData.email || !userData.password || !userData.name || !userData.flatNumber || !userData.role) {
       return NextResponse.json({ message: 'Missing required fields for registration' }, { status: 400 });
     }
+
+    if (!SELECTABLE_USER_ROLES.includes(userData.role)) {
+        return NextResponse.json({ message: 'Invalid role selected' }, { status: 400 });
+    }
+    
+    if (userData.role === USER_ROLES.GUARD && userData.flatNumber.toUpperCase() !== 'NA') {
+      return NextResponse.json({ message: "Flat number must be 'NA' for Guard role." }, { status: 400 });
+    }
+    if ((userData.role === USER_ROLES.OWNER || userData.role === USER_ROLES.RENTER) && (userData.flatNumber.toUpperCase() === 'NA' || !userData.flatNumber)) {
+      return NextResponse.json({ message: "Flat number is required for Owner/Renter and cannot be 'NA'." }, { status: 400 });
+    }
+
 
     // Check if user already exists
     const querySpecEmailCheck = {
@@ -50,20 +61,19 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ message: 'Email already exists' }, { status: 409 });
     }
     
-    // Standard registration: new users are residents and not approved by default.
-    const roleToAssign = USER_ROLES.RESIDENT;
+    // All new registrations (Owner, Renter, Guard) require admin approval.
     const isApprovedInitially = false;
 
     // Hash the password before storing
     const hashedPassword = await bcrypt.hash(userData.password, SALT_ROUNDS);
 
     const newUser: User = {
-      id: uuidv4(), // Generate a unique ID
+      id: uuidv4(),
       name: userData.name,
       email: userData.email,
-      password: hashedPassword, // Store the hashed password
+      password: hashedPassword,
       flatNumber: userData.flatNumber,
-      role: roleToAssign,
+      role: userData.role, // Role from request
       isApproved: isApprovedInitially,
       registrationDate: new Date().toISOString(),
     };
@@ -74,7 +84,6 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ message: 'Failed to create user' }, { status: 500 });
     }
     
-    // IMPORTANT: Remove password before sending user data to client
     const { password, ...userProfile } = createdUser;
 
     return NextResponse.json(userProfile, { status: 201 });

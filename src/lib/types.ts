@@ -1,5 +1,5 @@
 
-export type UserRole = "superadmin" | "resident" | "guard"; // Added guard role for future use
+export type UserRole = "superadmin" | "owner" | "renter" | "guard"; // Updated roles
 
 export interface User {
   id: string; // Will be the Cosmos DB item ID
@@ -7,8 +7,8 @@ export interface User {
   password?: string; // Hashed password
   name: string;
   role: UserRole;
-  flatNumber?: string; // Required for residents
-  isApproved: boolean; // For residents
+  flatNumber?: string; // Required for owners and renters
+  isApproved: boolean;
   registrationDate: string; // Store as ISO string (e.g., new Date().toISOString())
 }
 
@@ -52,8 +52,8 @@ export type GatePassStatus = typeof GATE_PASS_STATUSES[keyof typeof GATE_PASS_ST
 
 export interface GatePass {
   id: string;
-  residentUserId: string;
-  residentFlatNumber: string;
+  residentUserId: string; // Changed from user.id to residentUserId for clarity
+  residentFlatNumber: string; // Changed from flatNumber
   visitorName: string;
   expectedVisitDate: string; // ISO Date string (e.g., "2024-12-25")
   visitDetailsOrTime: string; // e.g., "Evening", "Around 2 PM", "Full Day"

@@ -43,7 +43,7 @@ const visitorEntrySchema = z.object({
 type VisitorEntryFormValues = z.infer<typeof visitorEntrySchema>;
 
 export function VisitorEntryForm() {
-  const { user, fetchVisitorEntries, isResident, isGuard } = useAuth(); 
+  const { user, fetchVisitorEntries, isOwnerOrRenter, isGuard } = useAuth(); // Changed from isResident
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [entryDateTime, setEntryDateTime] = useState(new Date()); 
@@ -53,23 +53,24 @@ export function VisitorEntryForm() {
     defaultValues: {
       visitorName: '',
       mobileNumber: '',
-      flatNumber: '', // Initial empty, will be set by useEffect if applicable
+      flatNumber: '', 
       purposeOfVisit: undefined,
       vehicleNumber: '',
       notes: '',
     },
   });
   
-  const isFlatNumberDisabled = user?.flatNumber && isResident() && !isGuard() ? true : false;
+  // An Owner or Renter should have their flat number auto-filled and disabled.
+  // A Guard should be able to edit the flat number.
+  const isFlatNumberDisabled = user?.flatNumber && isOwnerOrRenter() ? true : false;
 
   useEffect(() => {
-    // If user is a resident (and not a guard) and has a flat number, set it.
-    if (user?.flatNumber && isResident() && !isGuard()) {
+    if (user?.flatNumber && isOwnerOrRenter()) {
       form.setValue('flatNumber', user.flatNumber);
-    } else {
-      form.setValue('flatNumber', ''); // Clear if guard or no flat number
+    } else if (isGuard()){
+      form.setValue('flatNumber', ''); // Clear for guard
     }
-  }, [user, form, isResident, isGuard]);
+  }, [user, form, isOwnerOrRenter, isGuard]);
 
 
   const onSubmit = async (data: VisitorEntryFormValues) => {

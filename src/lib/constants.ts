@@ -3,9 +3,14 @@ export const APP_NAME = "ResiGate";
 
 export const USER_ROLES = {
   SUPERADMIN: "superadmin",
-  RESIDENT: "resident",
-  GUARD: "guard", // Added Guard role
+  OWNER: "owner", // New role
+  RENTER: "renter", // New role
+  GUARD: "guard",
 } as const;
+
+// Array of user roles for iterating in UI if needed, excluding superadmin for general selection
+export const SELECTABLE_USER_ROLES: Exclude<UserRole, "superadmin">[] = ["owner", "renter", "guard"];
+
 
 export const LOCAL_STORAGE_KEYS = {
   USERS: "resiGateUsers",

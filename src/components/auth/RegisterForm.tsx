@@ -1,3 +1,4 @@
+
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -14,21 +15,34 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useAuth } from '@/lib/auth-provider';
 import { useState } from 'react';
 import { UserPlus, Eye, EyeOff } from 'lucide-react';
+import { USER_ROLES, SELECTABLE_USER_ROLES } from '@/lib/constants';
+import type { UserRole } from '@/lib/types';
 
 const registerSchema = z.object({
   name: z.string().min(2, { message: 'Name must be at least 2 characters.' }),
   email: z.string().email({ message: 'Invalid email address.' }),
-  flatNumber: z.string().min(1, { message: 'Flat number is required.' }),
+  flatNumber: z.string().min(1, { message: 'Flat number is required (e.g., A-101, NA for Guard).' }),
   password: z.string().min(6, { message: 'Password must be at least 6 characters.' }),
   confirmPassword: z.string(),
+  role: z.enum(SELECTABLE_USER_ROLES, {
+    required_error: "You need to select a user type.",
+  }),
 }).refine(data => data.password === data.confirmPassword, {
   message: "Passwords don't match",
   path: ["confirmPassword"],
+}).refine(data => data.role === USER_ROLES.GUARD ? data.flatNumber.toUpperCase() === 'NA' : true, {
+  message: "Flat number must be 'NA' for Guard role.",
+  path: ["flatNumber"],
+}).refine(data => (data.role === USER_ROLES.OWNER || data.role === USER_ROLES.RENTER) ? data.flatNumber.toUpperCase() !== 'NA' && data.flatNumber.length > 0 : true, {
+  message: "Flat number is required for Owner/Renter and cannot be 'NA'.",
+  path: ["flatNumber"],
 });
+
 
 type RegisterFormValues = z.infer<typeof registerSchema>;
 
@@ -46,12 +60,15 @@ export function RegisterForm() {
       flatNumber: '',
       password: '',
       confirmPassword: '',
+      role: undefined,
     },
   });
 
+  const selectedRole = form.watch('role');
+
   const onSubmit = async (data: RegisterFormValues) => {
     setIsLoading(true);
-    const { confirmPassword, ...registrationData } = data; // Exclude confirmPassword
+    const { confirmPassword, ...registrationData } = data;
     await register(registrationData);
     setIsLoading(false);
   };
@@ -63,7 +80,7 @@ export function RegisterForm() {
             <UserPlus stroke="hsl(var(--primary))" size={48} />
         </div>
         <CardTitle className="text-3xl font-bold text-primary">Create Your Account</CardTitle>
-        <CardDescription>Register as a resident to access society features. Your account will require admin approval.</CardDescription>
+        <CardDescription>Register to access society features. Your account will require admin approval.</CardDescription>
       </CardHeader>
       <CardContent>
         <Form {...form}>
@@ -96,14 +113,54 @@ export function RegisterForm() {
             />
             <FormField
               control={form.control}
+              name="role"
+              render={({ field }) => (
+                <FormItem className="space-y-3">
+                  <FormLabel>I am a...</FormLabel>
+                  <FormControl>
+                    <RadioGroup
+                      onValueChange={(value) => {
+                        field.onChange(value as UserRole);
+                        if (value === USER_ROLES.GUARD) {
+                          form.setValue('flatNumber', 'NA');
+                        } else if (form.getValues('flatNumber') === 'NA') {
+                          form.setValue('flatNumber', '');
+                        }
+                      }}
+                      value={field.value}
+                      className="flex flex-col space-y-1 sm:flex-row sm:space-y-0 sm:space-x-4"
+                    >
+                      {SELECTABLE_USER_ROLES.map((role) => (
+                         <FormItem key={role} className="flex items-center space-x-2 space-y-0">
+                            <FormControl>
+                              <RadioGroupItem value={role} />
+                            </FormControl>
+                            <FormLabel className="font-normal capitalize">
+                              {role}
+                            </FormLabel>
+                          </FormItem>
+                      ))}
+                    </RadioGroup>
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
               name="flatNumber"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Flat Number (e.g., A-101)</FormLabel>
+                  <FormLabel>Flat Number</FormLabel>
                   <FormControl>
-                    <Input placeholder="A-101" {...field} />
+                    <Input 
+                      placeholder={selectedRole === USER_ROLES.GUARD ? "NA (auto-filled)" : "e.g., A-101"} 
+                      {...field} 
+                      disabled={selectedRole === USER_ROLES.GUARD}
+                      value={selectedRole === USER_ROLES.GUARD ? 'NA' : field.value}
+                    />
                   </FormControl>
-                  <FormMessage />
+                   <FormMessage />
                 </FormItem>
               )}
             />
