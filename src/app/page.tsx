@@ -4,9 +4,18 @@ import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth-provider';
 import { APP_NAME } from '@/lib/constants';
-import { Building2, Heart } from 'lucide-react';
+import { Building2, Heart, Info, Newspaper, Settings, Phone } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
-import { LoginForm } from '@/components/auth/LoginForm'; // Import the LoginForm
+import { LoginForm } from '@/components/auth/LoginForm';
+import { Button } from '@/components/ui/button';
+import Link from 'next/link';
+
+const navLinks = [
+  { label: 'About Us', href: '#', icon: Info },
+  { label: 'Features', href: '#', icon: Settings },
+  { label: 'Services', href: '#', icon: Newspaper },
+  { label: 'Contact Us', href: '#', icon: Phone },
+];
 
 export default function HomePage() {
   const router = useRouter();
@@ -34,7 +43,7 @@ export default function HomePage() {
 
   if (!isLoading && !user) {
     return (
-      <div className="flex flex-col min-h-screen items-center justify-center bg-gradient-to-br from-background via-secondary/10 to-background py-12 px-4 sm:px-6 lg:px-8">
+      <div className="flex flex-col min-h-screen items-center bg-gradient-to-br from-background via-secondary/10 to-background py-12 px-4 sm:px-6 lg:px-8">
         <header className="text-center mb-8 md:mb-12">
           <Building2 className="h-20 w-20 text-primary mx-auto mb-6" />
           <h1 className="text-5xl font-bold tracking-tight text-primary sm:text-6xl">
@@ -44,6 +53,25 @@ export default function HomePage() {
             Your all-in-one solution for modern & secure community management.
           </p>
         </header>
+
+        <nav className="mb-10 md:mb-12">
+          <ul className="flex flex-wrap justify-center gap-3 sm:gap-4">
+            {navLinks.map((item) => (
+              <li key={item.label}>
+                <Button
+                  variant="outline"
+                  className="border-primary/50 text-primary hover:bg-secondary hover:text-secondary-foreground hover:border-secondary focus:ring-primary/50"
+                  asChild
+                >
+                  <Link href={item.href}>
+                    <item.icon className="mr-2 h-4 w-4" />
+                    {item.label}
+                  </Link>
+                </Button>
+              </li>
+            ))}
+          </ul>
+        </nav>
 
         <main className="w-full max-w-md flex-grow flex flex-col items-center justify-center">
           <LoginForm />

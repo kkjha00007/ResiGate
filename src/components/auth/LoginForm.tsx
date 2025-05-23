@@ -1,3 +1,4 @@
+
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -47,14 +48,8 @@ export function LoginForm() {
 
   return (
     <Card className="w-full max-w-md shadow-xl">
-      <CardHeader className="text-center">
-        <div className="mx-auto mb-4">
-          <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="hsl(var(--primary))" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-shield-check"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><path d="m9 12 2 2 4-4"/></svg>
-        </div>
-        <CardTitle className="text-3xl font-bold text-primary">Welcome to ResiGate</CardTitle>
-        <CardDescription>Sign in to access your resident portal or management tools.</CardDescription>
-      </CardHeader>
-      <CardContent>
+      {/* CardHeader removed as requested, as the main page now has its own header */}
+      <CardContent className="pt-6"> {/* Added pt-6 for padding since CardHeader is removed */}
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
             <FormField
