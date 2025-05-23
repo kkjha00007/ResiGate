@@ -5,7 +5,7 @@ import React, { useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth-provider';
 import { AppHeader } from '@/components/layout/AppHeader';
-import { AppSidebar, NavItem } from '@/components/layout/AppSidebar';
+import { AppSidebar, NavItem } from '@/components/layout/AppSidebar'; // Re-import NavItem from AppSidebar for consistency
 import { USER_ROLES } from '@/lib/constants';
 import { LayoutDashboard, UserPlus, FileText, Users, LogOut, LucideIcon, ClipboardList, CalendarPlus, Ticket, ShieldCheckIcon, Settings2, Megaphone, ClipboardEdit, UsersRound, Store, ConciergeBell, ListFilter, Landmark } from 'lucide-react';
 import { SidebarProvider } from '@/components/ui/sidebar';
@@ -22,17 +22,21 @@ const getNavItemsForLayout = (isAdminUser: boolean, isOwnerOrRenterUser: boolean
 
   { href: '/dashboard/visitor-log', label: 'Visitor Log', icon: ClipboardList, iconColor: 'text-amber-500' },
 
-  // Owner/Renter and Admin Specific
+  // Owner/Renter and Admin Specific (for gate passes)
   ...((isOwnerOrRenterUser || isAdminUser) ? [
     { href: '/dashboard/gate-pass/create', label: 'Create Gate Pass', icon: CalendarPlus, iconColor: 'text-violet-500' } as NavItem,
     { href: '/dashboard/gate-pass/my-passes', label: 'My Gate Passes', icon: Ticket, iconColor: 'text-rose-500' } as NavItem,
   ] : []),
 
-  // Owner/Renter Specific
+  // Owner/Renter Specific (excluding Payment Details here)
   ...(isOwnerOrRenterUser ? [
     { href: '/dashboard/personal-logs', label: 'My Visitor Logs', icon: FileText, iconColor: 'text-teal-500' } as NavItem,
     { href: '/dashboard/complaints', label: 'My Complaints', icon: Megaphone, iconColor: 'text-orange-500' } as NavItem,
-    { href: '/dashboard/payment-details', label: 'Payment Details', icon: Landmark, iconColor: 'text-fuchsia-500' } as NavItem,
+  ] : []),
+
+  // Payment Details - Visible to Owner/Renter AND Admin
+  ...((isOwnerOrRenterUser || isAdminUser) ? [
+     { href: '/dashboard/payment-details', label: 'Payment Details', icon: Landmark, iconColor: 'text-fuchsia-500' } as NavItem,
   ] : []),
 
   // Vendor Directory - All authenticated users

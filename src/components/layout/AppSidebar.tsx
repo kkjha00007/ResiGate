@@ -25,7 +25,7 @@ import {
   Store,
   ConciergeBell,
   ListFilter,
-  Landmark, // Added for Payment Details
+  Landmark, 
 } from 'lucide-react';
 import {
   Sidebar,
@@ -59,17 +59,21 @@ const getNavItems = (isAdminUser: boolean, isOwnerOrRenterUser: boolean, isGuard
 
   { href: '/dashboard/visitor-log', label: 'Visitor Log', icon: ClipboardList, iconColor: 'text-amber-500' },
 
-  // Owner/Renter and Admin Specific
+  // Owner/Renter and Admin Specific (for gate passes)
   ...((isOwnerOrRenterUser || isAdminUser) ? [
     { href: '/dashboard/gate-pass/create', label: 'Create Gate Pass', icon: CalendarPlus, iconColor: 'text-violet-500' } as NavItem,
     { href: '/dashboard/gate-pass/my-passes', label: 'My Gate Passes', icon: Ticket, iconColor: 'text-rose-500' } as NavItem,
   ] : []),
 
-  // Owner/Renter Specific
+  // Owner/Renter Specific (excluding Payment Details here)
   ...(isOwnerOrRenterUser ? [
     { href: '/dashboard/personal-logs', label: 'My Visitor Logs', icon: FileText, iconColor: 'text-teal-500' } as NavItem,
     { href: '/dashboard/complaints', label: 'My Complaints', icon: Megaphone, iconColor: 'text-orange-500' } as NavItem,
-    { href: '/dashboard/payment-details', label: 'Payment Details', icon: Landmark, iconColor: 'text-fuchsia-500' } as NavItem,
+  ] : []),
+
+  // Payment Details - Visible to Owner/Renter AND Admin
+  ...((isOwnerOrRenterUser || isAdminUser) ? [
+     { href: '/dashboard/payment-details', label: 'Payment Details', icon: Landmark, iconColor: 'text-fuchsia-500' } as NavItem,
   ] : []),
 
   // Vendor Directory - All authenticated users
@@ -133,11 +137,11 @@ export function AppSidebar() {
                     isActive={isActive}
                     tooltip={tooltipProps}
                     disabled={item.disabled}
-                    className="justify-start group"
+                    className="justify-start group" 
                   >
                     <Link href={item.href}>
                       <item.icon className={cn("h-5 w-5", item.iconColor || 'text-sidebar-primary')} />
-                      <span className="group-data-[collapsible=icon]:hidden group-hover:font-semibold">{item.label}</span>
+                      <span className="group-data-[collapsible=icon]:hidden group-hover/menu-item:font-semibold">{item.label}</span>
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
