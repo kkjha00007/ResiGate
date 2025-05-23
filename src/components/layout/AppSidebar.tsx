@@ -10,15 +10,13 @@ import { Button } from '@/components/ui/button';
 import {
   LayoutDashboard,
   UserPlus,
-  ListChecks,
-  ShieldCheck as AdminIcon, 
-  LogOut,
+  ClipboardList,
   Users,
-  Settings,
-  LucideIcon,
-  Home,
   FileText,
-  ClipboardList // Added ClipboardList icon
+  LogOut,
+  LucideIcon,
+  CalendarPlus, // Icon for Create Gate Pass
+  Ticket, // Icon for My Gate Passes
 } from 'lucide-react';
 import {
   Sidebar,
@@ -28,10 +26,6 @@ import {
   SidebarMenu,
   SidebarMenuItem,
   SidebarMenuButton,
-  SidebarTrigger,
-  SidebarSeparator,
-  SidebarGroup,
-  SidebarGroupLabel
 } from '@/components/ui/sidebar'; 
 
 
@@ -39,14 +33,20 @@ export interface NavItem {
   href: string;
   label: string;
   icon: LucideIcon;
-  role?: UserRole; 
+  role?: UserRole[]; // Can be an array of roles or undefined for all
   disabled?: boolean;
 }
 
-const getNavItems = (isAdminUser: boolean, isResidentUser: boolean): NavItem[] => [
+const getNavItems = (isAdminUser: boolean, isResidentUser: boolean, isGuardUser: boolean): NavItem[] => [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { href: '/dashboard/add-visitor', label: 'Add Visitor Entry', icon: UserPlus },
-  { href: '/dashboard/visitor-log', label: 'Visitor Log', icon: ClipboardList }, // Added Visitor Log
+  // Show "Add Visitor Entry" only for Guard role
+  ...(isGuardUser ? [{ href: '/dashboard/add-visitor', label: 'Add Visitor Entry', icon: UserPlus } as NavItem] : []),
+  { href: '/dashboard/visitor-log', label: 'Visitor Log', icon: ClipboardList },
+  // Gate Pass links for Resident and Superadmin
+  ...((isResidentUser || isAdminUser) ? [
+    { href: '/dashboard/gate-pass/create', label: 'Create Gate Pass', icon: CalendarPlus } as NavItem,
+    { href: '/dashboard/gate-pass/my-passes', label: 'My Gate Passes', icon: Ticket } as NavItem,
+  ] : []),
   ...(isResidentUser ? [{ href: '/dashboard/personal-logs', label: 'My Visitor Logs', icon: FileText } as NavItem] : []),
   ...(isAdminUser ? [{ href: '/dashboard/admin-approvals', label: 'Resident Approvals', icon: Users } as NavItem] : []),
 ];
@@ -54,9 +54,9 @@ const getNavItems = (isAdminUser: boolean, isResidentUser: boolean): NavItem[] =
 
 export function AppSidebar() {
   const pathname = usePathname();
-  const { user, logout, isAdmin, isResident } = useAuth();
+  const { user, logout, isAdmin, isResident, isGuard } = useAuth();
   
-  const navItems = React.useMemo(() => getNavItems(isAdmin(), isResident()), [isAdmin, isResident, user?.role]);
+  const navItems = React.useMemo(() => getNavItems(isAdmin(), isResident(), isGuard()), [isAdmin, isResident, isGuard, user?.role]);
 
 
   const logoutTooltipProps = React.useMemo(() => ({
@@ -70,7 +70,7 @@ export function AppSidebar() {
       <Sidebar collapsible="icon" className="border-r shadow-sm hidden md:flex"> 
         <SidebarHeader className="p-4 border-b border-sidebar-border">
           <Link href="/dashboard" className="flex items-center gap-2 group-data-[collapsible=icon]:justify-center">
-            <AdminIcon className="h-7 w-7 text-sidebar-primary" />
+             <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-shield-check text-sidebar-primary"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><path d="m9 12 2 2 4-4"/></svg>
             <span className="text-xl font-semibold text-sidebar-primary group-data-[collapsible=icon]:hidden">{APP_NAME}</span>
           </Link>
         </SidebarHeader>
@@ -78,7 +78,9 @@ export function AppSidebar() {
         <SidebarContent className="p-2">
           <SidebarMenu>
             {navItems.map((item) => {
-              if (item.role && user.role !== item.role) return null;
+              const showItem = !item.role || (user?.role && item.role.includes(user.role));
+              if (!showItem) return null;
+
               const isActive = pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href));
               
               const tooltipProps = React.useMemo(() => ({

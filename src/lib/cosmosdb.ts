@@ -2,7 +2,7 @@
 // IMPORTANT: Ensure you have @azure/cosmos package installed: npm install @azure/cosmos
 
 import { CosmosClient, ConsistencyLevel } from "@azure/cosmos";
-import type { User, VisitorEntry, LoginAudit } from './types'; // Added LoginAudit
+import type { User, VisitorEntry, LoginAudit, GatePass } from './types'; // Added GatePass
 
 const endpoint = process.env.COSMOS_ENDPOINT;
 const key = process.env.COSMOS_KEY;
@@ -20,7 +20,8 @@ if (!endpoint || !key) {
 export const databaseId = process.env.COSMOS_DATABASE_ID || "ResiGateDB";
 export const usersContainerId = process.env.COSMOS_USERS_CONTAINER_ID || "Users";
 export const visitorEntriesContainerId = process.env.COSMOS_VISITORS_CONTAINER_ID || "VisitorEntries";
-export const loginAuditsContainerId = process.env.COSMOS_LOGIN_AUDITS_CONTAINER_ID || "LoginAudits"; // New container ID
+export const loginAuditsContainerId = process.env.COSMOS_LOGIN_AUDITS_CONTAINER_ID || "LoginAudits";
+export const gatePassesContainerId = process.env.COSMOS_GATE_PASSES_CONTAINER_ID || "GatePasses"; // New container ID
 
 // Initialize CosmosClient with a placeholder if credentials are not set for local dev,
 // but this will cause errors if actual DB operations are attempted.
@@ -33,7 +34,8 @@ export const client = new CosmosClient({
 export const database = client.database(databaseId);
 export const usersContainer = database.container(usersContainerId);
 export const visitorEntriesContainer = database.container(visitorEntriesContainerId);
-export const loginAuditsContainer = database.container(loginAuditsContainerId); // New container instance
+export const loginAuditsContainer = database.container(loginAuditsContainerId);
+export const gatePassesContainer = database.container(gatePassesContainerId); // New container instance
 
 /**
  * Ensures the database and containers exist, creating them if necessary.
@@ -60,14 +62,20 @@ export async function initializeCosmosDB() {
     });
     console.log(`Container '${visitorsCont.id}' ensured.`);
 
-    // Create LoginAudits container with TTL
     const thirtyDaysInSeconds = 30 * 24 * 60 * 60;
     const { container: auditsCont } = await db.containers.createIfNotExists({
       id: loginAuditsContainerId,
-      partitionKey: { paths: ["/userId"] }, // Partition by userId for efficient querying of a user's login history
-      defaultTtl: thirtyDaysInSeconds, // Documents will be automatically deleted after 30 days
+      partitionKey: { paths: ["/userId"] }, 
+      defaultTtl: thirtyDaysInSeconds, 
     });
     console.log(`Container '${auditsCont.id}' ensured with default TTL of ${thirtyDaysInSeconds} seconds.`);
+
+    const { container: gatePassesCont } = await db.containers.createIfNotExists({
+      id: gatePassesContainerId,
+      partitionKey: { paths: ["/residentUserId"] },
+    });
+    console.log(`Container '${gatePassesCont.id}' ensured.`);
+
 
   } catch (error) {
     console.error("Error initializing Cosmos DB:", error);
@@ -78,4 +86,4 @@ if (process.env.NODE_ENV !== 'test') {
     initializeCosmosDB().catch(console.error);
 }
 
-export type { User, VisitorEntry, LoginAudit };
+export type { User, VisitorEntry, LoginAudit, GatePass };

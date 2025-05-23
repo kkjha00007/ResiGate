@@ -1,5 +1,5 @@
 
-export type UserRole = "superadmin" | "resident";
+export type UserRole = "superadmin" | "resident" | "guard"; // Added guard role for future use
 
 export interface User {
   id: string; // Will be the Cosmos DB item ID
@@ -29,6 +29,7 @@ export interface VisitorEntry {
   enteredBy?: string; // User ID or public source
   notes?: string;
   tokenCode?: string;
+  gatePassId?: string; // Optional: Link to the gate pass if entry is via a pass
 }
 
 export interface LoginAudit {
@@ -38,4 +39,29 @@ export interface LoginAudit {
   userEmail: string;
   loginTimestamp: string; // ISO string
   // ipAddress?: string; // Optional: consider privacy implications
+}
+
+export const GATE_PASS_STATUSES = {
+  PENDING: "Pending",
+  USED: "Used",
+  CANCELLED: "Cancelled",
+  EXPIRED: "Expired",
+} as const;
+
+export type GatePassStatus = typeof GATE_PASS_STATUSES[keyof typeof GATE_PASS_STATUSES];
+
+export interface GatePass {
+  id: string;
+  residentUserId: string;
+  residentFlatNumber: string;
+  visitorName: string;
+  expectedVisitDate: string; // ISO Date string (e.g., "2024-12-25")
+  visitDetailsOrTime: string; // e.g., "Evening", "Around 2 PM", "Full Day"
+  purposeOfVisit: string;
+  vehicleNumber?: string;
+  notes?: string;
+  tokenCode: string;
+  status: GatePassStatus;
+  createdAt: string; // ISO DateTime string
+  updatedAt?: string; // ISO DateTime string
 }

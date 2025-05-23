@@ -7,14 +7,18 @@ import { useAuth } from '@/lib/auth-provider';
 import { AppHeader } from '@/components/layout/AppHeader';
 import { AppSidebar, NavItem } from '@/components/layout/AppSidebar'; 
 import { USER_ROLES } from '@/lib/constants';
-import { LayoutDashboard, UserPlus, FileText, Users, LogOut, LucideIcon, ClipboardList } from 'lucide-react'; // Added ClipboardList
-import { SidebarProvider, Sidebar, SidebarInset, SidebarTrigger } from '@/components/ui/sidebar';
+import { LayoutDashboard, UserPlus, FileText, Users, LogOut, LucideIcon, ClipboardList, CalendarPlus, Ticket } from 'lucide-react';
+import { SidebarProvider } from '@/components/ui/sidebar';
 
 
-const getNavItems = (isAdminUser: boolean, isResidentUser: boolean): NavItem[] => [
+const getNavItemsForLayout = (isAdminUser: boolean, isResidentUser: boolean, isGuardUser: boolean): NavItem[] => [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { href: '/dashboard/add-visitor', label: 'Add Visitor', icon: UserPlus },
-  { href: '/dashboard/visitor-log', label: 'Visitor Log', icon: ClipboardList }, // Added Visitor Log
+  ...(isGuardUser ? [{ href: '/dashboard/add-visitor', label: 'Add Visitor', icon: UserPlus } as NavItem] : []),
+  { href: '/dashboard/visitor-log', label: 'Visitor Log', icon: ClipboardList },
+  ...((isResidentUser || isAdminUser) ? [
+    { href: '/dashboard/gate-pass/create', label: 'Create Gate Pass', icon: CalendarPlus } as NavItem,
+    { href: '/dashboard/gate-pass/my-passes', label: 'My Gate Passes', icon: Ticket } as NavItem,
+  ] : []),
   ...(isResidentUser ? [{ href: '/dashboard/personal-logs', label: 'My Visitor Logs', icon: FileText } as NavItem] : []),
   ...(isAdminUser ? [{ href: '/dashboard/admin-approvals', label: 'Resident Approvals', icon: Users } as NavItem] : []),
 ];
@@ -25,7 +29,7 @@ export default function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const { user, isLoading, logout, isAdmin, isResident } = useAuth();
+  const { user, isLoading, logout, isAdmin, isResident, isGuard } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
@@ -34,7 +38,7 @@ export default function DashboardLayout({
     }
   }, [user, isLoading, router]);
 
-  const navItemsForHeader = useMemo(() => getNavItems(isAdmin(), isResident()), [isAdmin, isResident, user?.role]);
+  const navItemsForHeader = useMemo(() => getNavItemsForLayout(isAdmin(), isResident(), isGuard()), [isAdmin, isResident, isGuard, user?.role]);
 
 
   if (isLoading || !user) {
