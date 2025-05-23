@@ -6,7 +6,7 @@ import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/lib/auth-provider';
 import { APP_NAME, USER_ROLES } from '@/lib/constants';
-import { Button } from '@/components/ui/button';
+import type { UserRole } from '@/lib/types'; // Ensure UserRole is imported if it's defined in types.ts
 import {
   LayoutDashboard,
   UserPlus,
@@ -15,8 +15,8 @@ import {
   FileText,
   LogOut,
   LucideIcon,
-  CalendarPlus, // Icon for Create Gate Pass
-  Ticket, // Icon for My Gate Passes
+  CalendarPlus,
+  Ticket,
 } from 'lucide-react';
 import {
   Sidebar,
@@ -33,22 +33,21 @@ export interface NavItem {
   href: string;
   label: string;
   icon: LucideIcon;
-  role?: UserRole[]; // Can be an array of roles or undefined for all
+  role?: UserRole[];
   disabled?: boolean;
+  iconColor?: string; // Added for specific icon colors
 }
 
 const getNavItems = (isAdminUser: boolean, isResidentUser: boolean, isGuardUser: boolean): NavItem[] => [
-  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  // Show "Add Visitor Entry" only for Guard role (or if no specific roles are implemented yet, this might mean it's hidden by default for admin/resident)
-  ...(isGuardUser ? [{ href: '/dashboard/add-visitor', label: 'Add Visitor Entry', icon: UserPlus } as NavItem] : []),
-  { href: '/dashboard/visitor-log', label: 'Visitor Log', icon: ClipboardList },
-  // Gate Pass links for Resident and Superadmin
+  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, iconColor: 'text-sky-500' },
+  ...(isGuardUser ? [{ href: '/dashboard/add-visitor', label: 'Add Visitor Entry', icon: UserPlus, iconColor: 'text-emerald-500' } as NavItem] : []),
+  { href: '/dashboard/visitor-log', label: 'Visitor Log', icon: ClipboardList, iconColor: 'text-amber-500' },
   ...((isResidentUser || isAdminUser) ? [
-    { href: '/dashboard/gate-pass/create', label: 'Create Gate Pass', icon: CalendarPlus } as NavItem,
-    { href: '/dashboard/gate-pass/my-passes', label: 'My Gate Passes', icon: Ticket } as NavItem,
+    { href: '/dashboard/gate-pass/create', label: 'Create Gate Pass', icon: CalendarPlus, iconColor: 'text-violet-500' } as NavItem,
+    { href: '/dashboard/gate-pass/my-passes', label: 'My Gate Passes', icon: Ticket, iconColor: 'text-rose-500' } as NavItem,
   ] : []),
-  ...(isResidentUser ? [{ href: '/dashboard/personal-logs', label: 'My Visitor Logs', icon: FileText } as NavItem] : []),
-  ...(isAdminUser ? [{ href: '/dashboard/admin-approvals', label: 'Resident Approvals', icon: Users } as NavItem] : []),
+  ...(isResidentUser ? [{ href: '/dashboard/personal-logs', label: 'My Visitor Logs', icon: FileText, iconColor: 'text-teal-500' } as NavItem] : []),
+  ...(isAdminUser ? [{ href: '/dashboard/admin-approvals', label: 'Resident Approvals', icon: Users, iconColor: 'text-pink-500' } as NavItem] : []),
 ];
 
 
@@ -78,7 +77,7 @@ export function AppSidebar() {
         <SidebarContent className="p-2">
           <SidebarMenu>
             {navItems.map((item) => {
-              const showItem = !item.role || (user?.role && item.role.includes(user.role));
+              const showItem = !item.role || (user?.role && item.role.includes(user.role as UserRole));
               if (!showItem) return null;
 
               const isActive = pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href));
@@ -98,7 +97,7 @@ export function AppSidebar() {
                     className="justify-start"
                   >
                     <Link href={item.href}>
-                      <item.icon className="h-5 w-5 text-sidebar-primary" />
+                      <item.icon className={cn("h-5 w-5", item.iconColor || 'text-sidebar-primary')} />
                       <span className="group-data-[collapsible=icon]:hidden group-hover/menu-item:font-semibold">{item.label}</span>
                     </Link>
                   </SidebarMenuButton>
@@ -111,11 +110,11 @@ export function AppSidebar() {
         <SidebarFooter className="p-2 border-t border-sidebar-border">
            <SidebarMenuButton
               tooltip={logoutTooltipProps}
-              className="justify-start group" // Added group here
+              className="justify-start group"
               onClick={logout}
             >
             <div>
-              <LogOut className="h-5 w-5 text-sidebar-primary" />
+              <LogOut className="h-5 w-5 text-red-500" />
               <span className="group-data-[collapsible=icon]:hidden group-hover:font-semibold">Logout</span>
             </div>
           </SidebarMenuButton>

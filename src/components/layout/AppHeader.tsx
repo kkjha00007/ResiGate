@@ -7,9 +7,10 @@ import { useAuth } from '@/lib/auth-provider';
 import { APP_NAME } from '@/lib/constants';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { LogOut, Menu, ShieldCheck, UserCircle, Building2 } from 'lucide-react'; // Added Building2 for flat number
+import { LogOut, Menu, ShieldCheck, UserCircle, Building2 } from 'lucide-react';
 import Link from 'next/link';
 import type { NavItem } from './AppSidebar'; 
+import { cn } from '@/lib/utils';
 
 interface AppHeaderProps {
   navItems: NavItem[];
@@ -44,7 +45,7 @@ export function AppHeader({ navItems }: AppHeaderProps) {
                   href={item.href}
                   className="flex items-center gap-3 rounded-lg px-3 py-2 text-sidebar-foreground transition-all hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
                 >
-                  <item.icon className="h-4 w-4" />
+                  <item.icon className={cn("h-4 w-4", item.iconColor || 'text-sidebar-primary')} />
                   {item.label}
                 </Link>
               ))}
@@ -72,9 +73,9 @@ export function AppHeader({ navItems }: AppHeaderProps) {
               </Avatar>
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent className="w-64" align="end" forceMount> {/* Increased width slightly */}
+          <DropdownMenuContent className="w-64" align="end" forceMount> 
             <DropdownMenuLabel className="font-normal">
-              <div className="flex flex-col space-y-1.5"> {/* Increased space slightly */}
+              <div className="flex flex-col space-y-1.5"> 
                 <p className="text-sm font-medium leading-none">{user.name}</p>
                 <p className="text-xs leading-none text-muted-foreground">
                   {user.email}
