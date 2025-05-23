@@ -64,7 +64,7 @@ const getNavItems = (isAdminUser: boolean, isOwnerOrRenterUser: boolean, isGuard
   
   // Admin Specific
   ...(isAdminUser ? [
-    { href: '/dashboard/admin-approvals', label: 'User Approvals', icon: Users, iconColor: 'text-pink-500' } as NavItem // Changed label
+    { href: '/dashboard/admin-approvals', label: 'User Approvals', icon: Users, iconColor: 'text-pink-500' } as NavItem
   ] : []),
 ];
 
@@ -73,7 +73,7 @@ export function AppSidebar() {
   const pathname = usePathname();
   const { user, logout, isAdmin, isOwnerOrRenter, isGuard } = useAuth();
 
-  const navItems = React.useMemo(() => getNavItems(isAdmin(), isOwnerOrRenter(), isGuard()), [isAdmin, isOwnerOrRenter, isGuard, user?.role]);
+  const navItems = React.useMemo(() => getNavItems(isAdmin(), isOwnerOrRenter(), isGuard()), [isAdmin, isOwnerOrRenter, isGuard]);
 
 
   const logoutTooltipProps = React.useMemo(() => ({

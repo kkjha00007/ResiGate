@@ -55,7 +55,7 @@ export default function DashboardLayout({
     }
   }, [user, isLoading, router]);
 
-  const navItemsForHeader = useMemo(() => getNavItemsForLayout(isAdmin(), isOwnerOrRenter(), isGuard()), [isAdmin, isOwnerOrRenter, isGuard, user?.role]);
+  const navItemsForHeader = useMemo(() => getNavItemsForLayout(isAdmin(), isOwnerOrRenter(), isGuard()), [isAdmin, isOwnerOrRenter, isGuard]);
 
 
   if (isLoading || !user) {
