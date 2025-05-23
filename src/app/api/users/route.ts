@@ -1,11 +1,12 @@
-
 // src/app/api/users/route.ts
 import { NextResponse, type NextRequest } from 'next/server';
 import { usersContainer } from '@/lib/cosmosdb';
 import type { User } from '@/lib/types';
 import { v4 as uuidv4 } from 'uuid';
 import { USER_ROLES } from '@/lib/constants';
+import bcrypt from 'bcryptjs';
 
+const SALT_ROUNDS = 10; // Cost factor for bcrypt hashing
 
 // Get all users (potentially for admin)
 export async function GET(request: NextRequest) {
@@ -45,18 +46,19 @@ export async function POST(request: NextRequest) {
     if (existingUsers.length > 0) {
       return NextResponse.json({ message: 'Email already exists' }, { status: 409 });
     }
-
+    
     // Standard registration: new users are residents and not approved by default.
     const roleToAssign = USER_ROLES.RESIDENT;
     const isApprovedInitially = false;
 
-    // IMPORTANT: Password should be HASHED here before storing.
-    // Storing plain text is a major security risk. This is for demonstration only.
+    // Hash the password before storing
+    const hashedPassword = await bcrypt.hash(userData.password, SALT_ROUNDS);
+
     const newUser: User = {
       id: uuidv4(), // Generate a unique ID
       name: userData.name,
       email: userData.email,
-      password: userData.password, // UNSAFE: Store hashed password instead
+      password: hashedPassword, // Store the hashed password
       flatNumber: userData.flatNumber,
       role: roleToAssign,
       isApproved: isApprovedInitially,
@@ -80,4 +82,3 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ message: 'Internal server error', error: errorMessage }, { status: 500 });
   }
 }
-

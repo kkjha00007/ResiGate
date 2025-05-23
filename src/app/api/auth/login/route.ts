@@ -2,23 +2,21 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { usersContainer } from '@/lib/cosmosdb';
 import type { User } from '@/lib/types';
+import bcrypt from 'bcryptjs';
 
 export async function POST(request: NextRequest) {
   try {
-    const { email, password } = await request.json();
+    const { email, password: plainTextPassword } = await request.json();
 
-    if (!email || !password) {
+    if (!email || !plainTextPassword) {
       return NextResponse.json({ message: 'Email and password are required' }, { status: 400 });
     }
 
-    // Query Cosmos DB for the user
-    // IMPORTANT: In a real app, you would query by email and then securely compare a HASHED password.
-    // Here, we are comparing plain text passwords, which is NOT secure for production.
+    // Query Cosmos DB for the user by email
     const querySpec = {
-      query: "SELECT * FROM c WHERE c.email = @email AND c.password = @password", // UNSAFE: PLAIN TEXT PASSWORD
+      query: "SELECT * FROM c WHERE c.email = @email",
       parameters: [
-        { name: "@email", value: email },
-        { name: "@password", value: password } // UNSAFE
+        { name: "@email", value: email }
       ]
     };
 
@@ -30,7 +28,21 @@ export async function POST(request: NextRequest) {
 
     const user = foundUsers[0];
 
-    // IMPORTANT: Remove password before sending user data to client
+    // User found, now compare the provided password with the stored hashed password
+    // Ensure user.password (the hash) exists
+    if (!user.password) {
+        console.error(`User ${email} found but has no password hash stored.`);
+        return NextResponse.json({ message: 'Authentication error' }, { status: 500 });
+    }
+
+    const isPasswordMatch = await bcrypt.compare(plainTextPassword, user.password);
+
+    if (!isPasswordMatch) {
+      return NextResponse.json({ message: 'Invalid email or password' }, { status: 401 });
+    }
+
+    // Password matches
+    // IMPORTANT: Remove password hash before sending user data to client
     const { password: _, ...userProfile } = user;
 
     return NextResponse.json(userProfile, { status: 200 });
