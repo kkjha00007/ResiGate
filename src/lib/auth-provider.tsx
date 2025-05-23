@@ -76,6 +76,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const router = useRouter();
   const { toast } = useToast();
 
+  const isAdmin = useCallback(() => user?.role === USER_ROLES.SUPERADMIN, [user]);
+  const isOwnerOrRenter = useCallback(() => user?.role === USER_ROLES.OWNER || user?.role === USER_ROLES.RENTER, [user]);
+  const isGuard = useCallback(() => user?.role === USER_ROLES.GUARD, [user]);
+
   const _fetchActiveNotices = useCallback(async () => {
     try {
       const response = await fetch('/api/notices');
@@ -87,6 +91,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setActiveNoticesState(noticesData);
     } catch (error) {
       console.error("Failed to fetch active notices:", error);
+      setActiveNoticesState([]);
     }
   }, []);
 
@@ -101,6 +106,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setUpcomingMeetingsState(meetingsData);
     } catch (error) {
       console.error("Failed to fetch upcoming meetings:", error);
+      setUpcomingMeetingsState([]);
     }
   }, []);
 
@@ -116,11 +122,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     } catch (error) {
       console.error("Failed to fetch approved vendors:", error);
       toast({ title: 'Error Loading Vendors', description: (error as Error).message, variant: 'destructive' });
+      setApprovedVendorsState([]);
     }
   }, [toast]);
 
   useEffect(() => {
     const checkUserSession = () => {
+      // In a real app, you might check localStorage for a token or session info
+      // For this example, we assume the user state is lost on refresh and needs login
       setIsLoading(false);
     };
     checkUserSession();
@@ -142,6 +151,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     } catch (error) {
       console.error("Failed to fetch users:", error);
       toast({ title: 'Error Loading Users', description: `Failed to retrieve user list from database. Detail: ${(error as Error).message}`, variant: 'destructive' });
+      setAllUsersState([]);
     }
   }, [toast]);
 
@@ -157,6 +167,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     } catch (error) {
       console.error("Failed to fetch visitor entries:", error);
       toast({ title: 'Error Loading Visitor Entries', description: (error as Error).message, variant: 'destructive' });
+      setVisitorEntriesState([]);
     }
   }, [toast]);
 
@@ -173,6 +184,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     } catch (error) {
       console.error("Failed to fetch gate passes:", error);
       toast({ title: 'Error Loading Gate Passes', description: (error as Error).message, variant: 'destructive' });
+      setGatePassesState([]);
     }
   }, [user, toast]);
 
@@ -237,13 +249,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         toast({ title: 'Gate Pass Update Failed', description: data.message || 'Could not mark pass as used.', variant: 'destructive' });
         return null;
       }
-
-      if (user?.role === USER_ROLES.GUARD) {
-          // Guard might not need to re-fetch their own passes list, but global entries list
-      } else {
-          await fetchGatePasses();
+      // No specific toast for success here, relying on the component to show feedback.
+      // This ensures the success toast in ValidateGatePassForm isn't duplicated.
+      if (user?.role !== USER_ROLES.GUARD) {
+          await fetchGatePasses(); // Refresh for resident/admin
       }
-      await fetchVisitorEntries();
+      await fetchVisitorEntries(); // Refresh visitor log for all
       return data;
     } catch (error) {
       toast({ title: 'Gate Pass Update Error', description: (error as Error).message || 'An unexpected error occurred.', variant: 'destructive' });
@@ -257,10 +268,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       if (!response.ok) {
         if (response.status === 404) {
           toast({ title: 'Not Found', description: 'No gate pass found with this token.', variant: 'destructive' });
-          return null;
+        } else {
+            const errorData = await response.json().catch(() => ({ message: 'Failed to fetch gate pass by token.' }));
+            toast({ title: 'Error Fetching Pass', description: errorData.message || 'Server error.', variant: 'destructive' });
         }
-        const errorData = await response.json().catch(() => ({ message: 'Failed to fetch gate pass by token.' }));
-        throw new Error(errorData.message || 'Server error.');
+        return null;
       }
       return await response.json();
     } catch (error) {
@@ -296,9 +308,22 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
       setUser(loggedInUser);
       toast({ title: 'Login Successful', description: `Welcome back, ${loggedInUser.name}!` });
+      // Fetch data relevant to the logged-in user
       await _fetchActiveNotices();
       await _fetchUpcomingMeetings();
       await _fetchApprovedVendors();
+      if (loggedInUser.role === USER_ROLES.SUPERADMIN) {
+        await fetchAllUsers(); // Fetch all users for admin
+        await fetchAllNoticesForAdmin();
+        await fetchAllMeetingsForAdmin();
+        await fetchPendingVendors();
+      }
+      if (loggedInUser.role === USER_ROLES.OWNER || loggedInUser.role === USER_ROLES.RENTER) {
+        await fetchMyComplaints();
+        await fetchGatePasses();
+      }
+      await fetchVisitorEntries(); // All roles might need general visitor log access
+
       router.push('/dashboard');
       return true;
     } catch (error) {
@@ -339,8 +364,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         toast({ title: 'Registration Failed', description: data.message || 'Could not create account.', variant: 'destructive' });
         return false;
       }
-      toast({ title: 'Registration Successful', description: 'Your account has been created and is pending approval.' });
-      router.push('/');
+      toast({ title: 'Registration Successful', description: 'Your account has been created and is pending approval by an admin.' });
+      router.push('/'); // Redirect to home/login after registration
       return true;
     } catch (error) {
       toast({ title: 'Registration Error', description: (error as Error).message || 'An unexpected error occurred during registration.', variant: 'destructive' });
@@ -364,7 +389,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         return false;
       }
       toast({ title: 'User Approved', description: `${data.name} (${data.role}) has been approved.` });
-      await fetchAllUsers();
+      await fetchAllUsers(); // Refresh the list of all users
       return true;
     } catch (error) {
       toast({ title: 'Approval Error', description: (error as Error).message || 'An unexpected error occurred during approval.', variant: 'destructive' });
@@ -383,9 +408,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         toast({ title: 'Rejection Failed', description: data.message || 'Could not reject user.', variant: 'destructive' });
         return false;
       }
-      const data = await response.json();
+      const data = await response.json(); // Get the deleted user's profile
       toast({ title: 'User Rejected', description: `Registration for ${data.name} has been rejected and removed.` });
-      await fetchAllUsers();
+      await fetchAllUsers(); // Refresh the list of all users
       return true;
     } catch (error) {
       toast({ title: 'Rejection Error', description: (error as Error).message || 'An unexpected error occurred during rejection.', variant: 'destructive' });
@@ -406,6 +431,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         return null;
       }
       toast({ title: 'Profile Updated', description: 'Your profile has been successfully updated.' });
+      // If the updated user is the currently logged-in user, update the context
       if (user && user.id === userId) {
         setUser(prevUser => prevUser ? { ...prevUser, ...data } : null);
       }
@@ -459,7 +485,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         return null;
       }
       toast({ title: 'Complaint Submitted', description: 'Your complaint has been successfully submitted.' });
-      await fetchMyComplaints();
+      await fetchMyComplaints(); // Refresh the list of complaints
       return data as Complaint;
     } catch (error) {
       toast({ title: 'Complaint Submission Error', description: (error as Error).message || 'An unexpected error occurred.', variant: 'destructive' });
@@ -480,13 +506,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     } catch (error) {
       console.error("Failed to fetch my complaints:", error);
       toast({ title: 'Error Loading Complaints', description: (error as Error).message, variant: 'destructive' });
+      setMyComplaintsState([]);
     }
   }, [user, toast]);
 
-  const fetchActiveNotices = _fetchActiveNotices;
+  const fetchActiveNotices = _fetchActiveNotices; // Already defined above
 
   const createNotice = async (noticeData: { title: string; content: string; }): Promise<Notice | null> => {
-    if (!user || !isAdmin()) {
+    if (!user || !isAdmin()) { // Ensure isAdmin check is correct
         toast({ title: 'Unauthorized', description: 'Only super admins can create notices.', variant: 'destructive' });
         return null;
     }
@@ -507,8 +534,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             return null;
         }
         toast({ title: 'Notice Created', description: `Notice "${data.title}" has been posted.` });
-        await fetchActiveNotices();
-        await fetchAllNoticesForAdmin();
+        await fetchActiveNotices(); // Refresh active notices for dashboard
+        await fetchAllNoticesForAdmin(); // Refresh all notices for admin management
 
         return data as Notice;
     } catch (error) {
@@ -530,8 +557,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     } catch (error) {
       console.error("Failed to fetch all notices for admin:", error);
       toast({ title: 'Error Loading Admin Notices', description: (error as Error).message, variant: 'destructive' });
+      setAllNoticesForAdminState([]);
     }
-  }, [toast, user]); 
+  }, [toast, user, isAdmin]); // Added isAdmin to dependency array
 
   const updateNotice = async (noticeId: string, currentMonthYear: string, updates: Partial<Omit<Notice, 'id' | 'postedByUserId' | 'postedByName' | 'createdAt' | 'monthYear' | 'updatedAt'>>): Promise<Notice | null> => {
     if (!isAdmin()) {
@@ -542,6 +570,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const response = await fetch(`/api/notices/${noticeId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
+        // monthYear must be passed for partition key if not changing, or derived if changing
         body: JSON.stringify({ ...updates, monthYear: currentMonthYear }),
       });
       const data = await response.json();
@@ -565,7 +594,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       return false;
     }
     try {
-      const response = await fetch(`/api/notices/${noticeId}?monthYear=${encodeURIComponent(currentMonthYear)}`, {
+      const response = await fetch(`/api/notices/${noticeId}?monthYear=${encodeURIComponent(currentMonthYear)}`, { // Pass monthYear as query param for DELETE
         method: 'DELETE',
       });
       if (!response.ok) {
@@ -583,7 +612,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const fetchUpcomingMeetings = _fetchUpcomingMeetings;
+  const fetchUpcomingMeetings = _fetchUpcomingMeetings; // Already defined
 
   const createMeeting = async (meetingData: Omit<Meeting, 'id' | 'postedByUserId' | 'postedByName' | 'createdAt' | 'isActive' | 'monthYear' | 'updatedAt'>): Promise<Meeting | null> => {
     if (!user || !isAdmin()) {
@@ -629,35 +658,23 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     } catch (error) {
       console.error("Failed to fetch all meetings for admin:", error);
       toast({ title: 'Error Loading Admin Meetings', description: (error as Error).message, variant: 'destructive' });
+      setAllMeetingsForAdminState([]);
     }
-  }, [toast, user]); 
+  }, [toast, user, isAdmin]); // Added isAdmin
 
   const updateMeeting = async (meetingId: string, currentMonthYear: string, updates: Partial<Omit<Meeting, 'id' | 'postedByUserId' | 'postedByName' | 'createdAt' | 'monthYear' | 'updatedAt'>>): Promise<Meeting | null> => {
     if (!isAdmin()) {
       toast({ title: 'Unauthorized', description: 'Only super admins can update meetings.', variant: 'destructive' });
       return null;
     }
-
-    let newMonthYear = currentMonthYear;
-    if (updates.dateTime) {
-        try {
-            const newMeetingDateTime = parseISO(updates.dateTime);
-            if (isNaN(newMeetingDateTime.getTime())) {
-                 toast({ title: 'Invalid Date', description: 'New meeting date/time is invalid.', variant: 'destructive' });
-                return null;
-            }
-            newMonthYear = format(newMeetingDateTime, 'yyyy-MM');
-        } catch (e) {
-            toast({ title: 'Invalid Date Format', description: 'Error parsing new meeting date/time.', variant: 'destructive' });
-            return null;
-        }
-    }
+    // Include monthYear with updates for the API to handle partition key
+    const body = { ...updates, monthYear: currentMonthYear };
 
     try {
       const response = await fetch(`/api/meetings/${meetingId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...updates, monthYear: currentMonthYear }), 
+        body: JSON.stringify(body),
       });
       const data = await response.json();
       if (!response.ok) {
@@ -698,7 +715,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const fetchApprovedVendors = _fetchApprovedVendors;
+  const fetchApprovedVendors = _fetchApprovedVendors; // Already defined
 
   const submitNewVendor = async (vendorData: Omit<Vendor, 'id' | 'submittedAt' | 'isApproved' | 'submittedByUserId' | 'submittedByName' | 'approvedByUserId' | 'approvedAt'>): Promise<Vendor | null> => {
     if (!user) {
@@ -722,8 +739,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         toast({ title: 'Vendor Submission Failed', description: data.message || 'Could not submit vendor for review.', variant: 'destructive' });
         return null;
       }
-      toast({ title: 'Vendor Submitted', description: `Vendor "${data.name}" submitted for approval.` });
-      // No need to fetchApprovedVendors here, as it's a new unapproved vendor. Admin will see it in their queue.
+      // No success toast here as it's handled in the form component after redirect
+      // await fetchPendingVendors(); // Not needed here, admin will fetch their list
       return data as Vendor;
     } catch (error) {
       toast({ title: 'Vendor Submission Error', description: (error as Error).message || 'An unexpected error occurred.', variant: 'destructive' });
@@ -744,8 +761,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     } catch (error) {
       console.error("Failed to fetch pending vendors:", error);
       toast({ title: 'Error Loading Pending Vendors', description: (error as Error).message, variant: 'destructive' });
+      setPendingVendorsState([]); // Clear on error
     }
-  }, [toast, user]);
+  }, [toast, user, isAdmin]); // Added isAdmin
 
   const approveVendor = async (vendorId: string): Promise<Vendor | null> => {
     if (!user || !isAdmin()) {
@@ -756,9 +774,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const response = await fetch(`/api/vendors/admin/${vendorId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
+        body: JSON.stringify({
           isApproved: true,
-          approvedByUserId: user.id,
+          approvedByUserId: user.id, // Admin's ID
          }),
       });
       const data = await response.json();
@@ -767,8 +785,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         return null;
       }
       toast({ title: 'Vendor Approved', description: `Vendor "${data.name}" has been approved and added to the directory.` });
-      await fetchPendingVendors();
-      await fetchApprovedVendors();
+      await fetchPendingVendors(); // Refresh pending list
+      await fetchApprovedVendors(); // Refresh directory
       return data as Vendor;
     } catch (error) {
       toast({ title: 'Vendor Approval Error', description: (error as Error).message || 'An unexpected error occurred.', variant: 'destructive' });
@@ -777,7 +795,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const rejectVendor = async (vendorId: string): Promise<boolean> => {
-     if (!isAdmin()) {
+     if (!isAdmin()) { // Check if current user is admin
       toast({ title: 'Unauthorized', description: 'Only super admins can reject vendors.', variant: 'destructive' });
       return false;
     }
@@ -791,18 +809,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         return false;
       }
       toast({ title: 'Vendor Rejected', description: 'The vendor submission has been successfully rejected and removed.' });
-      await fetchPendingVendors();
+      await fetchPendingVendors(); // Refresh pending list
       return true;
     } catch (error) {
       toast({ title: 'Vendor Rejection Error', description: (error as Error).message || 'An unexpected error occurred.', variant: 'destructive' });
       return false;
     }
   };
-
-
-  const isAdmin = useCallback(() => user?.role === USER_ROLES.SUPERADMIN, [user]);
-  const isOwnerOrRenter = useCallback(() => user?.role === USER_ROLES.OWNER || user?.role === USER_ROLES.RENTER, [user]);
-  const isGuard = useCallback(() => user?.role === USER_ROLES.GUARD, [user]);
 
   return (
     <AuthContext.Provider value={{
@@ -865,4 +878,3 @@ export const useAuth = (): AuthContextType => {
   }
   return context;
 };
-
