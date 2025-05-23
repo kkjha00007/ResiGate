@@ -46,18 +46,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ message: 'Email already exists' }, { status: 409 });
     }
 
-    // Check if this is the first user being registered
-    const { resources: allUsers } = await usersContainer.items.readAll<User>().fetchAll();
-    const isFirstUser = allUsers.length === 0;
-
-    let roleToAssign = USER_ROLES.RESIDENT;
-    let isApprovedInitially = false;
-
-    if (isFirstUser) {
-      roleToAssign = USER_ROLES.SUPERADMIN;
-      isApprovedInitially = true;
-      console.log(`INFO: First user registration. Assigning SUPERADMIN role to: ${userData.email}`);
-    }
+    // Standard registration: new users are residents and not approved by default.
+    const roleToAssign = USER_ROLES.RESIDENT;
+    const isApprovedInitially = false;
 
     // IMPORTANT: Password should be HASHED here before storing.
     // Storing plain text is a major security risk. This is for demonstration only.
@@ -89,3 +80,4 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ message: 'Internal server error', error: errorMessage }, { status: 500 });
   }
 }
+
