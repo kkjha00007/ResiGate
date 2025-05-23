@@ -1,3 +1,4 @@
+
 // src/app/api/users/route.ts
 import { NextResponse, type NextRequest } from 'next/server';
 import { usersContainer } from '@/lib/cosmosdb';
@@ -35,26 +36,39 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if user already exists
-    const querySpec = {
+    const querySpecEmailCheck = {
       query: "SELECT * FROM c WHERE c.email = @email",
       parameters: [{ name: "@email", value: userData.email }]
     };
-    const { resources: existingUsers } = await usersContainer.items.query<User>(querySpec).fetchAll();
+    const { resources: existingUsers } = await usersContainer.items.query<User>(querySpecEmailCheck).fetchAll();
 
     if (existingUsers.length > 0) {
       return NextResponse.json({ message: 'Email already exists' }, { status: 409 });
     }
 
+    // Check if this is the first user being registered
+    const { resources: allUsers } = await usersContainer.items.readAll<User>().fetchAll();
+    const isFirstUser = allUsers.length === 0;
+
+    let roleToAssign = USER_ROLES.RESIDENT;
+    let isApprovedInitially = false;
+
+    if (isFirstUser) {
+      roleToAssign = USER_ROLES.SUPERADMIN;
+      isApprovedInitially = true;
+      console.log(`INFO: First user registration. Assigning SUPERADMIN role to: ${userData.email}`);
+    }
+
     // IMPORTANT: Password should be HASHED here before storing.
-    // Storing plain text is a major security risk.
+    // Storing plain text is a major security risk. This is for demonstration only.
     const newUser: User = {
       id: uuidv4(), // Generate a unique ID
       name: userData.name,
       email: userData.email,
       password: userData.password, // UNSAFE: Store hashed password instead
       flatNumber: userData.flatNumber,
-      role: USER_ROLES.RESIDENT, // Default role
-      isApproved: false,         // New residents require approval
+      role: roleToAssign,
+      isApproved: isApprovedInitially,
       registrationDate: new Date().toISOString(),
     };
 
