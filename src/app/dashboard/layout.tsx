@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useMemo } from 'react'; // Added useMemo
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth-provider';
 import { AppHeader } from '@/components/layout/AppHeader';
@@ -32,6 +32,9 @@ export default function DashboardLayout({
     }
   }, [user, isLoading, router]);
 
+  const navItemsForHeader = useMemo(() => getNavItems(isAdmin(), isResident()), [isAdmin, isResident, user?.role]);
+
+
   if (isLoading || !user) {
     return (
       <div className="flex h-screen items-center justify-center">
@@ -40,14 +43,12 @@ export default function DashboardLayout({
     );
   }
   
-  const navItems = getNavItems(isAdmin(), isResident());
-
   return (
     <SidebarProvider defaultOpen>
       <div className="flex min-h-screen w-full">
-        <AppSidebar />
+        <AppSidebar /> {/* AppSidebar now correctly consumes context from this SidebarProvider */}
         <div className="flex flex-1 flex-col">
-          <AppHeader navItems={navItems} />
+          <AppHeader navItems={navItemsForHeader} />
           <main className="flex-1 overflow-y-auto bg-secondary/30 p-4 md:p-6 lg:p-8">
             {children}
           </main>

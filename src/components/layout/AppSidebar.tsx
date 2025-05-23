@@ -20,7 +20,7 @@ import {
   FileText
 } from 'lucide-react';
 import {
-  SidebarProvider,
+  // SidebarProvider, // Removed
   Sidebar,
   SidebarHeader,
   SidebarContent,
@@ -58,7 +58,8 @@ export function AppSidebar() {
   const pathname = usePathname();
   const { user, logout, isAdmin, isResident } = useAuth();
   
-  const navItems = getNavItems(isAdmin(), isResident());
+  const navItems = React.useMemo(() => getNavItems(isAdmin(), isResident()), [isAdmin, isResident, user?.role]);
+
 
   const logoutTooltipProps = React.useMemo(() => ({
     children: "Logout",
@@ -68,8 +69,8 @@ export function AppSidebar() {
   if (!user) return null;
 
   return (
-    <SidebarProvider defaultOpen>
-      <Sidebar collapsible="icon" className="border-r shadow-sm">
+    // <SidebarProvider defaultOpen> // Removed this line
+      <Sidebar collapsible="icon" className="border-r shadow-sm hidden md:flex"> {/* Added hidden md:flex to match original behavior from SidebarProvider */}
         <SidebarHeader className="p-4 border-b border-sidebar-border">
           <Link href="/dashboard" className="flex items-center gap-2 group-data-[collapsible=icon]:justify-center">
             <AdminIcon className="h-7 w-7 text-sidebar-primary" />
@@ -121,7 +122,6 @@ export function AppSidebar() {
           </SidebarMenuButton>
         </SidebarFooter>
       </Sidebar>
-    </SidebarProvider>
+    // </SidebarProvider> // Removed this line
   );
 }
-
