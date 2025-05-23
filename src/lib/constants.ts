@@ -5,8 +5,8 @@ export const APP_NAME = "ResiGate";
 
 export const USER_ROLES = {
   SUPERADMIN: "superadmin",
-  OWNER: "owner", // New role
-  RENTER: "renter", // New role
+  OWNER: "owner", 
+  RENTER: "renter", 
   GUARD: "guard",
 } as const;
 
@@ -81,3 +81,15 @@ export const VENDOR_CATEGORIES: VendorCategory[] = [
   "Tiffin Service",
   "Other Services",
 ];
+
+// Committee Member Roles
+export const COMMITTEE_MEMBER_ROLES = [
+  "President",
+  "Vice-President",
+  "Secretary",
+  "Joint-Secretary",
+  "Treasurer",
+  "Committee Member",
+  "Advisor",
+  "Other",
+] as const;

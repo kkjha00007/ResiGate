@@ -21,17 +21,20 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-  FormDescription, // Added FormDescription here
+  FormDescription,
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea'; // If needed for a larger field like 'responsibilities'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'; // Added Select
 import React, { useEffect, useState } from 'react';
 import type { CommitteeMember } from '@/lib/types';
-import { User, Briefcase, HomeIcon, Mail, Phone, Image as ImageIcon, Save } from 'lucide-react';
+import { COMMITTEE_MEMBER_ROLES } from '@/lib/constants'; // Added import for roles
+import { User, Briefcase, HomeIcon, Mail, Phone, Image as ImageIcon, Save, Building } from 'lucide-react';
 
 const committeeMemberSchema = z.object({
   name: z.string().min(2, { message: 'Name must be at least 2 characters.' }).max(100),
-  roleInCommittee: z.string().min(2, { message: 'Role must be at least 2 characters.' }).max(50),
+  roleInCommittee: z.enum(COMMITTEE_MEMBER_ROLES, {
+    required_error: "Role in committee is required.",
+  }),
   flatNumber: z.string().min(1, { message: 'Flat number is required.' }).max(20),
   email: z.string().email({ message: 'Invalid email address.' }).optional().or(z.literal('')),
   phone: z.string().regex(/^$|^\d{10,15}$/, { message: 'Phone number must be 10-15 digits or empty.' }).optional(),
@@ -59,7 +62,7 @@ export function CommitteeMemberFormDialog({
     resolver: zodResolver(committeeMemberSchema),
     defaultValues: {
       name: '',
-      roleInCommittee: '',
+      roleInCommittee: undefined,
       flatNumber: '',
       email: '',
       phone: '',
@@ -68,39 +71,36 @@ export function CommitteeMemberFormDialog({
   });
 
   useEffect(() => {
-    if (initialData) {
+    if (isOpen && initialData) {
       form.reset({
         name: initialData.name || '',
-        roleInCommittee: initialData.roleInCommittee || '',
+        roleInCommittee: initialData.roleInCommittee as typeof COMMITTEE_MEMBER_ROLES[number] || undefined,
         flatNumber: initialData.flatNumber || '',
         email: initialData.email || '',
         phone: initialData.phone || '',
         imageUrl: initialData.imageUrl || `https://placehold.co/200x200.png?text=${initialData.name.substring(0,2).toUpperCase()}`,
       });
-    } else {
-      form.reset({ // Reset to default if no initial data (for 'Add' mode)
+    } else if (isOpen && !initialData) { // Reset to default if 'Add' mode and dialog becomes open
+      form.reset({
         name: '',
-        roleInCommittee: '',
+        roleInCommittee: undefined,
         flatNumber: '',
         email: '',
         phone: '',
         imageUrl: '',
       });
     }
-  }, [initialData, form, isOpen]); // Re-run effect if isOpen changes to handle dialog re-opening
+  }, [initialData, form, isOpen]);
 
   const handleSubmit = async (data: CommitteeMemberFormValues) => {
     setIsSubmitting(true);
-    // If imageUrl is empty, use a placeholder based on initials for consistency with display logic
     const finalData = {
       ...data,
       imageUrl: data.imageUrl || `https://placehold.co/200x200.png?text=${data.name.substring(0,2).toUpperCase()}`,
     };
     await onSubmit(finalData, initialData?.id);
     setIsSubmitting(false);
-    if (!form.formState.isSubmitSuccessful) { // only close if submit was successful (errors might keep it open)
-        // error handling might be needed here or handled by parent
-    }
+    // Dialog closing is handled by onOpenChange in parent
   };
 
   return (
@@ -138,12 +138,23 @@ export function CommitteeMemberFormDialog({
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Role in Committee *</FormLabel>
-                  <FormControl>
-                    <div className="relative">
-                      <Briefcase className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                      <Input placeholder="e.g., President, Secretary" {...field} className="pl-10" />
-                    </div>
-                  </FormControl>
+                  <Select onValueChange={field.onChange} value={field.value}>
+                    <FormControl>
+                      <div className="relative">
+                        <Briefcase className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <SelectTrigger className="pl-10">
+                          <SelectValue placeholder="Select a role" />
+                        </SelectTrigger>
+                      </div>
+                    </FormControl>
+                    <SelectContent>
+                      {COMMITTEE_MEMBER_ROLES.map((role) => (
+                        <SelectItem key={role} value={role}>
+                          {role}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                   <FormMessage />
                 </FormItem>
               )}
@@ -221,7 +232,7 @@ export function CommitteeMemberFormDialog({
               </DialogClose>
               <Button type="submit" disabled={isSubmitting}>
                 {isSubmitting ? (
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary-foreground"></div>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary-foreground mr-2"></div>
                 ) : (
                    <Save className="mr-2 h-4 w-4" />
                 )}
