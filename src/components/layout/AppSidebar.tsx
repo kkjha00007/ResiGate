@@ -25,7 +25,7 @@ import {
   Store,
   ConciergeBell,
   ListFilter,
-  // Users as CommitteeIcon, // Re-using Users icon for Committee Members
+  Landmark, // Added for Payment Details
 } from 'lucide-react';
 import {
   Sidebar,
@@ -69,6 +69,7 @@ const getNavItems = (isAdminUser: boolean, isOwnerOrRenterUser: boolean, isGuard
   ...(isOwnerOrRenterUser ? [
     { href: '/dashboard/personal-logs', label: 'My Visitor Logs', icon: FileText, iconColor: 'text-teal-500' } as NavItem,
     { href: '/dashboard/complaints', label: 'My Complaints', icon: Megaphone, iconColor: 'text-orange-500' } as NavItem,
+    { href: '/dashboard/payment-details', label: 'Payment Details', icon: Landmark, iconColor: 'text-fuchsia-500' } as NavItem,
   ] : []),
 
   // Vendor Directory - All authenticated users

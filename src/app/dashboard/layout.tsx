@@ -7,7 +7,7 @@ import { useAuth } from '@/lib/auth-provider';
 import { AppHeader } from '@/components/layout/AppHeader';
 import { AppSidebar, NavItem } from '@/components/layout/AppSidebar';
 import { USER_ROLES } from '@/lib/constants';
-import { LayoutDashboard, UserPlus, FileText, Users, LogOut, LucideIcon, ClipboardList, CalendarPlus, Ticket, ShieldCheckIcon, Settings2, Megaphone, ClipboardEdit, UsersRound, Store, ConciergeBell, ListFilter } from 'lucide-react';
+import { LayoutDashboard, UserPlus, FileText, Users, LogOut, LucideIcon, ClipboardList, CalendarPlus, Ticket, ShieldCheckIcon, Settings2, Megaphone, ClipboardEdit, UsersRound, Store, ConciergeBell, ListFilter, Landmark } from 'lucide-react';
 import { SidebarProvider } from '@/components/ui/sidebar';
 
 
@@ -32,6 +32,7 @@ const getNavItemsForLayout = (isAdminUser: boolean, isOwnerOrRenterUser: boolean
   ...(isOwnerOrRenterUser ? [
     { href: '/dashboard/personal-logs', label: 'My Visitor Logs', icon: FileText, iconColor: 'text-teal-500' } as NavItem,
     { href: '/dashboard/complaints', label: 'My Complaints', icon: Megaphone, iconColor: 'text-orange-500' } as NavItem,
+    { href: '/dashboard/payment-details', label: 'Payment Details', icon: Landmark, iconColor: 'text-fuchsia-500' } as NavItem,
   ] : []),
 
   // Vendor Directory - All authenticated users
