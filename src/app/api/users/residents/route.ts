@@ -12,7 +12,7 @@ export async function GET(request: NextRequest) {
     // For now, assuming client-side routing restricts access appropriately.
 
     const querySpec = {
-      query: "SELECT c.id, c.name, c.flatNumber FROM c WHERE (c.role = @ownerRole OR c.role = @renterRole) AND c.isApproved = true ORDER BY c.flatNumber ASC, c.name ASC",
+      query: "SELECT c.id, c.name, c.flatNumber FROM c WHERE (c.role = @ownerRole OR c.role = @renterRole) AND c.isApproved = true", // Removed ORDER BY c.flatNumber ASC, c.name ASC
       parameters: [
         { name: "@ownerRole", value: USER_ROLES.OWNER },
         { name: "@renterRole", value: USER_ROLES.RENTER }
@@ -23,9 +23,10 @@ export async function GET(request: NextRequest) {
     
     return NextResponse.json(residentProfiles, { status: 200 });
 
-  } catch (error) {
-    console.error('Get Approved Residents API error:', error); // This log is crucial
-    const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
+  } catch (error: any) {
+    console.error('Get Approved Residents API error:', error); 
+    const errorMessage = error?.body?.message || error?.message || 'An unknown error occurred while fetching approved residents.';
     return NextResponse.json({ message: `Failed to retrieve approved residents. Detail: ${errorMessage}` }, { status: 500 });
   }
 }
+
