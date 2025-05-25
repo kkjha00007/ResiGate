@@ -24,8 +24,8 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(residentProfiles, { status: 200 });
 
   } catch (error) {
-    console.error('Get Approved Residents API error:', error);
+    console.error('Get Approved Residents API error:', error); // This log is crucial
     const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
-    return NextResponse.json({ message: 'Internal server error', error: errorMessage }, { status: 500 });
+    return NextResponse.json({ message: `Failed to retrieve approved residents. Detail: ${errorMessage}` }, { status: 500 });
   }
 }
