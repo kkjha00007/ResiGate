@@ -27,7 +27,7 @@ import {
   ListFilter,
   Landmark,
   Users2 as NeighboursIcon,
-  ParkingSquare, // Added for Parking
+  ParkingSquare,
 } from 'lucide-react';
 import {
   Sidebar,
@@ -50,7 +50,8 @@ export interface NavItem {
   iconColor?: string;
 }
 
-const getNavItems = (isAdminUser: boolean, isOwnerOrRenterUser: boolean, isGuardUser: boolean): NavItem[] => [
+// Exporting getNavItems so it can be used by DashboardLayout for AppHeader
+export const getNavItems = (isAdminUser: boolean, isOwnerOrRenterUser: boolean, isGuardUser: boolean): NavItem[] => [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, iconColor: 'text-sky-500' },
 
   // Guard Specific
