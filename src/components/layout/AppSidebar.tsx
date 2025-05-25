@@ -25,8 +25,9 @@ import {
   Store,
   ConciergeBell,
   ListFilter,
-  Landmark, 
-  Users2 as NeighboursIcon, // Alias Users2 to avoid conflict if Users is used elsewhere
+  Landmark,
+  Users2 as NeighboursIcon,
+  ParkingSquare, // Added for Parking
 } from 'lucide-react';
 import {
   Sidebar,
@@ -59,7 +60,7 @@ const getNavItems = (isAdminUser: boolean, isOwnerOrRenterUser: boolean, isGuard
   ] : []),
 
   { href: '/dashboard/visitor-log', label: 'Visitor Log', icon: ClipboardList, iconColor: 'text-amber-500' },
-  
+
   // Owner/Renter and Admin Specific (for gate passes)
   ...((isOwnerOrRenterUser || isAdminUser) ? [
     { href: '/dashboard/gate-pass/create', label: 'Create Gate Pass', icon: CalendarPlus, iconColor: 'text-violet-500' } as NavItem,
@@ -71,17 +72,18 @@ const getNavItems = (isAdminUser: boolean, isOwnerOrRenterUser: boolean, isGuard
     { href: '/dashboard/personal-logs', label: 'My Visitor Logs', icon: FileText, iconColor: 'text-teal-500' } as NavItem,
     { href: '/dashboard/complaints', label: 'My Complaints', icon: Megaphone, iconColor: 'text-orange-500' } as NavItem,
   ] : []),
-  
+
   // All Authenticated Users
   { href: '/dashboard/neighbours', label: 'Our Neighbours', icon: NeighboursIcon, iconColor: 'text-cyan-600' },
   { href: '/dashboard/vendors/directory', label: 'Vendor Directory', icon: Store, iconColor: 'text-cyan-500' },
   { href: '/dashboard/vendors/add', label: 'Add Vendor', icon: ConciergeBell, iconColor: 'text-purple-500' },
   { href: '/dashboard/committee-members', label: 'Committee Members', icon: Users, iconColor: 'text-green-500' },
-  
+
   // Payment Details - Visible to Owner/Renter AND Admin
   ...((isOwnerOrRenterUser || isAdminUser) ? [
      { href: '/dashboard/payment-details', label: 'Payment Details', icon: Landmark, iconColor: 'text-fuchsia-500' } as NavItem,
   ] : []),
+
 
   // Admin Specific
   ...(isAdminUser ? [
@@ -89,8 +91,8 @@ const getNavItems = (isAdminUser: boolean, isOwnerOrRenterUser: boolean, isGuard
     { href: '/dashboard/admin/manage-notices', label: 'Manage Notices', icon: ClipboardEdit, iconColor: 'text-indigo-500' } as NavItem,
     { href: '/dashboard/admin/manage-meetings', label: 'Manage Meetings', icon: UsersRound, iconColor: 'text-lime-500' } as NavItem,
     { href: '/dashboard/admin/manage-vendors', label: 'Manage Vendors', icon: ListFilter, iconColor: 'text-yellow-500' } as NavItem,
+    { href: '/dashboard/admin/manage-parking', label: 'Manage Parking', icon: ParkingSquare, iconColor: 'text-orange-600' } as NavItem,
   ] : []),
-
   // All logged-in users
   { href: '/dashboard/my-profile', label: 'My Profile', icon: Settings2, iconColor: 'text-gray-400' },
 ];
@@ -101,7 +103,6 @@ export function AppSidebar() {
   const { user, logout, isAdmin, isOwnerOrRenter, isGuard } = useAuth();
 
   const navItems = React.useMemo(() => getNavItems(isAdmin(), isOwnerOrRenter(), isGuard()), [isAdmin, isOwnerOrRenter, isGuard]);
-
 
   const logoutTooltipProps = React.useMemo(() => ({
     children: "Logout",
@@ -136,7 +137,7 @@ export function AppSidebar() {
                     isActive={isActive}
                     tooltip={tooltipProps}
                     disabled={item.disabled}
-                    className="justify-start group" 
+                    className="justify-start group"
                   >
                     <Link href={item.href}>
                       <item.icon className={cn("h-5 w-5", item.iconColor || 'text-sidebar-primary')} />

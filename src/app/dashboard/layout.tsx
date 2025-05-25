@@ -5,9 +5,9 @@ import React, { useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth-provider';
 import { AppHeader } from '@/components/layout/AppHeader';
-import { AppSidebar, NavItem } from '@/components/layout/AppSidebar'; // Re-import NavItem from AppSidebar for consistency
+import { AppSidebar, NavItem } from '@/components/layout/AppSidebar';
 import { USER_ROLES } from '@/lib/constants';
-import { LayoutDashboard, UserPlus, FileText, Users, LogOut, LucideIcon, ClipboardList, CalendarPlus, Ticket, ShieldCheckIcon, Settings2, Megaphone, ClipboardEdit, UsersRound, Store, ConciergeBell, ListFilter, Landmark, Users2 as NeighboursIcon } from 'lucide-react';
+import { LayoutDashboard, UserPlus, FileText, Users, LogOut, LucideIcon, ClipboardList, CalendarPlus, Ticket, ShieldCheckIcon, Settings2, Megaphone, ClipboardEdit, UsersRound, Store, ConciergeBell, ListFilter, Landmark, Users2 as NeighboursIcon, ParkingSquare } from 'lucide-react';
 import { SidebarProvider } from '@/components/ui/sidebar';
 
 
@@ -39,7 +39,7 @@ const getNavItemsForLayout = (isAdminUser: boolean, isOwnerOrRenterUser: boolean
   { href: '/dashboard/vendors/directory', label: 'Vendor Directory', icon: Store, iconColor: 'text-cyan-500' },
   { href: '/dashboard/vendors/add', label: 'Add Vendor', icon: ConciergeBell, iconColor: 'text-purple-500' },
   { href: '/dashboard/committee-members', label: 'Committee Members', icon: Users, iconColor: 'text-green-500' },
-  
+
   // Payment Details - Visible to Owner/Renter AND Admin
   ...((isOwnerOrRenterUser || isAdminUser) ? [
      { href: '/dashboard/payment-details', label: 'Payment Details', icon: Landmark, iconColor: 'text-fuchsia-500' } as NavItem,
@@ -52,6 +52,7 @@ const getNavItemsForLayout = (isAdminUser: boolean, isOwnerOrRenterUser: boolean
     { href: '/dashboard/admin/manage-notices', label: 'Manage Notices', icon: ClipboardEdit, iconColor: 'text-indigo-500' } as NavItem,
     { href: '/dashboard/admin/manage-meetings', label: 'Manage Meetings', icon: UsersRound, iconColor: 'text-lime-500' } as NavItem,
     { href: '/dashboard/admin/manage-vendors', label: 'Manage Vendors', icon: ListFilter, iconColor: 'text-yellow-500' } as NavItem,
+    { href: '/dashboard/admin/manage-parking', label: 'Manage Parking', icon: ParkingSquare, iconColor: 'text-orange-600' } as NavItem,
   ] : []),
   // All logged-in users
   { href: '/dashboard/my-profile', label: 'My Profile', icon: Settings2, iconColor: 'text-gray-400' },
@@ -72,7 +73,7 @@ export default function DashboardLayout({
     }
   }, [user, isLoading, router]);
 
-  const navItemsForHeader = useMemo(() => getNavItemsForLayout(isAdmin(), isOwnerOrRenter(), isGuard()), [isAdmin, isOwnerOrRenter, isGuard]);
+  const navItemsForHeader = useMemo(() => getNavItems(isAdmin(), isOwnerOrRenter(), isGuard()), [isAdmin, isOwnerOrRenter, isGuard]);
 
 
   if (isLoading || !user) {
