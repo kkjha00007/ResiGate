@@ -28,6 +28,7 @@ import {
   Landmark,
   Users2 as NeighboursIcon,
   ParkingSquare,
+  ParkingCircle, // Added for My Parking
 } from 'lucide-react';
 import {
   Sidebar,
@@ -72,6 +73,7 @@ export const getNavItems = (isAdminUser: boolean, isOwnerOrRenterUser: boolean, 
   ...(isOwnerOrRenterUser ? [
     { href: '/dashboard/personal-logs', label: 'My Visitor Logs', icon: FileText, iconColor: 'text-teal-500' } as NavItem,
     { href: '/dashboard/complaints', label: 'My Complaints', icon: Megaphone, iconColor: 'text-orange-500' } as NavItem,
+    { href: '/dashboard/my-parking', label: 'My Parking', icon: ParkingCircle, iconColor: 'text-indigo-400' } as NavItem,
   ] : []),
 
   // All Authenticated Users

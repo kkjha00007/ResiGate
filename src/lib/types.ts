@@ -132,8 +132,8 @@ export interface Meeting {
   postedByName: string;
   createdAt: string; // ISO DateTime string
   updatedAt?: string; // ISO DateTime string
-  isActive: boolean; 
-  monthYear: string; 
+  isActive: boolean;
+  monthYear: string;
 }
 
 export const VENDOR_CATEGORIES_LIST = [
@@ -167,14 +167,14 @@ export interface Vendor {
   phoneNumber: string;
   alternatePhoneNumber?: string;
   address?: string;
-  servicesOffered: string; 
+  servicesOffered: string;
   submittedByUserId: string;
   submittedByName: string;
   submittedAt: string; // ISO DateTime string
   isApproved: boolean;
-  approvedByUserId?: string; 
-  approvedAt?: string; 
-  notes?: string; 
+  approvedByUserId?: string;
+  approvedAt?: string;
+  notes?: string;
 }
 
 export interface CommitteeMember {
@@ -182,28 +182,32 @@ export interface CommitteeMember {
   name: string;
   roleInCommittee: string;
   flatNumber: string;
-  imageUrl?: string; 
+  imageUrl?: string;
   email?: string;
   phone?: string;
-  createdAt?: string; 
-  updatedAt?: string; 
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface SocietyPaymentDetails {
-  id: "paymentDetailsDoc"; 
+  id: "paymentDetailsDoc";
   bankName: string;
   accountHolderName: string;
   accountNumber: string;
   ifscCode: string;
   branchName: string;
   accountType: string;
-  upiId?: string; 
-  updatedAt?: string; 
+  upiId?: string;
+  updatedAt?: string;
 }
 
 // Parking Management Types
-export type ParkingSpotType = "car" | "bike";
-export type ParkingSpotStatus = "available" | "allocated";
+export const PARKING_SPOT_TYPES_VALUES = ["car", "bike"] as const;
+export type ParkingSpotType = (typeof PARKING_SPOT_TYPES_VALUES)[number];
+
+export const PARKING_SPOT_STATUS_VALUES = ["available", "allocated"] as const;
+export type ParkingSpotStatus = (typeof PARKING_SPOT_STATUS_VALUES)[number];
+
 
 export interface ParkingSpot {
   id: string;
