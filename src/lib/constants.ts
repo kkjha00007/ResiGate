@@ -10,7 +10,6 @@ export const USER_ROLES = {
   GUARD: "guard",
 } as const;
 
-// Array of user roles for iterating in UI if needed, excluding superadmin for general selection
 export const SELECTABLE_USER_ROLES: Exclude<UserRole, "superadmin">[] = ["owner", "renter", "guard"];
 
 
@@ -39,7 +38,6 @@ export const GATE_PASS_STATUSES_ARRAY = ["Pending", "Used", "Cancelled", "Expire
 export const DEFAULT_ITEMS_PER_PAGE = 10;
 
 
-// Complaint Feature Constants
 export const COMPLAINT_STATUSES_LIST = [
   "Open",
   "In Progress",
@@ -59,7 +57,6 @@ export const COMPLAINT_CATEGORIES_LIST = [
   "Other",
 ] as const;
 
-// Vendor Directory Constants
 export const VENDOR_CATEGORIES: VendorCategory[] = [
   "Plumber",
   "Electrician",
@@ -82,7 +79,6 @@ export const VENDOR_CATEGORIES: VendorCategory[] = [
   "Other Services",
 ];
 
-// Committee Member Roles
 export const COMMITTEE_MEMBER_ROLES = [
   "President",
   "Vice-President",
@@ -93,3 +89,7 @@ export const COMMITTEE_MEMBER_ROLES = [
   "Advisor",
   "Other",
 ] as const;
+
+// Parking Management Constants
+export const PARKING_SPOT_TYPES = ["car", "bike"] as const;
+export const PARKING_SPOT_STATUSES = ["available", "allocated"] as const;

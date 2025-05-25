@@ -2,7 +2,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
-import type { User, UserProfile, VisitorEntry, GatePass, UserRole, Complaint, Notice, Meeting, Vendor, CommitteeMember, SocietyPaymentDetails, NeighbourProfile } from './types';
+import type { User, UserProfile, VisitorEntry, GatePass, UserRole, Complaint, Notice, Meeting, Vendor, CommitteeMember, SocietyPaymentDetails, NeighbourProfile, ParkingSpot } from './types';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 import { USER_ROLES, PUBLIC_ENTRY_SOURCE } from './constants';
@@ -66,6 +66,13 @@ interface AuthContextType {
   updateSocietyPaymentDetails: (details: Omit<SocietyPaymentDetails, 'id' | 'updatedAt'>) => Promise<SocietyPaymentDetails | null>;
   approvedResidents: NeighbourProfile[];
   fetchApprovedResidents: () => Promise<void>;
+  allParkingSpots: ParkingSpot[]; // For admin
+  fetchAllParkingSpots: () => Promise<void>; // For admin
+  createParkingSpot: (spotData: Omit<ParkingSpot, 'id' | 'createdAt' | 'updatedAt' | 'status'>) => Promise<ParkingSpot | null>; // For admin
+  updateParkingSpot: (spotId: string, updates: Partial<Omit<ParkingSpot, 'id' | 'createdAt' | 'updatedAt'>>) => Promise<ParkingSpot | null>; // For admin
+  deleteParkingSpot: (spotId: string) => Promise<boolean>; // For admin
+  // myParkingSpots: ParkingSpot[]; // For resident (Phase 2 of parking)
+  // fetchMyParkingSpots: () => Promise<void>; // For resident (Phase 2 of parking)
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -85,6 +92,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [committeeMembers, setCommitteeMembersState] = useState<CommitteeMember[]>([]);
   const [societyPaymentDetails, setSocietyPaymentDetailsState] = useState<SocietyPaymentDetails | null>(null);
   const [approvedResidents, setApprovedResidentsState] = useState<NeighbourProfile[]>([]);
+  const [allParkingSpots, setAllParkingSpotsState] = useState<ParkingSpot[]>([]);
+  // const [myParkingSpots, setMyParkingSpotsState] = useState<ParkingSpot[]>([]);
+
+
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
   const { toast } = useToast();
@@ -104,9 +115,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setActiveNoticesState(noticesData);
     } catch (error) {
       console.error("Failed to fetch active notices:", error);
-      // Do not toast here for initial load errors of non-critical data,
-      // let components handle display if data is empty.
-      // toast({ title: 'Error Loading Announcements', description: (error as Error).message, variant: 'destructive' });
       setActiveNoticesState([]);
     }
   }, []);
@@ -182,43 +190,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setApprovedResidentsState(residentsData);
     } catch (error) {
       console.error("Failed to fetch approved residents:", error);
-      // This toast will now show the more detailed error message from the API
       toast({ title: 'Error Loading Residents Directory', description: (error as Error).message, variant: 'destructive' });
       setApprovedResidentsState([]);
     }
   }, [toast]);
 
 
-  useEffect(() => {
-    const loadInitialData = async () => {
-        setIsLoading(true);
-        await Promise.all([
-            _fetchActiveNotices(),
-            _fetchUpcomingMeetings(),
-            _fetchApprovedVendors(),
-            _fetchCommitteeMembers(),
-            _fetchSocietyPaymentDetails(),
-            _fetchApprovedResidents()
-        ]);
-        setIsLoading(false);
-    }
-    // Check user session (e.g., from a cookie or localStorage if implementing session persistence)
-    // For now, we assume no persistent session, so user is null initially.
-    // If you had session persistence:
-    // const sessionUser = getSessionUserFromStorage();
-    // if (sessionUser) {
-    //   setUser(sessionUser);
-    //   // Then load data relevant to that user
-    // }
-    loadInitialData();
-  }, [_fetchActiveNotices, _fetchUpcomingMeetings, _fetchApprovedVendors, _fetchCommitteeMembers, _fetchSocietyPaymentDetails, _fetchApprovedResidents]);
-
-
   const fetchAllUsers = useCallback(async () => {
-    if (!isAdmin()) {
-        // console.warn("Attempted to fetch all users without admin rights.");
-        return;
-    }
+    if (!isAdmin()) return;
     try {
       const response = await fetch('/api/users');
       if (!response.ok) {
@@ -328,7 +307,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         toast({ title: 'Gate Pass Update Failed', description: data.message || 'Could not mark pass as used.', variant: 'destructive' });
         return null;
       }
-      if (user?.role !== USER_ROLES.GUARD) { // Non-guards (like admin who might also have this ability in future) need their pass list updated
+      if (user?.role !== USER_ROLES.GUARD) { 
           await fetchGatePasses(); 
       }
       await fetchVisitorEntries(); 
@@ -359,6 +338,152 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  const fetchMyComplaints = useCallback(async () => {
+    if (!user || (!isOwnerOrRenter() && !isAdmin())) return; 
+    if (!user) return; 
+
+    try {
+      const response = await fetch(`/api/complaints/user/${user.id}`);
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ message: 'Failed to fetch your complaints.' }));
+        throw new Error(errorData.message || 'Server error while fetching your complaints.');
+      }
+      const complaintsData: Complaint[] = await response.json();
+      setMyComplaintsState(complaintsData);
+    } catch (error) {
+      console.error("Failed to fetch my complaints:", error);
+      toast({ title: 'Error Loading Complaints', description: (error as Error).message, variant: 'destructive' });
+      setMyComplaintsState([]);
+    }
+  }, [user, toast, isOwnerOrRenter, isAdmin]);
+
+  const fetchActiveNotices = _fetchActiveNotices; 
+
+  const fetchAllNoticesForAdmin = useCallback(async () => {
+    if (!isAdmin()) return;
+    try {
+      const response = await fetch('/api/notices/admin/all');
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ message: 'Failed to fetch notices for admin.' }));
+        throw new Error(errorData.message || 'Server error fetching admin notices.');
+      }
+      const noticesData: Notice[] = await response.json();
+      setAllNoticesForAdminState(noticesData);
+    } catch (error) {
+      console.error("Failed to fetch all notices for admin:", error);
+      toast({ title: 'Error Loading Admin Notices', description: (error as Error).message, variant: 'destructive' });
+      setAllNoticesForAdminState([]);
+    }
+  }, [toast, isAdmin]); 
+
+  const fetchUpcomingMeetings = _fetchUpcomingMeetings; 
+
+  const fetchAllMeetingsForAdmin = useCallback(async () => {
+    if (!isAdmin()) return;
+    try {
+      const response = await fetch('/api/meetings/admin/all');
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ message: 'Failed to fetch meetings for admin.' }));
+        throw new Error(errorData.message || 'Server error fetching admin meetings.');
+      }
+      const meetingsData: Meeting[] = await response.json();
+      setAllMeetingsForAdminState(meetingsData);
+    } catch (error) {
+      console.error("Failed to fetch all meetings for admin:", error);
+      toast({ title: 'Error Loading Admin Meetings', description: (error as Error).message, variant: 'destructive' });
+      setAllMeetingsForAdminState([]);
+    }
+  }, [toast, isAdmin]); 
+
+  const fetchApprovedVendors = _fetchApprovedVendors; 
+
+  const fetchPendingVendors = useCallback(async () => {
+    if (!isAdmin()) {
+      setPendingVendorsState([]); // Clear if not admin
+      return;
+    }
+    try {
+      const response = await fetch('/api/vendors/admin/pending');
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ message: 'Failed to fetch pending vendors.' }));
+        throw new Error(errorData.message || 'Server error fetching pending vendors.');
+      }
+      const vendorsData: Vendor[] = await response.json();
+      setPendingVendorsState(vendorsData); 
+    } catch (error) {
+      console.error("Failed to fetch pending vendors:", error);
+      toast({ title: 'Error Loading Pending Vendors', description: (error as Error).message, variant: 'destructive' });
+      setPendingVendorsState([]); 
+    }
+  }, [toast, isAdmin]); 
+
+  const fetchCommitteeMembers = _fetchCommitteeMembers;
+  const fetchSocietyPaymentDetails = _fetchSocietyPaymentDetails;
+  const fetchApprovedResidents = _fetchApprovedResidents;
+  
+  const fetchAllParkingSpots = useCallback(async () => { // For admin
+    if (!isAdmin()) {
+        setAllParkingSpotsState([]);
+        return;
+    }
+    try {
+      const response = await fetch('/api/parking/spots');
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ message: 'Failed to fetch parking spots.' }));
+        throw new Error(errorData.message || 'Server error fetching parking spots.');
+      }
+      const spots: ParkingSpot[] = await response.json();
+      setAllParkingSpotsState(spots);
+    } catch (error) {
+      console.error("Failed to fetch all parking spots:", error);
+      toast({ title: 'Error Loading Parking Spots', description: (error as Error).message, variant: 'destructive' });
+      setAllParkingSpotsState([]);
+    }
+  }, [isAdmin, toast]);
+
+
+  const initialDataFetch = useCallback(async (currentUser: UserProfile | null) => {
+    const commonFetches = [
+      _fetchActiveNotices(),
+      _fetchUpcomingMeetings(),
+      _fetchApprovedVendors(),
+      _fetchCommitteeMembers(),
+      _fetchSocietyPaymentDetails(),
+      _fetchApprovedResidents(),
+      fetchVisitorEntries() 
+    ];
+
+    const roleSpecificFetches = [];
+    if (currentUser) {
+        if (currentUser.role === USER_ROLES.SUPERADMIN) {
+            roleSpecificFetches.push(fetchAllUsers());
+            roleSpecificFetches.push(fetchAllNoticesForAdmin());
+            roleSpecificFetches.push(fetchAllMeetingsForAdmin());
+            roleSpecificFetches.push(fetchPendingVendors());
+            roleSpecificFetches.push(fetchAllParkingSpots());
+        }
+        if (currentUser.role === USER_ROLES.OWNER || currentUser.role === USER_ROLES.RENTER) {
+            roleSpecificFetches.push(fetchMyComplaints());
+            // roleSpecificFetches.push(fetchMyParkingSpots()); // Add when resident parking view is ready
+        }
+        if (currentUser.role === USER_ROLES.OWNER || currentUser.role === USER_ROLES.RENTER || currentUser.role === USER_ROLES.SUPERADMIN) {
+             roleSpecificFetches.push(fetchGatePasses());
+        }
+    }
+    await Promise.all([...commonFetches, ...roleSpecificFetches]);
+  }, [
+      _fetchActiveNotices, _fetchUpcomingMeetings, _fetchApprovedVendors, _fetchCommitteeMembers, 
+      _fetchSocietyPaymentDetails, _fetchApprovedResidents, fetchVisitorEntries,
+      fetchAllUsers, fetchAllNoticesForAdmin, fetchAllMeetingsForAdmin, fetchPendingVendors,
+      fetchMyComplaints, fetchGatePasses, fetchAllParkingSpots 
+      // fetchMyParkingSpots (add when ready)
+  ]);
+
+  useEffect(() => {
+    setIsLoading(true);
+    initialDataFetch(user).finally(() => setIsLoading(false));
+  }, [user, initialDataFetch]);
+
 
   const login = async (email: string, passwordString: string): Promise<boolean> => {
     setIsLoading(true);
@@ -373,7 +498,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
       if (!response.ok) {
         toast({ title: 'Login Failed', description: data.message || 'Invalid credentials.', variant: 'destructive' });
-        setUser(null); // Ensure user is null on failed login
+        setUser(null); 
         return false;
       }
 
@@ -387,32 +512,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setUser(loggedInUser);
       toast({ title: 'Login Successful', description: `Welcome back, ${loggedInUser.name}!` });
       
-      // Fetch all general data first
-      await Promise.all([
-        _fetchActiveNotices(),
-        _fetchUpcomingMeetings(),
-        _fetchApprovedVendors(),
-        _fetchCommitteeMembers(),
-        _fetchSocietyPaymentDetails(),
-        _fetchApprovedResidents(),
-        fetchVisitorEntries() // Visitor entries are general for guards/admins
-      ]);
-
-      // Fetch role-specific data
-      if (loggedInUser.role === USER_ROLES.SUPERADMIN) {
-        await fetchAllUsers(); 
-        await fetchAllNoticesForAdmin();
-        await fetchAllMeetingsForAdmin();
-        await fetchPendingVendors();
-        // Superadmin might also need their own gate passes if they can create them
-        if (isOwnerOrRenter() || isAdmin()) { // Re-check based on new user
-            await fetchGatePasses();
-        }
-      } else if (loggedInUser.role === USER_ROLES.OWNER || loggedInUser.role === USER_ROLES.RENTER) {
-        await fetchMyComplaints();
-        await fetchGatePasses();
-      }
-      // Guards don't have specific additional data to fetch here beyond general visitor entries
+      await initialDataFetch(loggedInUser);
 
       router.push('/dashboard');
       return true;
@@ -431,17 +531,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setVisitorEntriesState([]);
     setGatePassesState([]);
     setMyComplaintsState([]);
-    // Keep activeNotices, upcomingMeetings, approvedVendors, committeeMembers, societyPaymentDetails, approvedResidents
-    // as they are general and might be useful for the landing page even after logout, or will be re-fetched on next login.
-    // Or clear them if a completely fresh state is desired:
-    // setActiveNoticesState([]);
-    // setUpcomingMeetingsState([]);
-    // etc.
-
     setAllNoticesForAdminState([]);
     setAllMeetingsForAdminState([]);
     setPendingVendorsState([]);
-    
+    setAllParkingSpotsState([]);
+    // setMyParkingSpotsState([]);
+    // Keep common data like activeNotices, upcomingMeetings, etc. or clear them if preferred
     router.push('/');
     toast({ title: 'Logged Out', description: 'You have been successfully logged out.' });
   };
@@ -531,7 +626,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       if (user && user.id === userId) {
         setUser(prevUser => prevUser ? { ...prevUser, ...data } : null);
       }
-      if (isAdmin()) { // If admin updates someone else, or their own, refetch all users for consistency
+      if (isAdmin()) { 
         await fetchAllUsers();
       }
       return data as UserProfile;
@@ -592,27 +687,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const fetchMyComplaints = useCallback(async () => {
-    if (!user || (!isOwnerOrRenter() && !isAdmin())) return; // Admins might not have "my" complaints unless they are also residents
-    if (!user) return; // ensure user exists
-
-    try {
-      const response = await fetch(`/api/complaints/user/${user.id}`);
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ message: 'Failed to fetch your complaints.' }));
-        throw new Error(errorData.message || 'Server error while fetching your complaints.');
-      }
-      const complaintsData: Complaint[] = await response.json();
-      setMyComplaintsState(complaintsData);
-    } catch (error) {
-      console.error("Failed to fetch my complaints:", error);
-      toast({ title: 'Error Loading Complaints', description: (error as Error).message, variant: 'destructive' });
-      setMyComplaintsState([]);
-    }
-  }, [user, toast, isOwnerOrRenter, isAdmin]);
-
-  const fetchActiveNotices = _fetchActiveNotices; 
-
   const createNotice = async (noticeData: { title: string; content: string; }): Promise<Notice | null> => {
     if (!user || !isAdmin()) { 
         toast({ title: 'Unauthorized', description: 'Only super admins can create notices.', variant: 'destructive' });
@@ -643,23 +717,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         return null;
     }
   };
-
-  const fetchAllNoticesForAdmin = useCallback(async () => {
-    if (!isAdmin()) return;
-    try {
-      const response = await fetch('/api/notices/admin/all');
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ message: 'Failed to fetch notices for admin.' }));
-        throw new Error(errorData.message || 'Server error fetching admin notices.');
-      }
-      const noticesData: Notice[] = await response.json();
-      setAllNoticesForAdminState(noticesData);
-    } catch (error) {
-      console.error("Failed to fetch all notices for admin:", error);
-      toast({ title: 'Error Loading Admin Notices', description: (error as Error).message, variant: 'destructive' });
-      setAllNoticesForAdminState([]);
-    }
-  }, [toast, isAdmin]); 
 
   const updateNotice = async (noticeId: string, currentMonthYear: string, updates: Partial<Omit<Notice, 'id' | 'postedByUserId' | 'postedByName' | 'createdAt' | 'monthYear' | 'updatedAt'>>): Promise<Notice | null> => {
     if (!isAdmin()) {
@@ -712,8 +769,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const fetchUpcomingMeetings = _fetchUpcomingMeetings; 
-
   const createMeeting = async (meetingData: Omit<Meeting, 'id' | 'postedByUserId' | 'postedByName' | 'createdAt' | 'isActive' | 'monthYear' | 'updatedAt'>): Promise<Meeting | null> => {
     if (!user || !isAdmin()) { 
         toast({ title: 'Unauthorized', description: 'Only super admins can create meetings.', variant: 'destructive' });
@@ -744,23 +799,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         return null;
     }
   };
-
-  const fetchAllMeetingsForAdmin = useCallback(async () => {
-    if (!isAdmin()) return;
-    try {
-      const response = await fetch('/api/meetings/admin/all');
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ message: 'Failed to fetch meetings for admin.' }));
-        throw new Error(errorData.message || 'Server error fetching admin meetings.');
-      }
-      const meetingsData: Meeting[] = await response.json();
-      setAllMeetingsForAdminState(meetingsData);
-    } catch (error) {
-      console.error("Failed to fetch all meetings for admin:", error);
-      toast({ title: 'Error Loading Admin Meetings', description: (error as Error).message, variant: 'destructive' });
-      setAllMeetingsForAdminState([]);
-    }
-  }, [toast, isAdmin]); 
 
   const updateMeeting = async (meetingId: string, currentMonthYear: string, updates: Partial<Omit<Meeting, 'id' | 'postedByUserId' | 'postedByName' | 'createdAt' | 'monthYear' | 'updatedAt'>>): Promise<Meeting | null> => {
     if (!isAdmin()) {
@@ -815,8 +853,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const fetchApprovedVendors = _fetchApprovedVendors; 
-
   const submitNewVendor = async (vendorData: Omit<Vendor, 'id' | 'submittedAt' | 'isApproved' | 'submittedByUserId' | 'submittedByName' | 'approvedByUserId' | 'approvedAt'>): Promise<Vendor | null> => {
     if (!user) {
       toast({ title: 'Error', description: 'You must be logged in to submit a vendor.', variant: 'destructive' });
@@ -839,30 +875,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         toast({ title: 'Vendor Submission Failed', description: data.message || 'Could not submit vendor for review.', variant: 'destructive' });
         return null;
       }
-      // No toast here, handled in component
       return data as Vendor;
     } catch (error) {
       toast({ title: 'Vendor Submission Error', description: (error as Error).message || 'An unexpected error occurred.', variant: 'destructive' });
       return null;
     }
   };
-
-  const fetchPendingVendors = useCallback(async () => {
-    if (!isAdmin()) return;
-    try {
-      const response = await fetch('/api/vendors/admin/pending');
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ message: 'Failed to fetch pending vendors.' }));
-        throw new Error(errorData.message || 'Server error fetching pending vendors.');
-      }
-      const vendorsData: Vendor[] = await response.json();
-      setPendingVendorsState(vendorsData); 
-    } catch (error) {
-      console.error("Failed to fetch pending vendors:", error);
-      toast({ title: 'Error Loading Pending Vendors', description: (error as Error).message, variant: 'destructive' });
-      setPendingVendorsState([]); 
-    }
-  }, [toast, isAdmin]); 
 
   const approveVendor = async (vendorId: string): Promise<Vendor | null> => {
     if (!user || !isAdmin()) {
@@ -915,8 +933,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       return false;
     }
   };
-
-  const fetchCommitteeMembers = _fetchCommitteeMembers;
 
   const addCommitteeMember = async (memberData: Omit<CommitteeMember, 'id' | 'createdAt' | 'updatedAt'>): Promise<CommitteeMember | null> => {
     if (!isAdmin()) {
@@ -991,8 +1007,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const fetchSocietyPaymentDetails = _fetchSocietyPaymentDetails;
-
   const updateSocietyPaymentDetails = async (details: Omit<SocietyPaymentDetails, 'id' | 'updatedAt'>): Promise<SocietyPaymentDetails | null> => {
     if (!isAdmin()) {
       toast({ title: 'Unauthorized', description: 'Only super admins can update payment details.', variant: 'destructive' });
@@ -1017,8 +1031,81 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       return null;
     }
   };
+  
+  const createParkingSpot = async (spotData: Omit<ParkingSpot, 'id' | 'createdAt' | 'updatedAt' | 'status'>): Promise<ParkingSpot | null> => {
+    if (!isAdmin()) {
+      toast({ title: 'Unauthorized', description: 'Only admins can create parking spots.', variant: 'destructive' });
+      return null;
+    }
+    try {
+      const response = await fetch('/api/parking/spots', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(spotData),
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        toast({ title: 'Parking Spot Creation Failed', description: data.message || 'Could not create spot.', variant: 'destructive' });
+        return null;
+      }
+      toast({ title: 'Parking Spot Created', description: `Spot ${data.spotNumber} created.` });
+      await fetchAllParkingSpots();
+      return data as ParkingSpot;
+    } catch (error) {
+      toast({ title: 'Parking Spot Creation Error', description: (error as Error).message, variant: 'destructive' });
+      return null;
+    }
+  };
 
-  const fetchApprovedResidents = _fetchApprovedResidents;
+  const updateParkingSpot = async (spotId: string, updates: Partial<Omit<ParkingSpot, 'id' | 'createdAt' | 'updatedAt'>>): Promise<ParkingSpot | null> => {
+    if (!isAdmin()) {
+      toast({ title: 'Unauthorized', description: 'Only admins can update parking spots.', variant: 'destructive' });
+      return null;
+    }
+    try {
+      const response = await fetch(`/api/parking/spots/${spotId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updates),
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        toast({ title: 'Parking Spot Update Failed', description: data.message || 'Could not update spot.', variant: 'destructive' });
+        return null;
+      }
+      toast({ title: 'Parking Spot Updated', description: `Spot ${data.spotNumber} updated.` });
+      await fetchAllParkingSpots();
+      // await fetchMyParkingSpots(); // If residents view their spots
+      return data as ParkingSpot;
+    } catch (error) {
+      toast({ title: 'Parking Spot Update Error', description: (error as Error).message, variant: 'destructive' });
+      return null;
+    }
+  };
+
+  const deleteParkingSpot = async (spotId: string): Promise<boolean> => {
+    if (!isAdmin()) {
+      toast({ title: 'Unauthorized', description: 'Only admins can delete parking spots.', variant: 'destructive' });
+      return false;
+    }
+    try {
+      const response = await fetch(`/api/parking/spots/${spotId}`, {
+        method: 'DELETE',
+      });
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({ message: 'Failed to delete spot.' }));
+        toast({ title: 'Parking Spot Deletion Failed', description: data.message, variant: 'destructive' });
+        return false;
+      }
+      toast({ title: 'Parking Spot Deleted', description: `Spot ${spotId} deleted.` });
+      await fetchAllParkingSpots();
+      // await fetchMyParkingSpots(); // If residents view their spots
+      return true;
+    } catch (error) {
+      toast({ title: 'Parking Spot Deletion Error', description: (error as Error).message, variant: 'destructive' });
+      return false;
+    }
+  };
 
 
   return (
@@ -1079,6 +1166,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         updateSocietyPaymentDetails,
         approvedResidents,
         fetchApprovedResidents,
+        allParkingSpots,
+        fetchAllParkingSpots,
+        createParkingSpot,
+        updateParkingSpot,
+        deleteParkingSpot,
     }}>
       {children}
     </AuthContext.Provider>

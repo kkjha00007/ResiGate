@@ -1,8 +1,6 @@
 
-// IMPORTANT: Ensure you have @azure/cosmos package installed: npm install @azure/cosmos
-
 import { CosmosClient, ConsistencyLevel } from "@azure/cosmos";
-import type { User, VisitorEntry, LoginAudit, GatePass, Complaint, Notice, Meeting, Vendor, CommitteeMember, SocietyPaymentDetails } from './types'; // Added CommitteeMember, SocietyPaymentDetails
+import type { User, VisitorEntry, LoginAudit, GatePass, Complaint, Notice, Meeting, Vendor, CommitteeMember, SocietyPaymentDetails, ParkingSpot } from './types';
 
 const endpoint = process.env.COSMOS_ENDPOINT;
 const key = process.env.COSMOS_KEY;
@@ -10,13 +8,11 @@ const key = process.env.COSMOS_KEY;
 if (!endpoint || !key) {
   if (process.env.NODE_ENV === 'production') {
     console.error("FATAL ERROR: Cosmos DB Endpoint or Key not configured in environment variables for production.");
-    // In a real app, you might want to throw an error or have a more graceful shutdown.
   } else {
      console.warn("Cosmos DB Endpoint or Key not found in .env file. Database operations will fail. Please create a .env file with COSMOS_ENDPOINT and COSMOS_KEY.");
   }
 }
 
-// Use default values or environment variables for database and container IDs
 export const databaseId = process.env.COSMOS_DATABASE_ID || "ResiGateDB";
 export const usersContainerId = process.env.COSMOS_USERS_CONTAINER_ID || "Users";
 export const visitorEntriesContainerId = process.env.COSMOS_VISITORS_CONTAINER_ID || "VisitorEntries";
@@ -28,13 +24,12 @@ export const meetingsContainerId = process.env.COSMOS_MEETINGS_CONTAINER_ID || "
 export const vendorsContainerId = process.env.COSMOS_VENDORS_CONTAINER_ID || "Vendors";
 export const committeeMembersContainerId = process.env.COSMOS_COMMITTEE_MEMBERS_CONTAINER_ID || "CommitteeMembers";
 export const societySettingsContainerId = process.env.COSMOS_SOCIETY_SETTINGS_CONTAINER_ID || "SocietySettings";
+export const parkingSpotsContainerId = process.env.COSMOS_PARKING_SPOTS_CONTAINER_ID || "ParkingSpots";
 
 
-// Initialize CosmosClient with a placeholder if credentials are not set for local dev,
-// but this will cause errors if actual DB operations are attempted.
 export const client = new CosmosClient({
-  endpoint: endpoint || "https://placeholder.documents.azure.com", // Placeholder
-  key: key || "placeholderkey", // Placeholder
+  endpoint: endpoint || "https://placeholder.documents.azure.com", 
+  key: key || "placeholderkey", 
   consistencyLevel: ConsistencyLevel.Session, 
 });
 
@@ -49,11 +44,8 @@ export const meetingsContainer = database.container(meetingsContainerId);
 export const vendorsContainer = database.container(vendorsContainerId);
 export const committeeMembersContainer = database.container(committeeMembersContainerId);
 export const societySettingsContainer = database.container(societySettingsContainerId);
+export const parkingSpotsContainer = database.container(parkingSpotsContainerId);
 
-/**
- * Ensures the database and containers exist, creating them if necessary.
- * Call this function once during application startup.
- */
 export async function initializeCosmosDB() {
   if (!endpoint || !key) {
     console.warn("Skipping Cosmos DB initialization as endpoint or key is not configured.");
@@ -63,68 +55,24 @@ export async function initializeCosmosDB() {
     const { database: db } = await client.databases.createIfNotExists({ id: databaseId });
     console.log(`Database '${db.id}' ensured.`);
 
-    const { container: usersCont } = await db.containers.createIfNotExists({
-      id: usersContainerId,
-      partitionKey: { paths: ["/role"] }, 
-    });
-    console.log(`Container '${usersCont.id}' ensured.`);
+    const containerDefinitions = [
+      { id: usersContainerId, partitionKey: { paths: ["/role"] } },
+      { id: visitorEntriesContainerId, partitionKey: { paths: ["/flatNumber"] } },
+      { id: loginAuditsContainerId, partitionKey: { paths: ["/userId"] }, defaultTtl: 30 * 24 * 60 * 60 },
+      { id: gatePassesContainerId, partitionKey: { paths: ["/residentUserId"] } },
+      { id: complaintsContainerId, partitionKey: { paths: ["/userId"] } },
+      { id: noticesContainerId, partitionKey: { paths: ["/monthYear"] } },
+      { id: meetingsContainerId, partitionKey: { paths: ["/monthYear"] } },
+      { id: vendorsContainerId, partitionKey: { paths: ["/category"] } },
+      { id: committeeMembersContainerId, partitionKey: { paths: ["/id"] } },
+      { id: societySettingsContainerId, partitionKey: { paths: ["/id"] } },
+      { id: parkingSpotsContainerId, partitionKey: { paths: ["/id"] } }, // Using /id as partition key for simplicity
+    ];
 
-    const { container: visitorsCont } = await db.containers.createIfNotExists({
-      id: visitorEntriesContainerId,
-      partitionKey: { paths: ["/flatNumber"] }, 
-    });
-    console.log(`Container '${visitorsCont.id}' ensured.`);
-
-    const thirtyDaysInSeconds = 30 * 24 * 60 * 60;
-    const { container: auditsCont } = await db.containers.createIfNotExists({
-      id: loginAuditsContainerId,
-      partitionKey: { paths: ["/userId"] }, 
-      defaultTtl: thirtyDaysInSeconds, 
-    });
-    console.log(`Container '${auditsCont.id}' ensured with default TTL of ${thirtyDaysInSeconds} seconds.`);
-
-    const { container: gatePassesCont } = await db.containers.createIfNotExists({
-      id: gatePassesContainerId,
-      partitionKey: { paths: ["/residentUserId"] },
-    });
-    console.log(`Container '${gatePassesCont.id}' ensured.`);
-
-    const { container: complaintsCont } = await db.containers.createIfNotExists({
-      id: complaintsContainerId,
-      partitionKey: { paths: ["/userId"] }, 
-    });
-    console.log(`Container '${complaintsCont.id}' ensured.`);
-
-    const { container: noticesCont } = await db.containers.createIfNotExists({
-      id: noticesContainerId,
-      partitionKey: { paths: ["/monthYear"] }, 
-    });
-    console.log(`Container '${noticesCont.id}' ensured.`);
-
-    const { container: meetingsCont } = await db.containers.createIfNotExists({
-      id: meetingsContainerId,
-      partitionKey: { paths: ["/monthYear"] }, // Partition by month/year of meeting
-    });
-    console.log(`Container '${meetingsCont.id}' ensured.`);
-
-    const { container: vendorsCont } = await db.containers.createIfNotExists({
-      id: vendorsContainerId,
-      partitionKey: { paths: ["/category"] }, // Partition by vendor category
-    });
-    console.log(`Container '${vendorsCont.id}' ensured.`);
-
-    const { container: committeeMembersCont } = await db.containers.createIfNotExists({
-        id: committeeMembersContainerId,
-        partitionKey: { paths: ["/id"] }, // Using /id as partition key for simplicity as member count is usually small
-    });
-    console.log(`Container '${committeeMembersCont.id}' ensured.`);
-
-    const { container: societySettingsCont } = await db.containers.createIfNotExists({
-        id: societySettingsContainerId,
-        partitionKey: { paths: ["/id"] }, // Using /id as partition key since there will be few documents
-    });
-    console.log(`Container '${societySettingsCont.id}' ensured.`);
-
+    for (const containerDef of containerDefinitions) {
+      const { container } = await db.containers.createIfNotExists(containerDef);
+      console.log(`Container '${container.id}' ensured.${containerDef.defaultTtl ? ` TTL: ${containerDef.defaultTtl}s` : ''}`);
+    }
 
   } catch (error) {
     console.error("Error initializing Cosmos DB:", error);
@@ -135,4 +83,4 @@ if (process.env.NODE_ENV !== 'test') {
     initializeCosmosDB().catch(console.error);
 }
 
-export type { User, VisitorEntry, LoginAudit, GatePass, Complaint, Notice, Meeting, Vendor, CommitteeMember, SocietyPaymentDetails };
+export type { User, VisitorEntry, LoginAudit, GatePass, Complaint, Notice, Meeting, Vendor, CommitteeMember, SocietyPaymentDetails, ParkingSpot };

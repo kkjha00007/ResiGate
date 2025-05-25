@@ -22,8 +22,6 @@ export interface NeighbourProfile {
   id: string;
   name: string;
   flatNumber: string;
-  // photoUrl can be added later if actual image storage is implemented
-  // For now, frontend will generate placeholder
 }
 
 
@@ -49,7 +47,6 @@ export interface LoginAudit {
   userName: string;
   userEmail: string;
   loginTimestamp: string; // ISO string
-  // ipAddress?: string; // Optional: consider privacy implications
 }
 
 export const GATE_PASS_STATUSES = {
@@ -77,7 +74,6 @@ export interface GatePass {
   updatedAt?: string; // ISO DateTime string
 }
 
-// Complaint Feature Types
 export const COMPLAINT_STATUSES_VALUES = {
   OPEN: "Open",
   IN_PROGRESS: "In Progress",
@@ -114,7 +110,6 @@ export interface Complaint {
   resolvedAt?: string; // ISO DateTime string
 }
 
-// Notice Feature Types
 export interface Notice {
   id: string;
   title: string;
@@ -127,7 +122,6 @@ export interface Notice {
   monthYear: string; // For partitioning, e.g., "YYYY-MM"
 }
 
-// Meeting Feature Types
 export interface Meeting {
   id: string;
   title: string;
@@ -138,11 +132,10 @@ export interface Meeting {
   postedByName: string;
   createdAt: string; // ISO DateTime string
   updatedAt?: string; // ISO DateTime string
-  isActive: boolean; // To easily enable/disable if needed
-  monthYear: string; // For partitioning, e.g., "YYYY-MM" derived from dateTime
+  isActive: boolean; 
+  monthYear: string; 
 }
 
-// Vendor Directory Types
 export const VENDOR_CATEGORIES_LIST = [
   "Plumber",
   "Electrician",
@@ -174,38 +167,54 @@ export interface Vendor {
   phoneNumber: string;
   alternatePhoneNumber?: string;
   address?: string;
-  servicesOffered: string; // Could be a brief description or comma-separated list
+  servicesOffered: string; 
   submittedByUserId: string;
   submittedByName: string;
   submittedAt: string; // ISO DateTime string
   isApproved: boolean;
-  approvedByUserId?: string; // Superadmin's ID
-  approvedAt?: string; // ISO DateTime string
-  notes?: string; // Any additional notes by submitter or admin
+  approvedByUserId?: string; 
+  approvedAt?: string; 
+  notes?: string; 
 }
 
-// Committee Member Type
 export interface CommitteeMember {
   id: string;
   name: string;
   roleInCommittee: string;
   flatNumber: string;
-  imageUrl?: string; // Optional, can be placeholder
+  imageUrl?: string; 
   email?: string;
   phone?: string;
-  createdAt?: string; // ISO DateTime string
-  updatedAt?: string; // ISO DateTime string
+  createdAt?: string; 
+  updatedAt?: string; 
 }
 
-// Society Payment Details Type
 export interface SocietyPaymentDetails {
-  id: "paymentDetailsDoc"; // Fixed ID for the single document
+  id: "paymentDetailsDoc"; 
   bankName: string;
   accountHolderName: string;
   accountNumber: string;
   ifscCode: string;
   branchName: string;
   accountType: string;
-  upiId?: string; // Optional: For future QR code generation
+  upiId?: string; 
+  updatedAt?: string; 
+}
+
+// Parking Management Types
+export type ParkingSpotType = "car" | "bike";
+export type ParkingSpotStatus = "available" | "allocated";
+
+export interface ParkingSpot {
+  id: string;
+  spotNumber: string; // e.g., "A-01", "B-102"
+  type: ParkingSpotType;
+  location: string; // e.g., "Basement 1, Wing A", "Open Area Near Gate 2"
+  status: ParkingSpotStatus;
+  allocatedToFlatNumber?: string;
+  allocatedToUserId?: string; // ID of the user (owner/renter) it's allocated to
+  vehicleNumber?: string; // Primary vehicle using this spot
+  notes?: string; // Any notes by admin
+  createdAt: string; // ISO DateTime string
   updatedAt?: string; // ISO DateTime string
 }
