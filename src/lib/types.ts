@@ -17,6 +17,15 @@ export interface User {
 // For sending user data to client, omitting sensitive fields like password
 export type UserProfile = Omit<User, 'password'>;
 
+// Specifically for the neighbours list, only essential fields
+export interface NeighbourProfile {
+  id: string;
+  name: string;
+  flatNumber: string;
+  // photoUrl can be added later if actual image storage is implemented
+  // For now, frontend will generate placeholder
+}
+
 
 export interface VisitorEntry {
   id: string; // Will be the Cosmos DB item ID

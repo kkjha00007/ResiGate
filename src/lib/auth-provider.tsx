@@ -2,7 +2,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
-import type { User, UserProfile, VisitorEntry, GatePass, UserRole, Complaint, Notice, Meeting, Vendor, CommitteeMember, SocietyPaymentDetails } from './types';
+import type { User, UserProfile, VisitorEntry, GatePass, UserRole, Complaint, Notice, Meeting, Vendor, CommitteeMember, SocietyPaymentDetails, NeighbourProfile } from './types';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 import { USER_ROLES, PUBLIC_ENTRY_SOURCE } from './constants';
@@ -64,6 +64,8 @@ interface AuthContextType {
   societyPaymentDetails: SocietyPaymentDetails | null;
   fetchSocietyPaymentDetails: () => Promise<void>;
   updateSocietyPaymentDetails: (details: Omit<SocietyPaymentDetails, 'id' | 'updatedAt'>) => Promise<SocietyPaymentDetails | null>;
+  approvedResidents: NeighbourProfile[];
+  fetchApprovedResidents: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -82,6 +84,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [pendingVendors, setPendingVendorsState] = useState<Vendor[]>([]);
   const [committeeMembers, setCommitteeMembersState] = useState<CommitteeMember[]>([]);
   const [societyPaymentDetails, setSocietyPaymentDetailsState] = useState<SocietyPaymentDetails | null>(null);
+  const [approvedResidents, setApprovedResidentsState] = useState<NeighbourProfile[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
   const { toast } = useToast();
@@ -168,6 +171,22 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [toast]);
 
+  const _fetchApprovedResidents = useCallback(async () => {
+    try {
+      const response = await fetch('/api/users/residents');
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ message: 'Failed to fetch approved residents.' }));
+        throw new Error(errorData.message || 'Server error.');
+      }
+      const residentsData: NeighbourProfile[] = await response.json();
+      setApprovedResidentsState(residentsData);
+    } catch (error) {
+      console.error("Failed to fetch approved residents:", error);
+      toast({ title: 'Error Loading Residents Directory', description: (error as Error).message, variant: 'destructive' });
+      setApprovedResidentsState([]);
+    }
+  }, [toast]);
+
 
   useEffect(() => {
     const checkUserSession = () => {
@@ -179,7 +198,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     _fetchApprovedVendors();
     _fetchCommitteeMembers();
     _fetchSocietyPaymentDetails();
-  }, [_fetchActiveNotices, _fetchUpcomingMeetings, _fetchApprovedVendors, _fetchCommitteeMembers, _fetchSocietyPaymentDetails]);
+    _fetchApprovedResidents();
+  }, [_fetchActiveNotices, _fetchUpcomingMeetings, _fetchApprovedVendors, _fetchCommitteeMembers, _fetchSocietyPaymentDetails, _fetchApprovedResidents]);
 
 
   const fetchAllUsers = useCallback(async () => {
@@ -355,6 +375,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       await _fetchApprovedVendors();
       await _fetchCommitteeMembers();
       await _fetchSocietyPaymentDetails();
+      await _fetchApprovedResidents();
 
 
       if (loggedInUser.role === USER_ROLES.SUPERADMIN) {
@@ -393,6 +414,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setPendingVendorsState([]);
     setCommitteeMembersState([]);
     setSocietyPaymentDetailsState(null);
+    setApprovedResidentsState([]);
     router.push('/');
     toast({ title: 'Logged Out', description: 'You have been successfully logged out.' });
   };
@@ -963,6 +985,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  const fetchApprovedResidents = _fetchApprovedResidents;
+
 
   return (
     <AuthContext.Provider value={{
@@ -1020,6 +1044,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         societyPaymentDetails,
         fetchSocietyPaymentDetails,
         updateSocietyPaymentDetails,
+        approvedResidents,
+        fetchApprovedResidents,
     }}>
       {children}
     </AuthContext.Provider>
