@@ -52,7 +52,7 @@ export async function GET(request: NextRequest) {
 
   try {
     const querySpec = {
-      query: "SELECT * FROM c ORDER BY c.location ASC, c.spotNumber ASC"
+      query: "SELECT * FROM c" // Removed ORDER BY c.location ASC, c.spotNumber ASC
     };
     const { resources } = await parkingSpotsContainer.items.query<ParkingSpot>(querySpec).fetchAll();
     return NextResponse.json(resources, { status: 200 });
@@ -61,3 +61,4 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ message: 'Internal server error' }, { status: 500 });
   }
 }
+
