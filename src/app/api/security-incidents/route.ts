@@ -3,7 +3,8 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { securityIncidentsContainer } from '@/lib/cosmosdb';
 import type { SecurityIncident, UserProfile } from '@/lib/types';
-import { SECURITY_INCIDENT_STATUSES } from '@/lib/constants'; // Corrected import
+// CORRECTED IMPORT: Ensure this line imports SECURITY_INCIDENT_STATUSES
+import { SECURITY_INCIDENT_STATUSES } from '@/lib/constants';
 import { v4 as uuidv4 } from 'uuid';
 
 // This function is a placeholder for getting the authenticated user.
@@ -43,7 +44,8 @@ export async function POST(request: NextRequest) {
     const user = body.currentUser as UserProfile | undefined;
 
     if (!user || !user.id || !user.name) {
-         return NextResponse.json({ message: 'Authentication required to report an incident.' }, { status: 401 });
+         console.error('Submit Security Incident API error: User not authenticated or user details missing in request body.');
+         return NextResponse.json({ message: 'Authentication required to report an incident. Ensure user details are sent correctly.' }, { status: 401 });
     }
 
     const {
