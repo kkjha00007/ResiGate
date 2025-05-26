@@ -19,13 +19,14 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useAuth } from '@/lib/auth-provider';
 import { useState } from 'react';
-import { UserPlus, Eye, EyeOff } from 'lucide-react';
+import { UserPlus, Eye, EyeOff, Building } from 'lucide-react';
 import { USER_ROLES, SELECTABLE_USER_ROLES } from '@/lib/constants';
 import type { UserRole } from '@/lib/types';
 
 const registerSchema = z.object({
   name: z.string().min(2, { message: 'Name must be at least 2 characters.' }),
   email: z.string().email({ message: 'Invalid email address.' }),
+  societyName: z.string().min(3, { message: 'Society Name must be at least 3 characters.'}),
   flatNumber: z.string().min(1, { message: 'Flat number is required (e.g., A-101, NA for Guard).' }),
   password: z.string().min(6, { message: 'Password must be at least 6 characters.' }),
   confirmPassword: z.string(),
@@ -57,6 +58,7 @@ export function RegisterForm() {
     defaultValues: {
       name: '',
       email: '',
+      societyName: '',
       flatNumber: '',
       password: '',
       confirmPassword: '',
@@ -80,7 +82,7 @@ export function RegisterForm() {
             <UserPlus stroke="hsl(var(--primary))" size={48} />
         </div>
         <CardTitle className="text-3xl font-bold text-primary">Create Your Account</CardTitle>
-        <CardDescription>Register to access society features. Your account will require admin approval.</CardDescription>
+        <CardDescription>Register to access society features. Your account will require admin approval within your society.</CardDescription>
       </CardHeader>
       <CardContent>
         <Form {...form}>
@@ -106,6 +108,22 @@ export function RegisterForm() {
                   <FormLabel>Email Address</FormLabel>
                   <FormControl>
                     <Input placeholder="you@example.com" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+             <FormField
+              control={form.control}
+              name="societyName"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Society Name</FormLabel>
+                  <FormControl>
+                    <div className="relative">
+                      <Building className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input placeholder="Enter your society's name" {...field} className="pl-10" />
+                    </div>
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -224,7 +242,7 @@ export function RegisterForm() {
           </form>
         </Form>
         <p className="mt-6 text-center text-sm text-muted-foreground">
-          Already have an account?{' '}
+          New User?, Don&apos;t have an account?{' '}
           <Link href="/login" className="font-medium text-primary hover:underline">
             Sign in here
           </Link>
