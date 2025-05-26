@@ -17,6 +17,24 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: 'ResiGate - Visitor Management',
   description: 'ResiGate - Modern Visitor Management System for Residential Societies',
+  icons: {
+    icon: '/favicon.ico', // Fallback for .ico
+    shortcut: '/favicon.png', // Or your preferred modern icon
+    apple: '/apple-touch-icon.png', // For Apple devices
+    // You can also specify different sizes if you have multiple icon versions
+    // other: [
+    //   {
+    //     rel: 'icon',
+    //     url: '/favicon-32x32.png',
+    //     sizes: '32x32',
+    //   },
+    //   {
+    //     rel: 'icon',
+    //     url: '/favicon-16x16.png',
+    //     sizes: '16x16',
+    //   },
+    // ],
+  },
 };
 
 export default function RootLayout({
