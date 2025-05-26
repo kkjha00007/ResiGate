@@ -7,9 +7,9 @@ import { useAuth } from '@/lib/auth-provider';
 import { APP_NAME } from '@/lib/constants';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { LogOut, Menu, ShieldCheck, UserCircle, Building2 } from 'lucide-react';
+import { LogOut, Menu, ShieldCheck, UserCircle, Building2, Briefcase, Shield, Clock } from 'lucide-react'; // Added Briefcase, Shield, Clock
 import Link from 'next/link';
-import type { NavItem } from './AppSidebar'; 
+import type { NavItem } from './AppSidebar';
 import { cn } from '@/lib/utils';
 
 interface AppHeaderProps {
@@ -19,7 +19,6 @@ interface AppHeaderProps {
 export function AppHeader({ navItems }: AppHeaderProps) {
   const { user, logout, societyInfo } = useAuth();
   const currentAppName = societyInfo?.societyName && societyInfo.societyName.trim() !== '' ? societyInfo.societyName : APP_NAME;
-
 
   const getInitials = (name: string = '') => {
     return name.split(' ').map(n => n[0]).join('').toUpperCase() || 'U';
@@ -55,7 +54,7 @@ export function AppHeader({ navItems }: AppHeaderProps) {
           </SheetContent>
         </Sheet>
       </div>
-      
+
       <div className="hidden md:flex items-center gap-2">
          <ShieldCheck className="h-7 w-7 text-primary" />
         <span className="text-xl font-semibold text-primary">{currentAppName}</span>
@@ -75,25 +74,46 @@ export function AppHeader({ navItems }: AppHeaderProps) {
               </Avatar>
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent className="w-64" align="end" forceMount> 
+          <DropdownMenuContent className="w-72" align="end" forceMount>
             <DropdownMenuLabel className="font-normal">
-              <div className="flex flex-col space-y-1.5"> 
-                <p className="text-sm font-medium leading-none">{user.name}</p>
+              <div className="flex flex-col space-y-1 p-1">
+                <p className="text-md font-semibold leading-none">{user.name}</p>
                 <p className="text-xs leading-none text-muted-foreground">
                   {user.email}
                 </p>
-                {user.flatNumber && (
-                  <div className="flex items-center text-xs leading-none text-muted-foreground pt-0.5">
-                    <Building2 className="mr-1.5 h-3.5 w-3.5" /> 
-                    <span>Flat: {user.flatNumber}</span>
-                  </div>
-                )}
               </div>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={logout}>
-              <LogOut className="mr-2 h-4 w-4" />
-              <span>Log out</span>
+            <div className="py-2 px-1 space-y-2">
+              <div className="flex items-center px-2 py-1 text-sm text-foreground">
+                <UserCircle className="mr-3 h-5 w-5 text-muted-foreground" />
+                <span>{user.name}</span>
+              </div>
+              {user.flatNumber && (
+                <div className="flex items-center px-2 py-1 text-sm text-foreground">
+                  <Building2 className="mr-3 h-5 w-5 text-muted-foreground" />
+                  <span>Flat: {user.flatNumber}</span>
+                </div>
+              )}
+              <div className="flex items-center px-2 py-1 text-sm text-foreground">
+                <Briefcase className="mr-3 h-5 w-5 text-muted-foreground" />
+                <span className="capitalize">Role: {user.role}</span>
+              </div>
+              {societyInfo?.societyName && (
+                <div className="flex items-center px-2 py-1 text-sm text-foreground">
+                  <Shield className="mr-3 h-5 w-5 text-muted-foreground" />
+                  <span>Society: {societyInfo.societyName}</span>
+                </div>
+              )}
+              <div className="flex items-center px-2 py-1 text-sm text-foreground">
+                <Clock className="mr-3 h-5 w-5 text-muted-foreground" />
+                <span>Last Login: Not tracked</span>
+              </div>
+            </div>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={logout} className="cursor-pointer py-2">
+              <LogOut className="mr-3 h-5 w-5 text-red-500" />
+              <span className="text-red-500 font-medium">Log out</span>
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
