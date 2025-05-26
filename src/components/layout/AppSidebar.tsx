@@ -6,7 +6,7 @@ import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/lib/auth-provider';
 import { APP_NAME, USER_ROLES } from '@/lib/constants';
-import type { UserProfile, UserRole } from '@/lib/types'; // Ensure UserProfile is imported
+import type { UserProfile, UserRole } from '@/lib/types'; 
 import {
   LayoutDashboard,
   UserPlus,
@@ -30,6 +30,7 @@ import {
   ParkingSquare,
   ParkingCircle,
   Building2,
+  Building, // Added Building icon
 } from 'lucide-react';
 import {
   Sidebar,
@@ -162,6 +163,13 @@ export const getNavItems = (user: UserProfile | null, isAdminFn: () => boolean, 
       label: 'Manage Meetings',
       icon: UsersRound,
       iconColor: 'text-lime-500',
+      isUserTypeCheck: (u) => isAdminFn()
+    },
+    {
+      href: '/dashboard/admin/manage-facilities',
+      label: 'Manage Facilities',
+      icon: Building,
+      iconColor: 'text-teal-600',
       isUserTypeCheck: (u) => isAdminFn()
     },
     {

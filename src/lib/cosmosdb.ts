@@ -1,6 +1,6 @@
 
 import { CosmosClient, ConsistencyLevel } from "@azure/cosmos";
-import type { User, VisitorEntry, LoginAudit, GatePass, Complaint, Notice, Meeting, Vendor, CommitteeMember, SocietyPaymentDetails, ParkingSpot } from './types';
+import type { User, VisitorEntry, LoginAudit, GatePass, Complaint, Notice, Meeting, Vendor, CommitteeMember, SocietyPaymentDetails, ParkingSpot, SocietyInfoSettings, Facility } from './types';
 
 const endpoint = process.env.COSMOS_ENDPOINT;
 const key = process.env.COSMOS_KEY;
@@ -25,7 +25,7 @@ export const vendorsContainerId = process.env.COSMOS_VENDORS_CONTAINER_ID || "Ve
 export const committeeMembersContainerId = process.env.COSMOS_COMMITTEE_MEMBERS_CONTAINER_ID || "CommitteeMembers";
 export const societySettingsContainerId = process.env.COSMOS_SOCIETY_SETTINGS_CONTAINER_ID || "SocietySettings";
 export const parkingSpotsContainerId = process.env.COSMOS_PARKING_SPOTS_CONTAINER_ID || "ParkingSpots";
-// SecurityIncidents container related variables are removed as part of the feature revert.
+export const facilitiesContainerId = process.env.COSMOS_FACILITIES_CONTAINER_ID || "Facilities";
 
 
 export const client = new CosmosClient({
@@ -46,7 +46,8 @@ export const vendorsContainer = database.container(vendorsContainerId);
 export const committeeMembersContainer = database.container(committeeMembersContainerId);
 export const societySettingsContainer = database.container(societySettingsContainerId);
 export const parkingSpotsContainer = database.container(parkingSpotsContainerId);
-// securityIncidentsContainer is removed as part of the feature revert.
+export const facilitiesContainer = database.container(facilitiesContainerId);
+
 
 export async function initializeCosmosDB() {
   if (!endpoint || !key) {
@@ -55,7 +56,7 @@ export async function initializeCosmosDB() {
   }
   try {
     const { database: db } = await client.databases.createIfNotExists({ id: databaseId });
-    console.log(`Database '${db.id}' ensured.`); // Corrected line
+    console.log(`Database '${db.id}' ensured.`);
 
     const containerDefinitions = [
       { id: usersContainerId, partitionKey: { paths: ["/role"] } },
@@ -66,10 +67,10 @@ export async function initializeCosmosDB() {
       { id: noticesContainerId, partitionKey: { paths: ["/monthYear"] } },
       { id: meetingsContainerId, partitionKey: { paths: ["/monthYear"] } },
       { id: vendorsContainerId, partitionKey: { paths: ["/category"] } },
-      { id: committeeMembersContainerId, partitionKey: { paths: ["/id"] } }, // Changed partition key to /id
+      { id: committeeMembersContainerId, partitionKey: { paths: ["/id"] } }, 
       { id: societySettingsContainerId, partitionKey: { paths: ["/id"] } },
-      { id: parkingSpotsContainerId, partitionKey: { paths: ["/id"] } }, // Changed partition key to /id
-      // SecurityIncidents container definition removed as part of feature revert.
+      { id: parkingSpotsContainerId, partitionKey: { paths: ["/id"] } },
+      { id: facilitiesContainerId, partitionKey: { paths: ["/id"] } },
     ];
 
     for (const containerDef of containerDefinitions) {
@@ -86,6 +87,4 @@ if (process.env.NODE_ENV !== 'test') {
     initializeCosmosDB().catch(console.error);
 }
 
-export type { User, VisitorEntry, LoginAudit, GatePass, Complaint, Notice, Meeting, Vendor, CommitteeMember, SocietyPaymentDetails, ParkingSpot };
-// SecurityIncident type export removed as part of feature revert.
-
+export type { User, VisitorEntry, LoginAudit, GatePass, Complaint, Notice, Meeting, Vendor, CommitteeMember, SocietyPaymentDetails, SocietyInfoSettings, ParkingSpot, Facility };

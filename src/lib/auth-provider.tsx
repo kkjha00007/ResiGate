@@ -2,7 +2,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
-import type { User, UserProfile, VisitorEntry, GatePass, UserRole, Complaint, Notice, Meeting, Vendor, CommitteeMember, SocietyPaymentDetails, NeighbourProfile, ParkingSpot, SocietyInfoSettings } from './types';
+import type { User, UserProfile, VisitorEntry, GatePass, UserRole, Complaint, Notice, Meeting, Vendor, CommitteeMember, SocietyPaymentDetails, NeighbourProfile, ParkingSpot, SocietyInfoSettings, Facility } from './types';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 import { USER_ROLES, PUBLIC_ENTRY_SOURCE } from './constants';
@@ -77,6 +77,11 @@ interface AuthContextType {
   updateParkingSpot: (spotId: string, updates: Partial<Omit<ParkingSpot, 'id' | 'createdAt' | 'updatedAt'>>) => Promise<ParkingSpot | null>; 
   deleteParkingSpot: (spotId: string) => Promise<boolean>; 
   initialDataFetch: (currentUser: UserProfile | null) => Promise<void>;
+  facilities: Facility[];
+  fetchFacilities: () => Promise<void>;
+  createFacility: (facilityData: Omit<Facility, 'id' | 'createdAt' | 'updatedAt' | 'isActive'>) => Promise<Facility | null>;
+  updateFacility: (facilityId: string, updates: Partial<Omit<Facility, 'id' | 'createdAt' | 'updatedAt'>>) => Promise<Facility | null>;
+  deleteFacility: (facilityId: string) => Promise<boolean>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -99,6 +104,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [approvedResidents, setApprovedResidentsState] = useState<NeighbourProfile[]>([]);
   const [allParkingSpots, setAllParkingSpotsState] = useState<ParkingSpot[]>([]);
   const [myParkingSpots, setMyParkingSpotsState] = useState<ParkingSpot[]>([]);
+  const [facilities, setFacilitiesState] = useState<Facility[]>([]);
 
 
   const [isLoading, setIsLoading] = useState(true);
@@ -195,7 +201,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setSocietyInfoState(info);
     } catch (error) {
       console.error("Failed to fetch society info:", error);
-      // toast({ title: 'Error Loading Society Info', description: (error as Error).message, variant: 'destructive' }); // Optional: Show toast
       setSocietyInfoState(null);
     }
   }, []);
@@ -329,11 +334,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         toast({ title: 'Gate Pass Update Failed', description: data.message || 'Could not mark pass as used.', variant: 'destructive' });
         return null;
       }
-      // If the current user is not a guard, they might be a resident/admin also viewing their passes, so refresh their view.
       if (user?.role !== USER_ROLES.GUARD) {
           await fetchGatePasses();
       }
-      // Always refresh visitor entries as a new entry is created.
       await fetchVisitorEntries();
       return data;
     } catch (error) {
@@ -436,10 +439,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setPendingVendorsState(vendorsData);
     } catch (error) {
       console.error("Failed to fetch pending vendors:", error);
-      // toast({ title: 'Error Loading Pending Vendors', description: (error as Error).message, variant: 'destructive' });
-      setPendingVendorsState([]); // Clear on error to avoid stale data
+      setPendingVendorsState([]); 
     }
-  }, [isAdmin]); // Removed toast from dependencies as it's stable
+  }, [isAdmin]); 
 
   const fetchCommitteeMembers = _fetchCommitteeMembers;
   const fetchSocietyPaymentDetails = _fetchSocietyPaymentDetails;
@@ -485,18 +487,36 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [user, isOwnerOrRenter, toast]);
 
+  const fetchFacilities = useCallback(async () => {
+    // For now, let's assume all users can fetch facilities for booking later
+    // Admin-specific fetching might be different if needed.
+    try {
+      const response = await fetch('/api/facilities');
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ message: 'Failed to fetch facilities.' }));
+        throw new Error(errorData.message || 'Server error while fetching facilities.');
+      }
+      const facilitiesData: Facility[] = await response.json();
+      setFacilitiesState(facilitiesData);
+    } catch (error) {
+      console.error("Failed to fetch facilities:", error);
+      toast({ title: 'Error Loading Facilities', description: (error as Error).message, variant: 'destructive' });
+      setFacilitiesState([]);
+    }
+  }, [toast]);
+
 
   const initialDataFetch = useCallback(async (currentUser: UserProfile | null) => {
-    // Fetches common to all users or unauthenticated states
     const commonFetches = [
-      fetchSocietyInfo(), // Society name for header, fetched for all
+      fetchSocietyInfo(), 
       _fetchActiveNotices(),
       _fetchUpcomingMeetings(),
       _fetchApprovedVendors(),
       _fetchCommitteeMembers(),
       _fetchSocietyPaymentDetails(),
       _fetchApprovedResidents(),
-      fetchVisitorEntries()
+      fetchVisitorEntries(),
+      fetchFacilities(), // Fetch facilities for all
     ];
 
     const roleSpecificFetches = [];
@@ -507,7 +527,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             roleSpecificFetches.push(fetchAllMeetingsForAdmin());
             roleSpecificFetches.push(fetchPendingVendors());
             roleSpecificFetches.push(fetchAllParkingSpots());
-            // SocietyInfo already fetched above
         }
         if (currentUser.role === USER_ROLES.OWNER || currentUser.role === USER_ROLES.RENTER) {
             roleSpecificFetches.push(fetchMyComplaints());
@@ -520,7 +539,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     await Promise.all([...commonFetches, ...roleSpecificFetches]);
   }, [
       fetchSocietyInfo, _fetchActiveNotices, _fetchUpcomingMeetings, _fetchApprovedVendors, _fetchCommitteeMembers,
-      _fetchSocietyPaymentDetails, _fetchApprovedResidents, fetchVisitorEntries,
+      _fetchSocietyPaymentDetails, _fetchApprovedResidents, fetchVisitorEntries, fetchFacilities,
       fetchAllUsers, fetchAllNoticesForAdmin, fetchAllMeetingsForAdmin, fetchPendingVendors,
       fetchMyComplaints, fetchGatePasses, fetchAllParkingSpots, fetchMyParkingSpots
   ]);
@@ -558,7 +577,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setUser(loggedInUser);
       toast({ title: 'Login Successful', description: `Welcome back, ${loggedInUser.name}!` });
 
-      await initialDataFetch(loggedInUser); // Fetch data after successful login and user state is set
+      await initialDataFetch(loggedInUser); 
 
       router.push('/dashboard');
       return true;
@@ -582,7 +601,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setPendingVendorsState([]);
     setAllParkingSpotsState([]);
     setMyParkingSpotsState([]);
-    // setSocietyInfoState(null); // Society info might still be relevant for public pages if any
+    setFacilitiesState([]);
     router.push('/');
     toast({ title: 'Logged Out', description: 'You have been successfully logged out.' });
   };
@@ -627,7 +646,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
       toast({ title: 'User Approved', description: `${data.name} (${data.role}) has been approved.` });
       await fetchAllUsers();
-      await fetchApprovedResidents(); // Refresh approved residents list
+      await fetchApprovedResidents(); 
       return true;
     } catch (error) {
       toast({ title: 'Approval Error', description: (error as Error).message || 'An unexpected error occurred during approval.', variant: 'destructive' });
@@ -649,7 +668,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const data = await response.json();
       toast({ title: 'User Rejected', description: `Registration for ${data.name} has been rejected and removed.` });
       await fetchAllUsers();
-      await fetchApprovedResidents(); // Refresh approved residents list
+      await fetchApprovedResidents(); 
       return true;
     } catch (error) {
       toast({ title: 'Rejection Error', description: (error as Error).message || 'An unexpected error occurred during rejection.', variant: 'destructive' });
@@ -677,7 +696,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       if (isAdmin()) {
         await fetchAllUsers();
       }
-      await fetchApprovedResidents(); // Refresh approved residents list if name changed
+      await fetchApprovedResidents(); 
       return data as UserProfile;
     } catch (error) {
       toast({ title: 'Profile Update Error', description: (error as Error).message || 'An unexpected error occurred.', variant: 'destructive' });
@@ -776,7 +795,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const response = await fetch(`/api/notices/${noticeId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-
         body: JSON.stringify({ ...updates, monthYear: currentMonthYear }),
       });
       const data = await response.json();
@@ -854,9 +872,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       toast({ title: 'Unauthorized', description: 'Only super admins can update meetings.', variant: 'destructive' });
       return null;
     }
-
     const body = { ...updates, monthYear: currentMonthYear };
-
     try {
       const response = await fetch(`/api/meetings/${meetingId}`, {
         method: 'PUT',
@@ -912,7 +928,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       submittedByUserId: user.id,
       submittedByName: user.name,
     };
-
     try {
       const response = await fetch('/api/vendors', {
         method: 'POST',
@@ -1181,6 +1196,79 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  const createFacility = async (facilityData: Omit<Facility, 'id' | 'createdAt' | 'updatedAt' | 'isActive'>): Promise<Facility | null> => {
+    if (!isAdmin()) {
+      toast({ title: 'Unauthorized', description: 'Only admins can create facilities.', variant: 'destructive' });
+      return null;
+    }
+    try {
+      const response = await fetch('/api/facilities', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(facilityData),
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        toast({ title: 'Facility Creation Failed', description: data.message || 'Could not create facility.', variant: 'destructive' });
+        return null;
+      }
+      toast({ title: 'Facility Created', description: `Facility "${data.name}" has been added.` });
+      await fetchFacilities(); 
+      return data as Facility;
+    } catch (error) {
+      toast({ title: 'Facility Creation Error', description: (error as Error).message, variant: 'destructive' });
+      return null;
+    }
+  };
+
+  const updateFacility = async (facilityId: string, updates: Partial<Omit<Facility, 'id' | 'createdAt' | 'updatedAt'>>): Promise<Facility | null> => {
+    if (!isAdmin()) {
+      toast({ title: 'Unauthorized', description: 'Only admins can update facilities.', variant: 'destructive' });
+      return null;
+    }
+    try {
+      const response = await fetch(`/api/facilities/${facilityId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updates),
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        toast({ title: 'Facility Update Failed', description: data.message || 'Could not update facility.', variant: 'destructive' });
+        return null;
+      }
+      toast({ title: 'Facility Updated', description: `Facility "${data.name}" has been updated.` });
+      await fetchFacilities();
+      return data as Facility;
+    } catch (error) {
+      toast({ title: 'Facility Update Error', description: (error as Error).message, variant: 'destructive' });
+      return null;
+    }
+  };
+
+  const deleteFacility = async (facilityId: string): Promise<boolean> => {
+    if (!isAdmin()) {
+      toast({ title: 'Unauthorized', description: 'Only admins can delete facilities.', variant: 'destructive' });
+      return false;
+    }
+    try {
+      const response = await fetch(`/api/facilities/${facilityId}`, {
+        method: 'DELETE',
+      });
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({ message: 'Failed to delete facility.' }));
+        toast({ title: 'Facility Deletion Failed', description: data.message, variant: 'destructive' });
+        return false;
+      }
+      toast({ title: 'Facility Deleted', description: 'The facility has been successfully deleted.' });
+      await fetchFacilities();
+      return true;
+    } catch (error) {
+      toast({ title: 'Facility Deletion Error', description: (error as Error).message, variant: 'destructive' });
+      return false;
+    }
+  };
+
 
   return (
     <AuthContext.Provider value={{
@@ -1251,6 +1339,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         updateParkingSpot,
         deleteParkingSpot,
         initialDataFetch,
+        facilities,
+        fetchFacilities,
+        createFacility,
+        updateFacility,
+        deleteFacility,
     }}>
       {children}
     </AuthContext.Provider>
@@ -1264,4 +1357,3 @@ export const useAuth = (): AuthContextType => {
   }
   return context;
 };
-

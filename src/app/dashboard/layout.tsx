@@ -21,7 +21,6 @@ export default function DashboardLayout({
     if (!isLoading && !user) {
       router.replace('/');
     }
-    // Initial data fetch based on user role, after login and user state is confirmed
     if (user && !isLoading) {
       initialDataFetch(user);
     }

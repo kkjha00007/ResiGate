@@ -240,3 +240,33 @@ export interface ParkingSpot {
   createdAt: string; // ISO DateTime string
   updatedAt?: string; // ISO DateTime string
 }
+
+// Reverted SecurityIncident types
+// export type SecurityIncidentSeverity = "Low" | "Medium" | "High";
+// export type SecurityIncidentStatus = "New" | "Under Review" | "Action Taken" | "Resolved" | "Closed";
+
+// export interface SecurityIncident {
+//   id: string;
+//   reportedByUserId: string;
+//   reportedByUserName: string;
+//   reportedByUserFlatNumber?: string;
+//   incidentDateTime: string; // ISO DateTime string
+//   location: string;
+//   description: string;
+//   severity: SecurityIncidentSeverity;
+//   status: SecurityIncidentStatus;
+//   reportedAt: string; // ISO DateTime string of when the report was created
+//   adminNotes?: string;
+//   resolvedAt?: string; // ISO DateTime string
+// }
+
+export interface Facility {
+  id: string;
+  name: string;
+  description?: string;
+  capacity?: number;
+  bookingRules?: string; // Text field for general booking rules/notes
+  isActive: boolean; // To enable/disable facility for booking
+  createdAt: string; // ISO DateTime string
+  updatedAt?: string; // ISO DateTime string
+}
