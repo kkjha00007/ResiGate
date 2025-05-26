@@ -82,7 +82,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(createdIncident, { status: 201 });
 
   } catch (error) {
-    console.error('Submit Security Incident API error:', error);
+    console.error('Submit Security Incident API error (detailed):', error); // More detailed log
     const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred while processing your request.';
     return NextResponse.json({ message: 'Internal server error', detail: errorMessage }, { status: 500 });
   }
