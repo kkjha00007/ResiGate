@@ -3,7 +3,7 @@
 
 import React, { useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuth, type UserProfile } from '@/lib/auth-provider'; // Ensure UserProfile is imported if used in getNavItems signature
+import { useAuth, type UserProfile } from '@/lib/auth-provider';
 import { AppHeader } from '@/components/layout/AppHeader';
 import { AppSidebar, getNavItems, type NavItem } from '@/components/layout/AppSidebar';
 import { SidebarProvider } from '@/components/ui/sidebar';
@@ -14,16 +14,20 @@ export default function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const { user, isLoading, logout, isAdmin, isOwnerOrRenter, isGuard } = useAuth();
+  const { user, isLoading, logout, isAdmin, isOwnerOrRenter, isGuard, initialDataFetch } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
     if (!isLoading && !user) {
-      router.replace('/'); 
+      router.replace('/');
     }
-  }, [user, isLoading, router]);
+    // Initial data fetch based on user role, after login and user state is confirmed
+    if (user && !isLoading) {
+      initialDataFetch(user);
+    }
+  }, [user, isLoading, router, initialDataFetch]);
 
-  // Pass user, isAdmin, isOwnerOrRenter, isGuard to getNavItems
+
   const navItemsForHeader = useMemo(() => getNavItems(user, isAdmin, isOwnerOrRenter, isGuard), [user, isAdmin, isOwnerOrRenter, isGuard]);
 
 
