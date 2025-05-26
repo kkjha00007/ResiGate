@@ -30,7 +30,8 @@ import {
   ParkingSquare,
   ParkingCircle,
   Building2,
-  Building, // Added Building icon
+  Building,
+  Sparkles, // Added Sparkles icon
 } from 'lucide-react';
 import {
   Sidebar,
@@ -142,6 +143,13 @@ export const getNavItems = (user: UserProfile | null, isAdminFn: () => boolean, 
       icon: Landmark,
       iconColor: 'text-fuchsia-500',
       isUserTypeCheck: (u) => isOwnerOrRenterFn() || isAdminFn()
+    },
+    {
+      href: '/dashboard/facilities', // New link for viewing facilities
+      label: 'Facilities',
+      icon: Sparkles, 
+      iconColor: 'text-yellow-400', // Example color
+      isUserTypeCheck: (u) => isOwnerOrRenterFn() || isAdminFn() // Visible to residents and admin
     },
     // Admin Specific Links
     {

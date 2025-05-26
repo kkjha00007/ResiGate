@@ -21,10 +21,8 @@ export default function DashboardLayout({
     if (!isLoading && !user) {
       router.replace('/');
     }
-    if (user && !isLoading) {
-      initialDataFetch(user);
-    }
-  }, [user, isLoading, router, initialDataFetch]);
+    // AuthProvider now handles its own initialDataFetch trigger based on user state
+  }, [user, isLoading, router]);
 
 
   const navItemsForHeader = useMemo(() => getNavItems(user, isAdmin, isOwnerOrRenter, isGuard), [user, isAdmin, isOwnerOrRenter, isGuard]);
