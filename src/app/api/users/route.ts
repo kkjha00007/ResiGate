@@ -4,7 +4,7 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { usersContainer, societySettingsContainer } from '@/lib/cosmosdb';
 import type { User, UserRole, SocietyInfoSettings } from '@/lib/types';
 import { v4 as uuidv4 } from 'uuid';
-import { USER_ROLES, SELECTABLE_USER_ROLES } from '@/lib/constants';
+import { USER_ROLES, SELECTABLE_USER_ROLES } from '@/lib/constants'; // Ensure USER_ROLES is imported
 import bcrypt from 'bcryptjs';
 
 const SALT_ROUNDS = 10;
@@ -16,18 +16,13 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ message: 'Tenant ID is required for fetching users.' }, { status: 400 });
   }
   try {
-    // For composite partition key ["/tenantId", "/role"], query needs tenantId.
-    // To get ALL users for a tenant, you'd typically query with tenantId and allow cross-partition if roles are diverse,
-    // or iterate through roles if that's more efficient for your specific Cosmos DB setup.
-    // For simplicity, if just querying with tenantId, ensure your query is structured for it.
-    // A simple query might be: "SELECT * FROM c WHERE c.tenantId = @tenantId"
-    // However, if your /users endpoint is intended for superadmins to see all users across tenants,
-    // then the query must not filter by tenantId, and needs appropriate indexing/cross-partition settings.
-    // Given the context, this GET route is likely for admin viewing users within *their* tenant.
     const querySpec = {
       query: "SELECT * FROM c WHERE c.tenantId = @tenantId",
       parameters: [{ name: "@tenantId", value: tenantId }]
     };
+    // For composite key, provide an array for partitionKey if needed by specific SDK versions or configurations,
+    // though often the SDK infers from the query if tenantId is the first part of the composite key.
+    // For /tenantId as the first key, this should work.
     const { resources: userItems } = await usersContainer.items.query<User>(querySpec, { partitionKey: tenantId }).fetchAll();
     
     const users = userItems.map(u => {
@@ -66,17 +61,20 @@ export async function POST(request: NextRequest) {
     // Step 2: Derive tenantId
     const tenantId = societyName.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
     if (!tenantId) {
-      return NextResponse.json({ message: 'Invalid society name, could not derive Tenant ID.' }, { status: 400 });
+      console.error('Tenant ID derivation resulted in an empty string for societyName:', societyName);
+      return NextResponse.json({ message: 'Invalid society name, could not derive a valid Tenant ID. Please use alphanumeric characters and spaces.' }, { status: 400 });
     }
 
     // Step 3: Check for existing user (email uniqueness globally for now)
     let existingUsers: User[] = [];
     try {
       const querySpecEmailCheck = {
-        query: "SELECT * FROM c WHERE c.email = @email", // Consider adding c.tenantId = @tenantId if emails are unique per tenant
+        query: "SELECT * FROM c WHERE c.email = @email",
         parameters: [{ name: "@email", value: email }]
       };
-      const { resources } = await usersContainer.items.query<User>(querySpecEmailCheck).fetchAll(); // May need enableCrossPartitionQuery if not partitioned by email
+      // This query might need enableCrossPartitionQuery if not partitioned by email,
+      // or if you intend email to be unique only per tenant, add c.tenantId = @tenantId to the query.
+      const { resources } = await usersContainer.items.query<User>(querySpecEmailCheck, {enableCrossPartitionQuery: true}).fetchAll();
       existingUsers = resources;
     } catch (dbError: any) {
       console.error('Error querying existing users:', dbError);
@@ -104,7 +102,7 @@ export async function POST(request: NextRequest) {
       email,
       password: hashedPassword,
       flatNumber,
-      role,
+      role, // Role comes from client
       isApproved: false, 
       registrationDate: new Date().toISOString(),
     };
@@ -126,22 +124,18 @@ export async function POST(request: NextRequest) {
     
     // Step 7: Check/Create SocietyInfoSettings for the new tenant
     try {
-        // Read item with partition key for SocietySettings (which is /tenantId, so effectively /id)
+        // Read item with partition key for SocietySettings (which is /id, and we use tenantId as id)
         await societySettingsContainer.item(tenantId, tenantId).read();
     } catch (error: any) {
-        // If item not found, create it. Cosmos SDK throws error for 404.
-        // Check for specific "NotFound" or status code 404 if possible, otherwise assume not found
         if ((error as any).code === 404 || (error as any).code === 'NotFound' || (error as any).statusCode === 404) {
             const defaultSocietyInfo: SocietyInfoSettings = {
                 id: tenantId, 
-                tenantId: tenantId, // Explicitly add tenantId for clarity if schema expects it
+                tenantId: tenantId,
                 societyName: societyName, 
                 registrationNumber: '', address: '', contactEmail: '', contactPhone: '',
                 updatedAt: new Date().toISOString(),
             };
             try {
-              // When creating, provide the item and partition key if different or composite
-              // For /id partition key, id is used as partition key value implicitly
               await societySettingsContainer.items.create(defaultSocietyInfo);
               console.log(`Created default SocietyInfoSettings for new tenant: ${tenantId}`);
             } catch (settingsCreateError: any) {
@@ -156,7 +150,7 @@ export async function POST(request: NextRequest) {
     const { password, ...userProfile } = createdUser;
     return NextResponse.json(userProfile, { status: 201 });
 
-  } catch (error: any) { // General catch-all for unexpected errors in the overall flow
+  } catch (error: any) { 
     console.error('Register User API error (Outer Catch):', error);
     const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred during registration.';
     return NextResponse.json({ message: 'Internal server error', error: errorMessage }, { status: 500 });
