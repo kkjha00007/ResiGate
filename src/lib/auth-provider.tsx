@@ -328,9 +328,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         toast({ title: 'Gate Pass Update Failed', description: data.message || 'Could not mark pass as used.', variant: 'destructive' });
         return null;
       }
+      // If the current user is not a guard, they might be a resident/admin also viewing their passes, so refresh their view.
       if (user?.role !== USER_ROLES.GUARD) {
           await fetchGatePasses();
       }
+      // Always refresh visitor entries as a new entry is created.
       await fetchVisitorEntries();
       return data;
     } catch (error) {
@@ -433,10 +435,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setPendingVendorsState(vendorsData);
     } catch (error) {
       console.error("Failed to fetch pending vendors:", error);
-      toast({ title: 'Error Loading Pending Vendors', description: (error as Error).message, variant: 'destructive' });
-      setPendingVendorsState([]);
+      // toast({ title: 'Error Loading Pending Vendors', description: (error as Error).message, variant: 'destructive' });
+      setPendingVendorsState([]); // Clear on error to avoid stale data
     }
-  }, [toast, isAdmin]);
+  }, [isAdmin]); // Removed toast from dependencies as it's stable
 
   const fetchCommitteeMembers = _fetchCommitteeMembers;
   const fetchSocietyPaymentDetails = _fetchSocietyPaymentDetails;
@@ -484,7 +486,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
 
   const initialDataFetch = useCallback(async (currentUser: UserProfile | null) => {
+    // Fetches common to all users or unauthenticated states
     const commonFetches = [
+      fetchSocietyInfo(), // Society name for header, fetched for all
       _fetchActiveNotices(),
       _fetchUpcomingMeetings(),
       _fetchApprovedVendors(),
@@ -502,7 +506,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             roleSpecificFetches.push(fetchAllMeetingsForAdmin());
             roleSpecificFetches.push(fetchPendingVendors());
             roleSpecificFetches.push(fetchAllParkingSpots());
-            roleSpecificFetches.push(fetchSocietyInfo()); // Fetch society info for admin
+            // SocietyInfo already fetched above
         }
         if (currentUser.role === USER_ROLES.OWNER || currentUser.role === USER_ROLES.RENTER) {
             roleSpecificFetches.push(fetchMyComplaints());
@@ -514,10 +518,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
     await Promise.all([...commonFetches, ...roleSpecificFetches]);
   }, [
-      _fetchActiveNotices, _fetchUpcomingMeetings, _fetchApprovedVendors, _fetchCommitteeMembers,
+      fetchSocietyInfo, _fetchActiveNotices, _fetchUpcomingMeetings, _fetchApprovedVendors, _fetchCommitteeMembers,
       _fetchSocietyPaymentDetails, _fetchApprovedResidents, fetchVisitorEntries,
       fetchAllUsers, fetchAllNoticesForAdmin, fetchAllMeetingsForAdmin, fetchPendingVendors,
-      fetchMyComplaints, fetchGatePasses, fetchAllParkingSpots, fetchMyParkingSpots, fetchSocietyInfo
+      fetchMyComplaints, fetchGatePasses, fetchAllParkingSpots, fetchMyParkingSpots
   ]);
 
   useEffect(() => {
@@ -553,7 +557,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setUser(loggedInUser);
       toast({ title: 'Login Successful', description: `Welcome back, ${loggedInUser.name}!` });
 
-      await initialDataFetch(loggedInUser);
+      await initialDataFetch(loggedInUser); // Fetch data after successful login and user state is set
 
       router.push('/dashboard');
       return true;
@@ -577,7 +581,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setPendingVendorsState([]);
     setAllParkingSpotsState([]);
     setMyParkingSpotsState([]);
-    setSocietyInfoState(null);
+    // setSocietyInfoState(null); // Society info might still be relevant for public pages if any
     router.push('/');
     toast({ title: 'Logged Out', description: 'You have been successfully logged out.' });
   };
@@ -622,6 +626,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
       toast({ title: 'User Approved', description: `${data.name} (${data.role}) has been approved.` });
       await fetchAllUsers();
+      await fetchApprovedResidents(); // Refresh approved residents list
       return true;
     } catch (error) {
       toast({ title: 'Approval Error', description: (error as Error).message || 'An unexpected error occurred during approval.', variant: 'destructive' });
@@ -643,6 +648,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const data = await response.json();
       toast({ title: 'User Rejected', description: `Registration for ${data.name} has been rejected and removed.` });
       await fetchAllUsers();
+      await fetchApprovedResidents(); // Refresh approved residents list
       return true;
     } catch (error) {
       toast({ title: 'Rejection Error', description: (error as Error).message || 'An unexpected error occurred during rejection.', variant: 'destructive' });
@@ -670,6 +676,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       if (isAdmin()) {
         await fetchAllUsers();
       }
+      await fetchApprovedResidents(); // Refresh approved residents list if name changed
       return data as UserProfile;
     } catch (error) {
       toast({ title: 'Profile Update Error', description: (error as Error).message || 'An unexpected error occurred.', variant: 'destructive' });

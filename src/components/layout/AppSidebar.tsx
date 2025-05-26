@@ -6,7 +6,7 @@ import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/lib/auth-provider';
 import { APP_NAME, USER_ROLES } from '@/lib/constants';
-import type { UserRole } from '@/lib/types';
+import type { UserProfile, UserRole } from '@/lib/types'; // Ensure UserProfile is imported
 import {
   LayoutDashboard,
   UserPlus,
@@ -81,56 +81,56 @@ export const getNavItems = (user: UserProfile | null, isAdminFn: () => boolean, 
       label: 'Add Visitor Entry', 
       icon: UserPlus, 
       iconColor: 'text-emerald-500',
-      isUserTypeCheck: (u) => isGuardFn() // Only for Guard
+      isUserTypeCheck: (u) => isGuardFn() 
     },
     { 
       href: '/dashboard/gate-pass/validate', 
       label: 'Validate Gate Pass', 
       icon: ShieldCheckIcon, 
       iconColor: 'text-blue-500',
-      isUserTypeCheck: (u) => isGuardFn() // Only for Guard
+      isUserTypeCheck: (u) => isGuardFn() 
     },
     { 
       href: '/dashboard/visitor-log', 
       label: 'Visitor Log', 
       icon: ClipboardList, 
       iconColor: 'text-amber-500',
-      isUserTypeCheck: (u) => isAdminFn() || isGuardFn() // Admin or Guard
+      isUserTypeCheck: (u) => isAdminFn() || isGuardFn() 
     },
     { 
       href: '/dashboard/gate-pass/create', 
       label: 'Create Gate Pass', 
       icon: CalendarPlus, 
       iconColor: 'text-violet-500',
-      isUserTypeCheck: (u) => isOwnerOrRenterFn() || isAdminFn() // Owner/Renter or Admin
+      isUserTypeCheck: (u) => isOwnerOrRenterFn() || isAdminFn() 
     },
     { 
       href: '/dashboard/gate-pass/my-passes', 
       label: 'My Gate Passes', 
       icon: Ticket, 
       iconColor: 'text-rose-500',
-      isUserTypeCheck: (u) => isOwnerOrRenterFn() || isAdminFn() // Owner/Renter or Admin
+      isUserTypeCheck: (u) => isOwnerOrRenterFn() || isAdminFn() 
     },
     { 
       href: '/dashboard/personal-logs', 
       label: 'My Visitor Logs', 
       icon: FileText, 
       iconColor: 'text-teal-500',
-      isUserTypeCheck: (u) => isOwnerOrRenterFn() // Only Owner/Renter
+      isUserTypeCheck: (u) => isOwnerOrRenterFn() 
     },
     { 
       href: '/dashboard/complaints', 
       label: 'My Complaints', 
       icon: Megaphone, 
       iconColor: 'text-orange-500',
-      isUserTypeCheck: (u) => isOwnerOrRenterFn() // Only Owner/Renter
+      isUserTypeCheck: (u) => isOwnerOrRenterFn() 
     },
      { 
       href: '/dashboard/my-parking', 
       label: 'My Parking', 
       icon: ParkingCircle, 
       iconColor: 'text-indigo-400',
-      isUserTypeCheck: (u) => isOwnerOrRenterFn() // Only Owner/Renter
+      isUserTypeCheck: (u) => isOwnerOrRenterFn() 
     },
     { href: '/dashboard/neighbours', label: 'Our Neighbours', icon: NeighboursIcon, iconColor: 'text-cyan-600' },
     { href: '/dashboard/vendors/directory', label: 'Vendor Directory', icon: Store, iconColor: 'text-cyan-500' },
@@ -141,7 +141,7 @@ export const getNavItems = (user: UserProfile | null, isAdminFn: () => boolean, 
       label: 'Payment Details', 
       icon: Landmark, 
       iconColor: 'text-fuchsia-500',
-      isUserTypeCheck: (u) => isOwnerOrRenterFn() || isAdminFn() // Owner/Renter or Admin
+      isUserTypeCheck: (u) => isOwnerOrRenterFn() || isAdminFn() 
     },
     // Admin Specific Links
     { 
@@ -149,42 +149,42 @@ export const getNavItems = (user: UserProfile | null, isAdminFn: () => boolean, 
       label: 'User Account Approvals', 
       icon: Users, 
       iconColor: 'text-pink-500',
-      isUserTypeCheck: (u) => isAdminFn() // Only Admin
+      isUserTypeCheck: (u) => isAdminFn() 
     },
     { 
       href: '/dashboard/admin/manage-notices', 
       label: 'Manage Notices', 
       icon: ClipboardEdit, 
       iconColor: 'text-indigo-500',
-      isUserTypeCheck: (u) => isAdminFn() // Only Admin
+      isUserTypeCheck: (u) => isAdminFn() 
     },
     { 
       href: '/dashboard/admin/manage-meetings', 
       label: 'Manage Meetings', 
       icon: UsersRound, 
       iconColor: 'text-lime-500',
-      isUserTypeCheck: (u) => isAdminFn() // Only Admin
+      isUserTypeCheck: (u) => isAdminFn() 
     },
     { 
       href: '/dashboard/admin/manage-vendors', 
       label: 'Manage Vendors', 
       icon: ListFilter, 
       iconColor: 'text-yellow-500',
-      isUserTypeCheck: (u) => isAdminFn() // Only Admin
+      isUserTypeCheck: (u) => isAdminFn() 
     },
     { 
       href: '/dashboard/admin/manage-parking', 
       label: 'Manage Parking', 
       icon: ParkingSquare, 
       iconColor: 'text-orange-600',
-      isUserTypeCheck: (u) => isAdminFn() // Only Admin
+      isUserTypeCheck: (u) => isAdminFn() 
     },
     { 
       href: '/dashboard/admin/society-settings', 
       label: 'Society Settings', 
       icon: Building2, 
       iconColor: 'text-rose-400',
-      isUserTypeCheck: (u) => isAdminFn() // Only Admin
+      isUserTypeCheck: (u) => isAdminFn() 
     },
     { href: '/dashboard/my-profile', label: 'My Profile', icon: Settings2, iconColor: 'text-gray-400' },
   ];
@@ -194,7 +194,9 @@ export const getNavItems = (user: UserProfile | null, isAdminFn: () => boolean, 
 
 export function AppSidebar() {
   const pathname = usePathname();
-  const { user, logout, isAdmin, isOwnerOrRenter, isGuard } = useAuth();
+  const { user, logout, isAdmin, isOwnerOrRenter, isGuard, societyInfo } = useAuth();
+  const currentAppName = societyInfo?.societyName && societyInfo.societyName.trim() !== '' ? societyInfo.societyName : APP_NAME;
+
 
   const navItems = React.useMemo(() => getNavItems(user, isAdmin, isOwnerOrRenter, isGuard), [user, isAdmin, isOwnerOrRenter, isGuard]);
 
@@ -210,7 +212,7 @@ export function AppSidebar() {
         <SidebarHeader className="p-4 border-b border-sidebar-border">
           <Link href="/dashboard" className="flex items-center gap-2 group-data-[collapsible=icon]:justify-center">
              <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="hsl(var(--sidebar-primary))" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-shield-check"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><path d="m9 12 2 2 4-4"/></svg>
-            <span className="text-xl font-semibold text-sidebar-primary group-data-[collapsible=icon]:hidden">{APP_NAME}</span>
+            <span className="text-xl font-semibold text-sidebar-primary group-data-[collapsible=icon]:hidden">{currentAppName}</span>
           </Link>
         </SidebarHeader>
 

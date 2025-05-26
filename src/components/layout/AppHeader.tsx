@@ -17,7 +17,9 @@ interface AppHeaderProps {
 }
 
 export function AppHeader({ navItems }: AppHeaderProps) {
-  const { user, logout } = useAuth();
+  const { user, logout, societyInfo } = useAuth();
+  const currentAppName = societyInfo?.societyName && societyInfo.societyName.trim() !== '' ? societyInfo.societyName : APP_NAME;
+
 
   const getInitials = (name: string = '') => {
     return name.split(' ').map(n => n[0]).join('').toUpperCase() || 'U';
@@ -36,7 +38,7 @@ export function AppHeader({ navItems }: AppHeaderProps) {
           <SheetContent side="left" className="flex flex-col p-0 pt-4 bg-sidebar text-sidebar-foreground w-[260px]">
             <Link href="/dashboard" className="flex items-center gap-2 px-4 pb-4 border-b border-sidebar-border">
                <ShieldCheck className="h-7 w-7 text-sidebar-primary" />
-              <span className="text-xl font-semibold text-sidebar-primary">{APP_NAME}</span>
+              <span className="text-xl font-semibold text-sidebar-primary">{currentAppName}</span>
             </Link>
             <nav className="flex-1 overflow-y-auto p-4 space-y-1">
               {navItems.map((item) => (
@@ -56,7 +58,7 @@ export function AppHeader({ navItems }: AppHeaderProps) {
       
       <div className="hidden md:flex items-center gap-2">
          <ShieldCheck className="h-7 w-7 text-primary" />
-        <span className="text-xl font-semibold text-primary">{APP_NAME}</span>
+        <span className="text-xl font-semibold text-primary">{currentAppName}</span>
       </div>
 
       <div className="flex-1">
