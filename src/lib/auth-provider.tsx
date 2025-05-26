@@ -2,10 +2,10 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
-import type { User, UserProfile, VisitorEntry, GatePass, UserRole, Complaint, Notice, Meeting, Vendor, CommitteeMember, SocietyPaymentDetails, NeighbourProfile, ParkingSpot } from './types'; // Removed SecurityIncident
+import type { User, UserProfile, VisitorEntry, GatePass, UserRole, Complaint, Notice, Meeting, Vendor, CommitteeMember, SocietyPaymentDetails, NeighbourProfile, ParkingSpot } from './types';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
-import { USER_ROLES, PUBLIC_ENTRY_SOURCE } from './constants'; // Removed SECURITY_INCIDENT_STATUSES
+import { USER_ROLES, PUBLIC_ENTRY_SOURCE } from './constants';
 import { GATE_PASS_STATUSES } from './types';
 import { format, parseISO } from 'date-fns';
 
@@ -73,7 +73,6 @@ interface AuthContextType {
   createParkingSpot: (spotData: Omit<ParkingSpot, 'id' | 'createdAt' | 'updatedAt' | 'status'>) => Promise<ParkingSpot | null>; 
   updateParkingSpot: (spotId: string, updates: Partial<Omit<ParkingSpot, 'id' | 'createdAt' | 'updatedAt'>>) => Promise<ParkingSpot | null>; 
   deleteParkingSpot: (spotId: string) => Promise<boolean>; 
-  // submitSecurityIncident: (incidentData: Omit<SecurityIncident, 'id' | 'reportedByUserId' | 'reportedByUserName' | 'reportedByUserFlatNumber' | 'reportedAt' | 'status'>) => Promise<SecurityIncident | null>; // Removed
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -1126,35 +1125,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  // const submitSecurityIncident = async (incidentData: Omit<SecurityIncident, 'id' | 'reportedByUserId' | 'reportedByUserName' | 'reportedByUserFlatNumber' | 'reportedAt' | 'status'>): Promise<SecurityIncident | null> => { // Removed
-  //   if (!user) {
-  //     toast({ title: 'Authentication Error', description: 'You must be logged in to report an incident.', variant: 'destructive' });
-  //     return null;
-  //   }
-  //   const submissionData = {
-  //       ...incidentData,
-  //       currentUser: user, 
-  //   };
-
-  //   try {
-  //       const response = await fetch('/api/security-incidents', {
-  //           method: 'POST',
-  //           headers: { 'Content-Type': 'application/json' },
-  //           body: JSON.stringify(submissionData),
-  //       });
-  //       const data = await response.json();
-  //       if (!response.ok) {
-  //           toast({ title: 'Incident Report Failed', description: data.message || 'Could not submit security incident.', variant: 'destructive' });
-  //           return null;
-  //       }
-  //       toast({ title: 'Incident Reported', description: 'Your security incident report has been submitted.' });
-  //       return data as SecurityIncident;
-  //   } catch (error) {
-  //       toast({ title: 'Incident Report Error', description: (error as Error).message || 'An unexpected error occurred.', variant: 'destructive' });
-  //       return null;
-  //   }
-  // };
-
 
   return (
     <AuthContext.Provider value={{
@@ -1221,7 +1191,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         createParkingSpot,
         updateParkingSpot,
         deleteParkingSpot,
-        // submitSecurityIncident, // Removed
     }}>
       {children}
     </AuthContext.Provider>

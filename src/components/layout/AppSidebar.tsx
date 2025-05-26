@@ -29,7 +29,6 @@ import {
   Users2 as NeighboursIcon,
   ParkingSquare,
   ParkingCircle, 
-  // ShieldAlert, // Removed
 } from 'lucide-react';
 import {
   Sidebar,
@@ -79,14 +78,13 @@ export const getNavItems = (isAdminUser: boolean, isOwnerOrRenterUser: boolean, 
   { href: '/dashboard/vendors/directory', label: 'Vendor Directory', icon: Store, iconColor: 'text-cyan-500' },
   { href: '/dashboard/vendors/add', label: 'Add Vendor', icon: ConciergeBell, iconColor: 'text-purple-500' },
   { href: '/dashboard/committee-members', label: 'Committee Members', icon: Users, iconColor: 'text-green-500' },
-  // { href: '/dashboard/security-log/report-incident', label: 'Report Incident', icon: ShieldAlert, iconColor: 'text-red-400' }, // Removed
-
+  
   ...((isOwnerOrRenterUser || isAdminUser) ? [
      { href: '/dashboard/payment-details', label: 'Payment Details', icon: Landmark, iconColor: 'text-fuchsia-500' } as NavItem,
   ] : []),
 
   ...(isAdminUser ? [
-    { href: '/dashboard/admin-approvals', label: 'User Approvals', icon: Users, iconColor: 'text-pink-500' } as NavItem,
+    { href: '/dashboard/admin-approvals', label: 'User Account Approvals', icon: Users, iconColor: 'text-pink-500' } as NavItem,
     { href: '/dashboard/admin/manage-notices', label: 'Manage Notices', icon: ClipboardEdit, iconColor: 'text-indigo-500' } as NavItem,
     { href: '/dashboard/admin/manage-meetings', label: 'Manage Meetings', icon: UsersRound, iconColor: 'text-lime-500' } as NavItem,
     { href: '/dashboard/admin/manage-vendors', label: 'Manage Vendors', icon: ListFilter, iconColor: 'text-yellow-500' } as NavItem,

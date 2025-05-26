@@ -10,6 +10,10 @@ export const USER_ROLES = {
   GUARD: "guard",
 } as const;
 
+// Explicitly type UserRole based on the values of USER_ROLES
+export type UserRole = typeof USER_ROLES[keyof typeof USER_ROLES];
+
+
 export const SELECTABLE_USER_ROLES: Exclude<UserRole, "superadmin">[] = ["owner", "renter", "guard"];
 
 

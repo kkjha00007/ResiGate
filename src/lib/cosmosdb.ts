@@ -25,7 +25,9 @@ export const vendorsContainerId = process.env.COSMOS_VENDORS_CONTAINER_ID || "Ve
 export const committeeMembersContainerId = process.env.COSMOS_COMMITTEE_MEMBERS_CONTAINER_ID || "CommitteeMembers";
 export const societySettingsContainerId = process.env.COSMOS_SOCIETY_SETTINGS_CONTAINER_ID || "SocietySettings";
 export const parkingSpotsContainerId = process.env.COSMOS_PARKING_SPOTS_CONTAINER_ID || "ParkingSpots";
-// export const securityIncidentsContainerId = process.env.COSMOS_SECURITY_INCIDENTS_CONTAINER_ID || "SecurityIncidents"; // Reverted
+// Removed SecurityIncidents container during revert
+// export const securityIncidentsContainerId = process.env.COSMOS_SECURITY_INCIDENTS_CONTAINER_ID || "SecurityIncidents";
+
 
 export const client = new CosmosClient({
   endpoint: endpoint || "https://placeholder.documents.azure.com",
@@ -45,7 +47,8 @@ export const vendorsContainer = database.container(vendorsContainerId);
 export const committeeMembersContainer = database.container(committeeMembersContainerId);
 export const societySettingsContainer = database.container(societySettingsContainerId);
 export const parkingSpotsContainer = database.container(parkingSpotsContainerId);
-// export const securityIncidentsContainer = database.container(securityIncidentsContainerId); // Reverted
+// Removed SecurityIncidents container during revert
+// export const securityIncidentsContainer = database.container(securityIncidentsContainerId);
 
 export async function initializeCosmosDB() {
   if (!endpoint || !key) {
@@ -59,16 +62,17 @@ export async function initializeCosmosDB() {
     const containerDefinitions = [
       { id: usersContainerId, partitionKey: { paths: ["/role"] } },
       { id: visitorEntriesContainerId, partitionKey: { paths: ["/flatNumber"] } },
-      { id: loginAuditsContainerId, partitionKey: { paths: ["/userId"] }, defaultTtl: 30 * 24 * 60 * 60 },
+      { id: loginAuditsContainerId, partitionKey: { paths: ["/userId"] }, defaultTtl: 30 * 24 * 60 * 60 }, // 30 days TTL
       { id: gatePassesContainerId, partitionKey: { paths: ["/residentUserId"] } },
       { id: complaintsContainerId, partitionKey: { paths: ["/userId"] } },
       { id: noticesContainerId, partitionKey: { paths: ["/monthYear"] } },
       { id: meetingsContainerId, partitionKey: { paths: ["/monthYear"] } },
       { id: vendorsContainerId, partitionKey: { paths: ["/category"] } },
-      { id: committeeMembersContainerId, partitionKey: { paths: ["/id"] } }, // Using /id as partition key
-      { id: societySettingsContainerId, partitionKey: { paths: ["/id"] } }, // Single document, /id is fine
-      { id: parkingSpotsContainerId, partitionKey: { paths: ["/id"] } }, // Using /id as partition key
-      // { id: securityIncidentsContainerId, partitionKey: { paths: ["/reportedByUserId"] } }, // Reverted
+      { id: committeeMembersContainerId, partitionKey: { paths: ["/id"] } },
+      { id: societySettingsContainerId, partitionKey: { paths: ["/id"] } },
+      { id: parkingSpotsContainerId, partitionKey: { paths: ["/id"] } },
+      // Removed SecurityIncidents container definition during revert
+      // { id: securityIncidentsContainerId, partitionKey: { paths: ["/reportedByUserId"] } },
     ];
 
     for (const containerDef of containerDefinitions) {
@@ -86,3 +90,5 @@ if (process.env.NODE_ENV !== 'test') {
 }
 
 export type { User, VisitorEntry, LoginAudit, GatePass, Complaint, Notice, Meeting, Vendor, CommitteeMember, SocietyPaymentDetails, ParkingSpot };
+// Removed SecurityIncident type export during revert
+// export type { SecurityIncident };
