@@ -76,6 +76,7 @@ interface AuthContextType {
   createParkingSpot: (spotData: Omit<ParkingSpot, 'id' | 'createdAt' | 'updatedAt' | 'status'>) => Promise<ParkingSpot | null>; 
   updateParkingSpot: (spotId: string, updates: Partial<Omit<ParkingSpot, 'id' | 'createdAt' | 'updatedAt'>>) => Promise<ParkingSpot | null>; 
   deleteParkingSpot: (spotId: string) => Promise<boolean>; 
+  initialDataFetch: (currentUser: UserProfile | null) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -1249,6 +1250,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         createParkingSpot,
         updateParkingSpot,
         deleteParkingSpot,
+        initialDataFetch,
     }}>
       {children}
     </AuthContext.Provider>
@@ -1262,3 +1264,4 @@ export const useAuth = (): AuthContextType => {
   }
   return context;
 };
+
