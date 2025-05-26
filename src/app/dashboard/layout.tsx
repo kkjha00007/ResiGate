@@ -3,7 +3,7 @@
 
 import React, { useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuth } from '@/lib/auth-provider';
+import { useAuth, type UserProfile } from '@/lib/auth-provider'; // Ensure UserProfile is imported if used in getNavItems signature
 import { AppHeader } from '@/components/layout/AppHeader';
 import { AppSidebar, getNavItems, type NavItem } from '@/components/layout/AppSidebar';
 import { SidebarProvider } from '@/components/ui/sidebar';
@@ -23,7 +23,8 @@ export default function DashboardLayout({
     }
   }, [user, isLoading, router]);
 
-  const navItemsForHeader = useMemo(() => getNavItems(isAdmin(), isOwnerOrRenter(), isGuard()), [isAdmin, isOwnerOrRenter, isGuard]);
+  // Pass user, isAdmin, isOwnerOrRenter, isGuard to getNavItems
+  const navItemsForHeader = useMemo(() => getNavItems(user, isAdmin, isOwnerOrRenter, isGuard), [user, isAdmin, isOwnerOrRenter, isGuard]);
 
 
   if (isLoading || !user) {

@@ -29,6 +29,7 @@ import {
   Users2 as NeighboursIcon,
   ParkingSquare,
   ParkingCircle, 
+  Building2,
 } from 'lucide-react';
 import {
   Sidebar,
@@ -45,60 +46,157 @@ export interface NavItem {
   href: string;
   label: string;
   icon: LucideIcon;
-  role?: UserRole[];
-  hideForRole?: UserRole[];
+  role?: UserRole[]; // If present, user must have one of these roles
+  hideForRole?: UserRole[]; // If present, user must NOT have one of these roles
+  isUserTypeCheck?: (user: UserProfile | null) => boolean; // Custom check function
   disabled?: boolean;
   iconColor?: string;
 }
 
-export const getNavItems = (isAdminUser: boolean, isOwnerOrRenterUser: boolean, isGuardUser: boolean): NavItem[] => [
-  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, iconColor: 'text-sky-500' },
+// Helper to simplify role checks in getNavItems
+const checkVisibility = (user: UserProfile | null, isAdminFn: () => boolean, isOwnerOrRenterFn: () => boolean, isGuardFn: () => boolean, item: NavItem): boolean => {
+  if (item.isUserTypeCheck) {
+    return item.isUserTypeCheck(user);
+  }
+  if (item.role) {
+    return item.role.some(role => {
+      if (role === USER_ROLES.SUPERADMIN) return isAdminFn();
+      if (role === USER_ROLES.OWNER || role === USER_ROLES.RENTER) return isOwnerOrRenterFn();
+      if (role === USER_ROLES.GUARD) return isGuardFn();
+      return user?.role === role;
+    });
+  }
+  if (item.hideForRole && user) {
+    return !item.hideForRole.includes(user.role);
+  }
+  return true; // Default to visible if no specific role conditions
+};
 
-  ...(isGuardUser ? [
-    { href: '/dashboard/add-visitor', label: 'Add Visitor Entry', icon: UserPlus, iconColor: 'text-emerald-500' } as NavItem,
-    { href: '/dashboard/gate-pass/validate', label: 'Validate Gate Pass', icon: ShieldCheckIcon, iconColor: 'text-blue-500' } as NavItem,
-  ] : []),
 
-  ...((isAdminUser || isGuardUser) ? [
-      { href: '/dashboard/visitor-log', label: 'Visitor Log', icon: ClipboardList, iconColor: 'text-amber-500' },
-  ] : []),
-
-  ...((isOwnerOrRenterUser || isAdminUser) ? [
-    { href: '/dashboard/gate-pass/create', label: 'Create Gate Pass', icon: CalendarPlus, iconColor: 'text-violet-500' } as NavItem,
-    { href: '/dashboard/gate-pass/my-passes', label: 'My Gate Passes', icon: Ticket, iconColor: 'text-rose-500' } as NavItem,
-  ] : []),
-
-  ...(isOwnerOrRenterUser ? [
-    { href: '/dashboard/personal-logs', label: 'My Visitor Logs', icon: FileText, iconColor: 'text-teal-500' } as NavItem,
-    { href: '/dashboard/complaints', label: 'My Complaints', icon: Megaphone, iconColor: 'text-orange-500' } as NavItem,
-    { href: '/dashboard/my-parking', label: 'My Parking', icon: ParkingCircle, iconColor: 'text-indigo-400' } as NavItem,
-  ] : []),
-
-  { href: '/dashboard/neighbours', label: 'Our Neighbours', icon: NeighboursIcon, iconColor: 'text-cyan-600' },
-  { href: '/dashboard/vendors/directory', label: 'Vendor Directory', icon: Store, iconColor: 'text-cyan-500' },
-  { href: '/dashboard/vendors/add', label: 'Add Vendor', icon: ConciergeBell, iconColor: 'text-purple-500' },
-  { href: '/dashboard/committee-members', label: 'Committee Members', icon: Users, iconColor: 'text-green-500' },
-  
-  ...((isOwnerOrRenterUser || isAdminUser) ? [
-     { href: '/dashboard/payment-details', label: 'Payment Details', icon: Landmark, iconColor: 'text-fuchsia-500' } as NavItem,
-  ] : []),
-
-  ...(isAdminUser ? [
-    { href: '/dashboard/admin-approvals', label: 'User Account Approvals', icon: Users, iconColor: 'text-pink-500' } as NavItem,
-    { href: '/dashboard/admin/manage-notices', label: 'Manage Notices', icon: ClipboardEdit, iconColor: 'text-indigo-500' } as NavItem,
-    { href: '/dashboard/admin/manage-meetings', label: 'Manage Meetings', icon: UsersRound, iconColor: 'text-lime-500' } as NavItem,
-    { href: '/dashboard/admin/manage-vendors', label: 'Manage Vendors', icon: ListFilter, iconColor: 'text-yellow-500' } as NavItem,
-    { href: '/dashboard/admin/manage-parking', label: 'Manage Parking', icon: ParkingSquare, iconColor: 'text-orange-600' } as NavItem,
-  ] : []),
-  { href: '/dashboard/my-profile', label: 'My Profile', icon: Settings2, iconColor: 'text-gray-400' },
-];
+export const getNavItems = (user: UserProfile | null, isAdminFn: () => boolean, isOwnerOrRenterFn: () => boolean, isGuardFn: () => boolean): NavItem[] => {
+  const allItems: NavItem[] = [
+    { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, iconColor: 'text-sky-500' },
+    { 
+      href: '/dashboard/add-visitor', 
+      label: 'Add Visitor Entry', 
+      icon: UserPlus, 
+      iconColor: 'text-emerald-500',
+      isUserTypeCheck: (u) => isGuardFn() // Only for Guard
+    },
+    { 
+      href: '/dashboard/gate-pass/validate', 
+      label: 'Validate Gate Pass', 
+      icon: ShieldCheckIcon, 
+      iconColor: 'text-blue-500',
+      isUserTypeCheck: (u) => isGuardFn() // Only for Guard
+    },
+    { 
+      href: '/dashboard/visitor-log', 
+      label: 'Visitor Log', 
+      icon: ClipboardList, 
+      iconColor: 'text-amber-500',
+      isUserTypeCheck: (u) => isAdminFn() || isGuardFn() // Admin or Guard
+    },
+    { 
+      href: '/dashboard/gate-pass/create', 
+      label: 'Create Gate Pass', 
+      icon: CalendarPlus, 
+      iconColor: 'text-violet-500',
+      isUserTypeCheck: (u) => isOwnerOrRenterFn() || isAdminFn() // Owner/Renter or Admin
+    },
+    { 
+      href: '/dashboard/gate-pass/my-passes', 
+      label: 'My Gate Passes', 
+      icon: Ticket, 
+      iconColor: 'text-rose-500',
+      isUserTypeCheck: (u) => isOwnerOrRenterFn() || isAdminFn() // Owner/Renter or Admin
+    },
+    { 
+      href: '/dashboard/personal-logs', 
+      label: 'My Visitor Logs', 
+      icon: FileText, 
+      iconColor: 'text-teal-500',
+      isUserTypeCheck: (u) => isOwnerOrRenterFn() // Only Owner/Renter
+    },
+    { 
+      href: '/dashboard/complaints', 
+      label: 'My Complaints', 
+      icon: Megaphone, 
+      iconColor: 'text-orange-500',
+      isUserTypeCheck: (u) => isOwnerOrRenterFn() // Only Owner/Renter
+    },
+     { 
+      href: '/dashboard/my-parking', 
+      label: 'My Parking', 
+      icon: ParkingCircle, 
+      iconColor: 'text-indigo-400',
+      isUserTypeCheck: (u) => isOwnerOrRenterFn() // Only Owner/Renter
+    },
+    { href: '/dashboard/neighbours', label: 'Our Neighbours', icon: NeighboursIcon, iconColor: 'text-cyan-600' },
+    { href: '/dashboard/vendors/directory', label: 'Vendor Directory', icon: Store, iconColor: 'text-cyan-500' },
+    { href: '/dashboard/vendors/add', label: 'Add Vendor', icon: ConciergeBell, iconColor: 'text-purple-500' },
+    { href: '/dashboard/committee-members', label: 'Committee Members', icon: Users, iconColor: 'text-green-500' },
+    { 
+      href: '/dashboard/payment-details', 
+      label: 'Payment Details', 
+      icon: Landmark, 
+      iconColor: 'text-fuchsia-500',
+      isUserTypeCheck: (u) => isOwnerOrRenterFn() || isAdminFn() // Owner/Renter or Admin
+    },
+    // Admin Specific Links
+    { 
+      href: '/dashboard/admin-approvals', 
+      label: 'User Account Approvals', 
+      icon: Users, 
+      iconColor: 'text-pink-500',
+      isUserTypeCheck: (u) => isAdminFn() // Only Admin
+    },
+    { 
+      href: '/dashboard/admin/manage-notices', 
+      label: 'Manage Notices', 
+      icon: ClipboardEdit, 
+      iconColor: 'text-indigo-500',
+      isUserTypeCheck: (u) => isAdminFn() // Only Admin
+    },
+    { 
+      href: '/dashboard/admin/manage-meetings', 
+      label: 'Manage Meetings', 
+      icon: UsersRound, 
+      iconColor: 'text-lime-500',
+      isUserTypeCheck: (u) => isAdminFn() // Only Admin
+    },
+    { 
+      href: '/dashboard/admin/manage-vendors', 
+      label: 'Manage Vendors', 
+      icon: ListFilter, 
+      iconColor: 'text-yellow-500',
+      isUserTypeCheck: (u) => isAdminFn() // Only Admin
+    },
+    { 
+      href: '/dashboard/admin/manage-parking', 
+      label: 'Manage Parking', 
+      icon: ParkingSquare, 
+      iconColor: 'text-orange-600',
+      isUserTypeCheck: (u) => isAdminFn() // Only Admin
+    },
+    { 
+      href: '/dashboard/admin/society-settings', 
+      label: 'Society Settings', 
+      icon: Building2, 
+      iconColor: 'text-rose-400',
+      isUserTypeCheck: (u) => isAdminFn() // Only Admin
+    },
+    { href: '/dashboard/my-profile', label: 'My Profile', icon: Settings2, iconColor: 'text-gray-400' },
+  ];
+  return allItems.filter(item => checkVisibility(user, isAdminFn, isOwnerOrRenterFn, isGuardFn, item));
+};
 
 
 export function AppSidebar() {
   const pathname = usePathname();
   const { user, logout, isAdmin, isOwnerOrRenter, isGuard } = useAuth();
 
-  const navItems = React.useMemo(() => getNavItems(isAdmin(), isOwnerOrRenter(), isGuard()), [isAdmin, isOwnerOrRenter, isGuard]);
+  const navItems = React.useMemo(() => getNavItems(user, isAdmin, isOwnerOrRenter, isGuard), [user, isAdmin, isOwnerOrRenter, isGuard]);
 
   const logoutTooltipProps = React.useMemo(() => ({
     children: "Logout",
@@ -119,7 +217,7 @@ export function AppSidebar() {
         <SidebarContent className="p-2">
           <SidebarMenu>
             {navItems.map((item) => {
-              const isActive = pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href));
+              const isActive = pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href) && item.href.split('/').length > 2);
               const tooltipProps = React.useMemo(() => ({
                 children: item.label,
                 className: "ml-2"

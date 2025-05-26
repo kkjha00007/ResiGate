@@ -2,7 +2,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
-import type { User, UserProfile, VisitorEntry, GatePass, UserRole, Complaint, Notice, Meeting, Vendor, CommitteeMember, SocietyPaymentDetails, NeighbourProfile, ParkingSpot } from './types';
+import type { User, UserProfile, VisitorEntry, GatePass, UserRole, Complaint, Notice, Meeting, Vendor, CommitteeMember, SocietyPaymentDetails, NeighbourProfile, ParkingSpot, SocietyInfoSettings } from './types';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 import { USER_ROLES, PUBLIC_ENTRY_SOURCE } from './constants';
@@ -64,6 +64,9 @@ interface AuthContextType {
   societyPaymentDetails: SocietyPaymentDetails | null;
   fetchSocietyPaymentDetails: () => Promise<void>;
   updateSocietyPaymentDetails: (details: Omit<SocietyPaymentDetails, 'id' | 'updatedAt'>) => Promise<SocietyPaymentDetails | null>;
+  societyInfo: SocietyInfoSettings | null;
+  fetchSocietyInfo: () => Promise<void>;
+  updateSocietyInfo: (settings: Omit<SocietyInfoSettings, 'id' | 'updatedAt'>) => Promise<SocietyInfoSettings | null>;
   approvedResidents: NeighbourProfile[];
   fetchApprovedResidents: () => Promise<void>;
   allParkingSpots: ParkingSpot[]; 
@@ -91,6 +94,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [pendingVendors, setPendingVendorsState] = useState<Vendor[]>([]);
   const [committeeMembers, setCommitteeMembersState] = useState<CommitteeMember[]>([]);
   const [societyPaymentDetails, setSocietyPaymentDetailsState] = useState<SocietyPaymentDetails | null>(null);
+  const [societyInfo, setSocietyInfoState] = useState<SocietyInfoSettings | null>(null);
   const [approvedResidents, setApprovedResidentsState] = useState<NeighbourProfile[]>([]);
   const [allParkingSpots, setAllParkingSpotsState] = useState<ParkingSpot[]>([]);
   const [myParkingSpots, setMyParkingSpotsState] = useState<ParkingSpot[]>([]);
@@ -178,6 +182,23 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setSocietyPaymentDetailsState(null);
     }
   }, []);
+  
+  const fetchSocietyInfo = useCallback(async () => {
+    try {
+      const response = await fetch('/api/settings/society-info');
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ message: 'Failed to fetch society info.' }));
+        throw new Error(errorData.message || 'Server error fetching society info.');
+      }
+      const info: SocietyInfoSettings = await response.json();
+      setSocietyInfoState(info);
+    } catch (error) {
+      console.error("Failed to fetch society info:", error);
+      // toast({ title: 'Error Loading Society Info', description: (error as Error).message, variant: 'destructive' }); // Optional: Show toast
+      setSocietyInfoState(null);
+    }
+  }, []);
+
 
   const _fetchApprovedResidents = useCallback(async () => {
     try {
@@ -481,6 +502,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             roleSpecificFetches.push(fetchAllMeetingsForAdmin());
             roleSpecificFetches.push(fetchPendingVendors());
             roleSpecificFetches.push(fetchAllParkingSpots());
+            roleSpecificFetches.push(fetchSocietyInfo()); // Fetch society info for admin
         }
         if (currentUser.role === USER_ROLES.OWNER || currentUser.role === USER_ROLES.RENTER) {
             roleSpecificFetches.push(fetchMyComplaints());
@@ -495,7 +517,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       _fetchActiveNotices, _fetchUpcomingMeetings, _fetchApprovedVendors, _fetchCommitteeMembers,
       _fetchSocietyPaymentDetails, _fetchApprovedResidents, fetchVisitorEntries,
       fetchAllUsers, fetchAllNoticesForAdmin, fetchAllMeetingsForAdmin, fetchPendingVendors,
-      fetchMyComplaints, fetchGatePasses, fetchAllParkingSpots, fetchMyParkingSpots
+      fetchMyComplaints, fetchGatePasses, fetchAllParkingSpots, fetchMyParkingSpots, fetchSocietyInfo
   ]);
 
   useEffect(() => {
@@ -555,6 +577,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setPendingVendorsState([]);
     setAllParkingSpotsState([]);
     setMyParkingSpotsState([]);
+    setSocietyInfoState(null);
     router.push('/');
     toast({ title: 'Logged Out', description: 'You have been successfully logged out.' });
   };
@@ -1049,6 +1072,31 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       return null;
     }
   };
+  
+  const updateSocietyInfo = async (settings: Omit<SocietyInfoSettings, 'id' | 'updatedAt'>): Promise<SocietyInfoSettings | null> => {
+    if (!isAdmin()) {
+      toast({ title: 'Unauthorized', description: 'Only super admins can update society settings.', variant: 'destructive' });
+      return null;
+    }
+    try {
+      const response = await fetch('/api/settings/society-info', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(settings),
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        toast({ title: 'Update Failed', description: data.message || 'Could not update society information.', variant: 'destructive' });
+        return null;
+      }
+      toast({ title: 'Society Info Updated', description: 'Society information has been successfully updated.' });
+      setSocietyInfoState(data as SocietyInfoSettings);
+      return data as SocietyInfoSettings;
+    } catch (error) {
+      toast({ title: 'Update Error', description: (error as Error).message || 'An unexpected error occurred.', variant: 'destructive' });
+      return null;
+    }
+  };
 
   const createParkingSpot = async (spotData: Omit<ParkingSpot, 'id' | 'createdAt' | 'updatedAt' | 'status'>): Promise<ParkingSpot | null> => {
     if (!isAdmin()) {
@@ -1182,6 +1230,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         societyPaymentDetails,
         fetchSocietyPaymentDetails,
         updateSocietyPaymentDetails,
+        societyInfo,
+        fetchSocietyInfo,
+        updateSocietyInfo,
         approvedResidents,
         fetchApprovedResidents,
         allParkingSpots,

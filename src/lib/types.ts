@@ -199,7 +199,7 @@ export interface CommitteeMember {
 }
 
 export interface SocietyPaymentDetails {
-  id: "paymentDetailsDoc";
+  id: "paymentDetailsDoc"; // Fixed ID for single document pattern
   bankName: string;
   accountHolderName: string;
   accountNumber: string;
@@ -209,6 +209,17 @@ export interface SocietyPaymentDetails {
   upiId?: string;
   updatedAt?: string;
 }
+
+export interface SocietyInfoSettings {
+  id: "societyInfoDoc"; // Fixed ID for single document pattern
+  societyName: string;
+  registrationNumber?: string;
+  address?: string;
+  contactEmail?: string;
+  contactPhone?: string;
+  updatedAt?: string;
+}
+
 
 export const PARKING_SPOT_TYPES_VALUES = ["car", "bike"] as const;
 export type ParkingSpotType = (typeof PARKING_SPOT_TYPES_VALUES)[number];
