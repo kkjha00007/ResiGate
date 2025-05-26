@@ -1,32 +1,29 @@
 
-export type UserRole = "superadmin" | "owner" | "renter" | "guard"; // Updated roles
+export type UserRole = "superadmin" | "owner" | "renter" | "guard";
 
 export interface User {
-  id: string; // Will be the Cosmos DB item ID
+  id: string;
   email: string;
   password?: string; // Hashed password
   name: string;
   role: UserRole;
-  flatNumber?: string; // Required for owners and renters, 'NA' for guard
+  flatNumber?: string;
   isApproved: boolean;
-  registrationDate: string; // Store as ISO string (e.g., new Date().toISOString())
+  registrationDate: string; // Store as ISO string
   secondaryPhoneNumber1?: string;
   secondaryPhoneNumber2?: string;
 }
 
-// For sending user data to client, omitting sensitive fields like password
 export type UserProfile = Omit<User, 'password'>;
 
-// Specifically for the neighbours list, only essential fields
 export interface NeighbourProfile {
   id: string;
   name: string;
   flatNumber: string;
 }
 
-
 export interface VisitorEntry {
-  id: string; // Will be the Cosmos DB item ID
+  id: string;
   visitorName: string;
   mobileNumber: string;
   purposeOfVisit: string;
@@ -38,7 +35,7 @@ export interface VisitorEntry {
   enteredBy?: string; // User ID or public source
   notes?: string;
   tokenCode?: string;
-  gatePassId?: string; // Optional: Link to the gate pass if entry is via a pass
+  gatePassId?: string;
 }
 
 export interface LoginAudit {
@@ -63,8 +60,8 @@ export interface GatePass {
   residentUserId: string;
   residentFlatNumber: string;
   visitorName: string;
-  expectedVisitDate: string; // ISO Date string (e.g., "2024-12-25")
-  visitDetailsOrTime: string; // e.g., "Evening", "Around 2 PM", "Full Day"
+  expectedVisitDate: string; // ISO Date string
+  visitDetailsOrTime: string;
   purposeOfVisit: string;
   vehicleNumber?: string;
   notes?: string;
@@ -95,7 +92,6 @@ export const COMPLAINT_CATEGORIES_VALUES = [
 ] as const;
 export type ComplaintCategory = (typeof COMPLAINT_CATEGORIES_VALUES)[number];
 
-
 export interface Complaint {
   id: string;
   userId: string;
@@ -119,7 +115,7 @@ export interface Notice {
   createdAt: string; // ISO DateTime string
   updatedAt?: string; // ISO DateTime string
   isActive: boolean;
-  monthYear: string; // For partitioning, e.g., "YYYY-MM"
+  monthYear: string; // For partitioning
 }
 
 export interface Meeting {
@@ -214,46 +210,22 @@ export interface SocietyPaymentDetails {
   updatedAt?: string;
 }
 
-// Parking Management Types
 export const PARKING_SPOT_TYPES_VALUES = ["car", "bike"] as const;
 export type ParkingSpotType = (typeof PARKING_SPOT_TYPES_VALUES)[number];
 
 export const PARKING_SPOT_STATUS_VALUES = ["available", "allocated"] as const;
 export type ParkingSpotStatus = (typeof PARKING_SPOT_STATUS_VALUES)[number];
 
-
 export interface ParkingSpot {
   id: string;
-  spotNumber: string; // e.g., "A-01", "B-102"
+  spotNumber: string;
   type: ParkingSpotType;
-  location: string; // e.g., "Basement 1, Wing A", "Open Area Near Gate 2"
+  location: string;
   status: ParkingSpotStatus;
   allocatedToFlatNumber?: string;
-  allocatedToUserId?: string; // ID of the user (owner/renter) it's allocated to
-  vehicleNumber?: string; // Primary vehicle using this spot
-  notes?: string; // Any notes by admin
+  allocatedToUserId?: string;
+  vehicleNumber?: string;
+  notes?: string;
   createdAt: string; // ISO DateTime string
   updatedAt?: string; // ISO DateTime string
-}
-
-// Security Log Types
-export const SECURITY_INCIDENT_SEVERITIES_VALUES = ["Low", "Medium", "High"] as const;
-export type SecurityIncidentSeverity = (typeof SECURITY_INCIDENT_SEVERITIES_VALUES)[number];
-
-export const SECURITY_INCIDENT_STATUSES_VALUES = ["New", "Under Review", "Action Taken", "Resolved", "Closed"] as const;
-export type SecurityIncidentStatus = (typeof SECURITY_INCIDENT_STATUSES_VALUES)[number];
-
-export interface SecurityIncident {
-  id: string;
-  reportedByUserId: string;
-  reportedByUserName: string;
-  reportedByUserFlatNumber?: string;
-  incidentDateTime: string; // ISO DateTime string
-  location: string;
-  description: string;
-  severity: SecurityIncidentSeverity;
-  status: SecurityIncidentStatus;
-  reportedAt: string; // ISO DateTime string
-  adminNotes?: string;
-  resolvedAt?: string; // ISO DateTime string
 }

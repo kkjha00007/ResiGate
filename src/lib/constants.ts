@@ -1,5 +1,5 @@
 
-import type { VendorCategory, CommitteeMemberRole, ParkingSpotType, ParkingSpotStatus, SecurityIncidentSeverity, SecurityIncidentStatus } from "./types";
+import type { VendorCategory, CommitteeMemberRole, ParkingSpotType, ParkingSpotStatus } from "./types";
 
 export const APP_NAME = "ResiGate";
 
@@ -93,8 +93,3 @@ export const COMMITTEE_MEMBER_ROLES: CommitteeMemberRole[] = [
 // Parking Management Constants
 export const PARKING_SPOT_TYPES: ParkingSpotType[] = ["car", "bike"];
 export const PARKING_SPOT_STATUSES: ParkingSpotStatus[] = ["available", "allocated"];
-
-// Security Log Constants
-export const SECURITY_INCIDENT_SEVERITIES: SecurityIncidentSeverity[] = ["Low", "Medium", "High"];
-export const SECURITY_INCIDENT_STATUSES: SecurityIncidentStatus[] = ["New", "Under Review", "Action Taken", "Resolved", "Closed"];
-

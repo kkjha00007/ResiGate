@@ -29,7 +29,7 @@ import {
   Users2 as NeighboursIcon,
   ParkingSquare,
   ParkingCircle, 
-  ShieldAlert, // Added for Security Log
+  // ShieldAlert, // Removed
 } from 'lucide-react';
 import {
   Sidebar,
@@ -52,59 +52,46 @@ export interface NavItem {
   iconColor?: string;
 }
 
-// Exporting getNavItems so it can be used by DashboardLayout for AppHeader
 export const getNavItems = (isAdminUser: boolean, isOwnerOrRenterUser: boolean, isGuardUser: boolean): NavItem[] => [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, iconColor: 'text-sky-500' },
 
-  // Guard Specific
   ...(isGuardUser ? [
     { href: '/dashboard/add-visitor', label: 'Add Visitor Entry', icon: UserPlus, iconColor: 'text-emerald-500' } as NavItem,
     { href: '/dashboard/gate-pass/validate', label: 'Validate Gate Pass', icon: ShieldCheckIcon, iconColor: 'text-blue-500' } as NavItem,
   ] : []),
 
-  // Visitor Log - visible to Admin and Guard
   ...((isAdminUser || isGuardUser) ? [
       { href: '/dashboard/visitor-log', label: 'Visitor Log', icon: ClipboardList, iconColor: 'text-amber-500' },
   ] : []),
 
-
-  // Owner/Renter and Admin Specific (for gate passes)
   ...((isOwnerOrRenterUser || isAdminUser) ? [
     { href: '/dashboard/gate-pass/create', label: 'Create Gate Pass', icon: CalendarPlus, iconColor: 'text-violet-500' } as NavItem,
     { href: '/dashboard/gate-pass/my-passes', label: 'My Gate Passes', icon: Ticket, iconColor: 'text-rose-500' } as NavItem,
   ] : []),
 
-  // Owner/Renter Specific
   ...(isOwnerOrRenterUser ? [
     { href: '/dashboard/personal-logs', label: 'My Visitor Logs', icon: FileText, iconColor: 'text-teal-500' } as NavItem,
     { href: '/dashboard/complaints', label: 'My Complaints', icon: Megaphone, iconColor: 'text-orange-500' } as NavItem,
     { href: '/dashboard/my-parking', label: 'My Parking', icon: ParkingCircle, iconColor: 'text-indigo-400' } as NavItem,
   ] : []),
 
-  // All Authenticated Users
   { href: '/dashboard/neighbours', label: 'Our Neighbours', icon: NeighboursIcon, iconColor: 'text-cyan-600' },
   { href: '/dashboard/vendors/directory', label: 'Vendor Directory', icon: Store, iconColor: 'text-cyan-500' },
   { href: '/dashboard/vendors/add', label: 'Add Vendor', icon: ConciergeBell, iconColor: 'text-purple-500' },
   { href: '/dashboard/committee-members', label: 'Committee Members', icon: Users, iconColor: 'text-green-500' },
-  { href: '/dashboard/security-log/report-incident', label: 'Report Incident', icon: ShieldAlert, iconColor: 'text-red-400' },
+  // { href: '/dashboard/security-log/report-incident', label: 'Report Incident', icon: ShieldAlert, iconColor: 'text-red-400' }, // Removed
 
-
-  // Payment Details - Visible to Owner/Renter AND Admin
   ...((isOwnerOrRenterUser || isAdminUser) ? [
      { href: '/dashboard/payment-details', label: 'Payment Details', icon: Landmark, iconColor: 'text-fuchsia-500' } as NavItem,
   ] : []),
 
-
-  // Admin Specific
   ...(isAdminUser ? [
     { href: '/dashboard/admin-approvals', label: 'User Approvals', icon: Users, iconColor: 'text-pink-500' } as NavItem,
     { href: '/dashboard/admin/manage-notices', label: 'Manage Notices', icon: ClipboardEdit, iconColor: 'text-indigo-500' } as NavItem,
     { href: '/dashboard/admin/manage-meetings', label: 'Manage Meetings', icon: UsersRound, iconColor: 'text-lime-500' } as NavItem,
     { href: '/dashboard/admin/manage-vendors', label: 'Manage Vendors', icon: ListFilter, iconColor: 'text-yellow-500' } as NavItem,
     { href: '/dashboard/admin/manage-parking', label: 'Manage Parking', icon: ParkingSquare, iconColor: 'text-orange-600' } as NavItem,
-    // TODO: Add link for viewing all security logs for admin
   ] : []),
-  // All logged-in users
   { href: '/dashboard/my-profile', label: 'My Profile', icon: Settings2, iconColor: 'text-gray-400' },
 ];
 
@@ -135,7 +122,6 @@ export function AppSidebar() {
           <SidebarMenu>
             {navItems.map((item) => {
               const isActive = pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href));
-
               const tooltipProps = React.useMemo(() => ({
                 children: item.label,
                 className: "ml-2"
@@ -167,13 +153,10 @@ export function AppSidebar() {
               className="justify-start group"
               onClick={logout}
             >
-            
               <LogOut className="h-5 w-5 text-red-500" />
-              <span className="group-data-[collapsible=icon]:hidden group-hover/menu-item:font-semibold">Logout</span>
-            
+              <span className="group-data-[collapsible=icon]:hidden group-hover:font-semibold">Logout</span>
           </SidebarMenuButton>
         </SidebarFooter>
       </Sidebar>
   );
 }
-

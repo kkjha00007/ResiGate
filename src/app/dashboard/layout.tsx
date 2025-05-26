@@ -5,7 +5,7 @@ import React, { useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth-provider';
 import { AppHeader } from '@/components/layout/AppHeader';
-import { AppSidebar, getNavItems, type NavItem } from '@/components/layout/AppSidebar'; // Import getNavItems and NavItem
+import { AppSidebar, getNavItems, type NavItem } from '@/components/layout/AppSidebar';
 import { SidebarProvider } from '@/components/ui/sidebar';
 
 
@@ -19,7 +19,7 @@ export default function DashboardLayout({
 
   useEffect(() => {
     if (!isLoading && !user) {
-      router.replace('/'); // Redirect to main login page
+      router.replace('/'); 
     }
   }, [user, isLoading, router]);
 
@@ -48,4 +48,3 @@ export default function DashboardLayout({
     </SidebarProvider>
   );
 }
-
