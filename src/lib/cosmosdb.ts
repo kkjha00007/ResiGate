@@ -54,7 +54,7 @@ export async function initializeCosmosDB() {
   }
   try {
     const { database: db } = await client.databases.createIfNotExists({ id: databaseId });
-    console.log(\`Database '${db.id}' ensured.\`);
+    console.log(`Database '${db.id}' ensured.`);
 
     const containerDefinitions = [
       { id: usersContainerId, partitionKey: { paths: ["/role"] } },
@@ -65,15 +65,15 @@ export async function initializeCosmosDB() {
       { id: noticesContainerId, partitionKey: { paths: ["/monthYear"] } },
       { id: meetingsContainerId, partitionKey: { paths: ["/monthYear"] } },
       { id: vendorsContainerId, partitionKey: { paths: ["/category"] } },
-      { id: committeeMembersContainerId, partitionKey: { paths: ["/id"] } },
-      { id: societySettingsContainerId, partitionKey: { paths: ["/id"] } },
-      { id: parkingSpotsContainerId, partitionKey: { paths: ["/id"] } },
+      { id: committeeMembersContainerId, partitionKey: { paths: ["/id"] } }, // Using /id as partition key
+      { id: societySettingsContainerId, partitionKey: { paths: ["/id"] } }, // Single document, /id is fine
+      { id: parkingSpotsContainerId, partitionKey: { paths: ["/id"] } }, // Using /id as partition key
       // { id: securityIncidentsContainerId, partitionKey: { paths: ["/reportedByUserId"] } }, // Reverted
     ];
 
     for (const containerDef of containerDefinitions) {
       const { container } = await db.containers.createIfNotExists(containerDef);
-      console.log(\`Container '${container.id}' ensured.${containerDef.defaultTtl ? \` TTL: \${containerDef.defaultTtl}s\` : ''}\`);
+      console.log(`Container '${container.id}' ensured.${containerDef.defaultTtl ? ` TTL: ${containerDef.defaultTtl}s` : ''}`);
     }
 
   } catch (error) {
