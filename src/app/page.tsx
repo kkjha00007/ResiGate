@@ -46,7 +46,6 @@ export default function HomePage() {
           <h1 className="text-5xl font-bold tracking-tight text-primary sm:text-6xl">
             {currentAppName}
           </h1>
-          {/* Tagline removed from here */}
         </header>
 
         <nav className="mb-10 md:mb-12">
@@ -73,11 +72,10 @@ export default function HomePage() {
         </main>
 
         <footer className="mt-16 md:mt-24 text-center text-muted-foreground">
-          <p>&copy; {new Date().getFullYear()} {currentAppName}. All rights reserved.</p>
+          <p>ResiGate © 2025 . All rights reserved.</p>
           <div className="flex items-center justify-center text-sm mt-2">
             Made in India with <Heart className="h-4 w-4 text-red-500 fill-red-500 mx-1.5" />
           </div>
-          <p className="text-xs mt-1">Secure. Streamlined. Connected.</p>
         </footer>
       </div>
     );

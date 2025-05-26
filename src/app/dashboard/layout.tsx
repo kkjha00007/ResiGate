@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth, type UserProfile } from '@/lib/auth-provider';
 import { AppHeader } from '@/components/layout/AppHeader';
 import { AppSidebar, getNavItems, type NavItem } from '@/components/layout/AppSidebar';
+import { AppFooter } from '@/components/layout/AppFooter'; // Import the new footer
 import { SidebarProvider } from '@/components/ui/sidebar';
 
 
@@ -21,7 +22,6 @@ export default function DashboardLayout({
     if (!isLoading && !user) {
       router.replace('/');
     }
-    // AuthProvider now handles its own initialDataFetch trigger based on user state
   }, [user, isLoading, router]);
 
 
@@ -45,6 +45,7 @@ export default function DashboardLayout({
           <main className="flex-1 overflow-y-auto bg-secondary/30 p-4 md:p-6 lg:p-8">
             {children}
           </main>
+          <AppFooter /> {/* Add the footer here */}
         </div>
       </div>
     </SidebarProvider>
