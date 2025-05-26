@@ -3,8 +3,7 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { securityIncidentsContainer } from '@/lib/cosmosdb';
 import type { SecurityIncident, UserProfile } from '@/lib/types';
-// CORRECTED IMPORT: Ensure this line imports SECURITY_INCIDENT_STATUSES
-import { SECURITY_INCIDENT_STATUSES } from '@/lib/constants';
+import { SECURITY_INCIDENT_STATUSES } from '@/lib/constants'; // CORRECTED IMPORT
 import { v4 as uuidv4 } from 'uuid';
 
 // This function is a placeholder for getting the authenticated user.
