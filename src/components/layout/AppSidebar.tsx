@@ -28,7 +28,8 @@ import {
   Landmark,
   Users2 as NeighboursIcon,
   ParkingSquare,
-  ParkingCircle, // Added for My Parking
+  ParkingCircle, 
+  ShieldAlert, // Added for Security Log
 } from 'lucide-react';
 import {
   Sidebar,
@@ -61,7 +62,11 @@ export const getNavItems = (isAdminUser: boolean, isOwnerOrRenterUser: boolean, 
     { href: '/dashboard/gate-pass/validate', label: 'Validate Gate Pass', icon: ShieldCheckIcon, iconColor: 'text-blue-500' } as NavItem,
   ] : []),
 
-  { href: '/dashboard/visitor-log', label: 'Visitor Log', icon: ClipboardList, iconColor: 'text-amber-500' },
+  // Visitor Log - visible to Admin and Guard
+  ...((isAdminUser || isGuardUser) ? [
+      { href: '/dashboard/visitor-log', label: 'Visitor Log', icon: ClipboardList, iconColor: 'text-amber-500' },
+  ] : []),
+
 
   // Owner/Renter and Admin Specific (for gate passes)
   ...((isOwnerOrRenterUser || isAdminUser) ? [
@@ -81,6 +86,8 @@ export const getNavItems = (isAdminUser: boolean, isOwnerOrRenterUser: boolean, 
   { href: '/dashboard/vendors/directory', label: 'Vendor Directory', icon: Store, iconColor: 'text-cyan-500' },
   { href: '/dashboard/vendors/add', label: 'Add Vendor', icon: ConciergeBell, iconColor: 'text-purple-500' },
   { href: '/dashboard/committee-members', label: 'Committee Members', icon: Users, iconColor: 'text-green-500' },
+  { href: '/dashboard/security-log/report-incident', label: 'Report Incident', icon: ShieldAlert, iconColor: 'text-red-400' },
+
 
   // Payment Details - Visible to Owner/Renter AND Admin
   ...((isOwnerOrRenterUser || isAdminUser) ? [
@@ -95,6 +102,7 @@ export const getNavItems = (isAdminUser: boolean, isOwnerOrRenterUser: boolean, 
     { href: '/dashboard/admin/manage-meetings', label: 'Manage Meetings', icon: UsersRound, iconColor: 'text-lime-500' } as NavItem,
     { href: '/dashboard/admin/manage-vendors', label: 'Manage Vendors', icon: ListFilter, iconColor: 'text-yellow-500' } as NavItem,
     { href: '/dashboard/admin/manage-parking', label: 'Manage Parking', icon: ParkingSquare, iconColor: 'text-orange-600' } as NavItem,
+    // TODO: Add link for viewing all security logs for admin
   ] : []),
   // All logged-in users
   { href: '/dashboard/my-profile', label: 'My Profile', icon: Settings2, iconColor: 'text-gray-400' },
@@ -140,7 +148,7 @@ export function AppSidebar() {
                     isActive={isActive}
                     tooltip={tooltipProps}
                     disabled={item.disabled}
-                    className="justify-start group"
+                    className="justify-start group" 
                   >
                     <Link href={item.href}>
                       <item.icon className={cn("h-5 w-5", item.iconColor || 'text-sidebar-primary')} />
@@ -159,12 +167,13 @@ export function AppSidebar() {
               className="justify-start group"
               onClick={logout}
             >
-            <div>
+            
               <LogOut className="h-5 w-5 text-red-500" />
-              <span className="group-data-[collapsible=icon]:hidden group-hover:font-semibold">Logout</span>
-            </div>
+              <span className="group-data-[collapsible=icon]:hidden group-hover/menu-item:font-semibold">Logout</span>
+            
           </SidebarMenuButton>
         </SidebarFooter>
       </Sidebar>
   );
 }
+

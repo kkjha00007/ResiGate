@@ -2,10 +2,10 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
-import type { User, UserProfile, VisitorEntry, GatePass, UserRole, Complaint, Notice, Meeting, Vendor, CommitteeMember, SocietyPaymentDetails, NeighbourProfile, ParkingSpot } from './types';
+import type { User, UserProfile, VisitorEntry, GatePass, UserRole, Complaint, Notice, Meeting, Vendor, CommitteeMember, SocietyPaymentDetails, NeighbourProfile, ParkingSpot, SecurityIncident } from './types';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
-import { USER_ROLES, PUBLIC_ENTRY_SOURCE } from './constants';
+import { USER_ROLES, PUBLIC_ENTRY_SOURCE, SECURITY_INCIDENT_STATUSES } from './constants';
 import { GATE_PASS_STATUSES } from './types';
 import { format, parseISO } from 'date-fns';
 
@@ -73,6 +73,7 @@ interface AuthContextType {
   createParkingSpot: (spotData: Omit<ParkingSpot, 'id' | 'createdAt' | 'updatedAt' | 'status'>) => Promise<ParkingSpot | null>; // For admin
   updateParkingSpot: (spotId: string, updates: Partial<Omit<ParkingSpot, 'id' | 'createdAt' | 'updatedAt'>>) => Promise<ParkingSpot | null>; // For admin
   deleteParkingSpot: (spotId: string) => Promise<boolean>; // For admin
+  submitSecurityIncident: (incidentData: Omit<SecurityIncident, 'id' | 'reportedByUserId' | 'reportedByUserName' | 'reportedByUserFlatNumber' | 'reportedAt' | 'status'>) => Promise<SecurityIncident | null>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -1127,6 +1128,39 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  const submitSecurityIncident = async (incidentData: Omit<SecurityIncident, 'id' | 'reportedByUserId' | 'reportedByUserName' | 'reportedByUserFlatNumber' | 'reportedAt' | 'status'>): Promise<SecurityIncident | null> => {
+    if (!user) {
+      toast({ title: 'Authentication Error', description: 'You must be logged in to report an incident.', variant: 'destructive' });
+      return null;
+    }
+    // Pass currentUser to API for it to extract details.
+    // The API should be responsible for setting reporter details from the authenticated session.
+    // Sending 'currentUser' like this in the body is a temporary workaround if true session-based user extraction is not yet in place in the API.
+    const submissionData = {
+        ...incidentData,
+        currentUser: user, // This is a temporary measure. API should derive user from session.
+    };
+
+    try {
+        const response = await fetch('/api/security-incidents', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(submissionData),
+        });
+        const data = await response.json();
+        if (!response.ok) {
+            toast({ title: 'Incident Report Failed', description: data.message || 'Could not submit security incident.', variant: 'destructive' });
+            return null;
+        }
+        toast({ title: 'Incident Reported', description: 'Your security incident report has been submitted.' });
+        // Optionally, fetch and update a list of "my reported incidents" if that feature exists.
+        return data as SecurityIncident;
+    } catch (error) {
+        toast({ title: 'Incident Report Error', description: (error as Error).message || 'An unexpected error occurred.', variant: 'destructive' });
+        return null;
+    }
+  };
+
 
   return (
     <AuthContext.Provider value={{
@@ -1193,6 +1227,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         createParkingSpot,
         updateParkingSpot,
         deleteParkingSpot,
+        submitSecurityIncident,
     }}>
       {children}
     </AuthContext.Provider>
@@ -1206,3 +1241,4 @@ export const useAuth = (): AuthContextType => {
   }
   return context;
 };
+

@@ -177,10 +177,23 @@ export interface Vendor {
   notes?: string;
 }
 
+export const COMMITTEE_MEMBER_ROLES_VALUES = [
+  "President",
+  "Vice-President",
+  "Secretary",
+  "Joint-Secretary",
+  "Treasurer",
+  "Committee Member",
+  "Advisor",
+  "Other",
+] as const;
+
+export type CommitteeMemberRole = (typeof COMMITTEE_MEMBER_ROLES_VALUES)[number];
+
 export interface CommitteeMember {
   id: string;
   name: string;
-  roleInCommittee: string;
+  roleInCommittee: CommitteeMemberRole;
   flatNumber: string;
   imageUrl?: string;
   email?: string;
@@ -221,4 +234,26 @@ export interface ParkingSpot {
   notes?: string; // Any notes by admin
   createdAt: string; // ISO DateTime string
   updatedAt?: string; // ISO DateTime string
+}
+
+// Security Log Types
+export const SECURITY_INCIDENT_SEVERITIES_VALUES = ["Low", "Medium", "High"] as const;
+export type SecurityIncidentSeverity = (typeof SECURITY_INCIDENT_SEVERITIES_VALUES)[number];
+
+export const SECURITY_INCIDENT_STATUSES_VALUES = ["New", "Under Review", "Action Taken", "Resolved", "Closed"] as const;
+export type SecurityIncidentStatus = (typeof SECURITY_INCIDENT_STATUSES_VALUES)[number];
+
+export interface SecurityIncident {
+  id: string;
+  reportedByUserId: string;
+  reportedByUserName: string;
+  reportedByUserFlatNumber?: string;
+  incidentDateTime: string; // ISO DateTime string
+  location: string;
+  description: string;
+  severity: SecurityIncidentSeverity;
+  status: SecurityIncidentStatus;
+  reportedAt: string; // ISO DateTime string
+  adminNotes?: string;
+  resolvedAt?: string; // ISO DateTime string
 }
