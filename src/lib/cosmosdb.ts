@@ -1,6 +1,6 @@
 
 import { CosmosClient, ConsistencyLevel } from "@azure/cosmos";
-import type { User, VisitorEntry, LoginAudit, GatePass, Complaint, Notice, Meeting, Vendor, CommitteeMember, SocietyPaymentDetails, ParkingSpot } from './types'; // Removed SecurityIncident
+import type { User, VisitorEntry, LoginAudit, GatePass, Complaint, Notice, Meeting, Vendor, CommitteeMember, SocietyPaymentDetails, ParkingSpot } from './types';
 
 const endpoint = process.env.COSMOS_ENDPOINT;
 const key = process.env.COSMOS_KEY;
@@ -25,13 +25,12 @@ export const vendorsContainerId = process.env.COSMOS_VENDORS_CONTAINER_ID || "Ve
 export const committeeMembersContainerId = process.env.COSMOS_COMMITTEE_MEMBERS_CONTAINER_ID || "CommitteeMembers";
 export const societySettingsContainerId = process.env.COSMOS_SOCIETY_SETTINGS_CONTAINER_ID || "SocietySettings";
 export const parkingSpotsContainerId = process.env.COSMOS_PARKING_SPOTS_CONTAINER_ID || "ParkingSpots";
-// export const securityIncidentsContainerId = process.env.COSMOS_SECURITY_INCIDENTS_CONTAINER_ID || "SecurityIncidents"; // Removed
-
+// export const securityIncidentsContainerId = process.env.COSMOS_SECURITY_INCIDENTS_CONTAINER_ID || "SecurityIncidents"; // Reverted
 
 export const client = new CosmosClient({
-  endpoint: endpoint || "https://placeholder.documents.azure.com", 
-  key: key || "placeholderkey", 
-  consistencyLevel: ConsistencyLevel.Session, 
+  endpoint: endpoint || "https://placeholder.documents.azure.com",
+  key: key || "placeholderkey",
+  consistencyLevel: ConsistencyLevel.Session,
 });
 
 export const database = client.database(databaseId);
@@ -46,7 +45,7 @@ export const vendorsContainer = database.container(vendorsContainerId);
 export const committeeMembersContainer = database.container(committeeMembersContainerId);
 export const societySettingsContainer = database.container(societySettingsContainerId);
 export const parkingSpotsContainer = database.container(parkingSpotsContainerId);
-// export const securityIncidentsContainer = database.container(securityIncidentsContainerId); // Removed
+// export const securityIncidentsContainer = database.container(securityIncidentsContainerId); // Reverted
 
 export async function initializeCosmosDB() {
   if (!endpoint || !key) {
@@ -55,7 +54,7 @@ export async function initializeCosmosDB() {
   }
   try {
     const { database: db } = await client.databases.createIfNotExists({ id: databaseId });
-    console.log(\`Database '\${db.id}' ensured.\`);
+    console.log(`Database '${db.id}' ensured.`);
 
     const containerDefinitions = [
       { id: usersContainerId, partitionKey: { paths: ["/role"] } },
@@ -66,15 +65,15 @@ export async function initializeCosmosDB() {
       { id: noticesContainerId, partitionKey: { paths: ["/monthYear"] } },
       { id: meetingsContainerId, partitionKey: { paths: ["/monthYear"] } },
       { id: vendorsContainerId, partitionKey: { paths: ["/category"] } },
-      { id: committeeMembersContainerId, partitionKey: { paths: ["/id"] } },
-      { id: societySettingsContainerId, partitionKey: { paths: ["/id"] } },
-      { id: parkingSpotsContainerId, partitionKey: { paths: ["/id"] } }, 
-      // { id: securityIncidentsContainerId, partitionKey: { paths: ["/reportedByUserId"] } }, // Removed
+      { id: committeeMembersContainerId, partitionKey: { paths: ["/id"] } }, // Changed partition key to /id for simplicity
+      { id: societySettingsContainerId, partitionKey: { paths: ["/id"] } }, // Using /id as partition key for single-doc containers
+      { id: parkingSpotsContainerId, partitionKey: { paths: ["/id"] } }, // Changed partition key to /id
+      // { id: securityIncidentsContainerId, partitionKey: { paths: ["/reportedByUserId"] } }, // Reverted
     ];
 
     for (const containerDef of containerDefinitions) {
       const { container } = await db.containers.createIfNotExists(containerDef);
-      console.log(\`Container '\${container.id}' ensured.\${containerDef.defaultTtl ? \` TTL: \${containerDef.defaultTtl}s\` : ''}\`);
+      console.log(`Container '${container.id}' ensured.${containerDef.defaultTtl ? ` TTL: ${containerDef.defaultTtl}s` : ''}`);
     }
 
   } catch (error) {
@@ -82,8 +81,8 @@ export async function initializeCosmosDB() {
   }
 }
 
-if (process.env.NODE_ENV !== 'test') { 
+if (process.env.NODE_ENV !== 'test') {
     initializeCosmosDB().catch(console.error);
 }
 
-export type { User, VisitorEntry, LoginAudit, GatePass, Complaint, Notice, Meeting, Vendor, CommitteeMember, SocietyPaymentDetails, ParkingSpot }; // Removed SecurityIncident
+export type { User, VisitorEntry, LoginAudit, GatePass, Complaint, Notice, Meeting, Vendor, CommitteeMember, SocietyPaymentDetails, ParkingSpot };
