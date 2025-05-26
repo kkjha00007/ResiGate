@@ -3,7 +3,7 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { securityIncidentsContainer } from '@/lib/cosmosdb';
 import type { SecurityIncident, UserProfile } from '@/lib/types';
-import { SECURITY_INCIDENT_STATUSES_VALUES } from '@/lib/constants';
+import { SECURITY_INCIDENT_STATUSES } from '@/lib/constants'; // Corrected import name
 import { v4 as uuidv4 } from 'uuid';
 
 // This function is a placeholder for getting the authenticated user.
@@ -37,20 +37,14 @@ async function getAuthenticatedUser(request: NextRequest): Promise<UserProfile |
 // Submit a new security incident
 export async function POST(request: NextRequest) {
   try {
-    // In a real app, ensure only authenticated users can submit.
-    // The following is a placeholder for user authentication.
-    // const user = await getAuthenticatedUser(request); 
-    // For now, we'll proceed assuming client sends required user details for demo purposes,
-    // or that client-side has user context.
-    // In a real app, this would be extracted securely from an auth session.
-    const user = await request.json().then(body => body.currentUser as UserProfile | undefined);
+    const body = await request.json();
+    const user = body.currentUser as UserProfile | undefined;
+
 
     if (!user || !user.id || !user.name) {
          return NextResponse.json({ message: 'Authentication required to report an incident.' }, { status: 401 });
     }
 
-
-    const body = await request.json(); // Re-parse to get actual incident data
     const {
         incidentDateTime, // Expecting ISO string from client
         location,
@@ -71,22 +65,23 @@ export async function POST(request: NextRequest) {
       location,
       description,
       severity,
-      status: SECURITY_INCIDENT_STATUSES_VALUES[0], // Default to "New"
+      status: SECURITY_INCIDENT_STATUSES[0], // Default to "New" using the corrected constant
       reportedAt: new Date().toISOString(),
     };
 
     const { resource: createdIncident } = await securityIncidentsContainer.items.create(newIncident);
 
     if (!createdIncident) {
-      return NextResponse.json({ message: 'Failed to submit security incident report' }, { status: 500 });
+      console.error('Failed to create security incident in Cosmos DB, but no error was thrown by SDK.');
+      return NextResponse.json({ message: 'Failed to submit security incident report due to a database issue.' }, { status: 500 });
     }
 
     return NextResponse.json(createdIncident, { status: 201 });
 
   } catch (error) {
     console.error('Submit Security Incident API error:', error);
-    const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
-    return NextResponse.json({ message: 'Internal server error', error: errorMessage }, { status: 500 });
+    const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred while processing your request.';
+    return NextResponse.json({ message: 'Internal server error', detail: errorMessage }, { status: 500 });
   }
 }
 
