@@ -3,7 +3,7 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { securityIncidentsContainer } from '@/lib/cosmosdb';
 import type { SecurityIncident, UserProfile } from '@/lib/types';
-import { SECURITY_INCIDENT_STATUSES } from '@/lib/constants'; // Corrected import name
+import { SECURITY_INCIDENT_STATUSES } from '@/lib/constants'; // Corrected import
 import { v4 as uuidv4 } from 'uuid';
 
 // This function is a placeholder for getting the authenticated user.
@@ -38,8 +38,9 @@ async function getAuthenticatedUser(request: NextRequest): Promise<UserProfile |
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
+    // Ensure you're correctly accessing the user object from the request body,
+    // assuming it's passed under a 'currentUser' key by the client-side AuthProvider.
     const user = body.currentUser as UserProfile | undefined;
-
 
     if (!user || !user.id || !user.name) {
          return NextResponse.json({ message: 'Authentication required to report an incident.' }, { status: 401 });
