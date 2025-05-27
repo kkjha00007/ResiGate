@@ -1,20 +1,20 @@
 
-import type { VendorCategory, CommitteeMemberRole, ParkingSpotType, ParkingSpotStatus } from "./types";
+import type { VendorCategory, CommitteeMemberRole, ParkingSpotType, ParkingSpotStatus, UserRole } from "./types";
 
 export const APP_NAME = "ResiGate";
 
 export const USER_ROLES = {
   SUPERADMIN: "superadmin",
-  OWNER: "owner", 
-  RENTER: "renter", 
+  SOCIETY_ADMIN: "societyAdmin", // New role
+  OWNER: "owner",
+  RENTER: "renter",
   GUARD: "guard",
 } as const;
 
 // Explicitly type UserRole based on the values of USER_ROLES
-export type UserRole = typeof USER_ROLES[keyof typeof USER_ROLES];
+// export type UserRole = typeof USER_ROLES[keyof typeof USER_ROLES]; // This is now in types.ts to avoid circular deps
 
-
-export const SELECTABLE_USER_ROLES: Exclude<UserRole, "superadmin">[] = ["owner", "renter", "guard"];
+export const SELECTABLE_USER_ROLES: Exclude<UserRole, "superadmin" | "societyAdmin">[] = ["owner", "renter", "guard"];
 
 
 export const LOCAL_STORAGE_KEYS = {
@@ -42,7 +42,7 @@ export const GATE_PASS_STATUSES_ARRAY = ["Pending", "Used", "Cancelled", "Expire
 export const DEFAULT_ITEMS_PER_PAGE = 10;
 
 
-export const COMPLAINT_STATUSES_LIST = [
+export const COMPLAINT_STATUSES = [ // Renamed for clarity
   "Open",
   "In Progress",
   "Resolved",
@@ -97,3 +97,10 @@ export const COMMITTEE_MEMBER_ROLES: CommitteeMemberRole[] = [
 // Parking Management Constants
 export const PARKING_SPOT_TYPES: ParkingSpotType[] = ["car", "bike"];
 export const PARKING_SPOT_STATUSES: ParkingSpotStatus[] = ["available", "allocated"];
+
+// Reverted Security Log constants
+// export const SECURITY_INCIDENT_SEVERITIES = ["Low", "Medium", "High"] as const;
+// export const SECURITY_INCIDENT_STATUSES = ["New", "Under Review", "Action Taken", "Resolved", "Closed"] as const;
+
+
+    

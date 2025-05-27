@@ -1,8 +1,10 @@
 
-export type UserRole = "superadmin" | "owner" | "renter" | "guard";
+export type UserRole = "superadmin" | "societyAdmin" | "owner" | "renter" | "guard";
 
 export interface User {
   id: string;
+  tenantId?: string; // This will be replaced by societyId in a later batch
+  societyId?: string; // Placeholder for future, will be mandatory for most roles
   email: string;
   password?: string; // Hashed password
   name: string;
@@ -24,6 +26,8 @@ export interface NeighbourProfile {
 
 export interface VisitorEntry {
   id: string;
+  tenantId?: string; // To be replaced by societyId
+  societyId?: string; // Placeholder
   visitorName: string;
   mobileNumber: string;
   purposeOfVisit: string;
@@ -44,6 +48,8 @@ export interface LoginAudit {
   userName: string;
   userEmail: string;
   loginTimestamp: string; // ISO string
+  tenantId?: string; // To be replaced by societyId
+  societyId?: string; // Placeholder
 }
 
 export const GATE_PASS_STATUSES = {
@@ -57,6 +63,8 @@ export type GatePassStatus = typeof GATE_PASS_STATUSES[keyof typeof GATE_PASS_ST
 
 export interface GatePass {
   id: string;
+  tenantId?: string; // To be replaced by societyId
+  societyId?: string; // Placeholder
   residentUserId: string;
   residentFlatNumber: string;
   visitorName: string;
@@ -94,6 +102,8 @@ export type ComplaintCategory = (typeof COMPLAINT_CATEGORIES_VALUES)[number];
 
 export interface Complaint {
   id: string;
+  tenantId?: string; // To be replaced by societyId
+  societyId?: string; // Placeholder
   userId: string;
   userName: string;
   userFlatNumber: string;
@@ -108,6 +118,8 @@ export interface Complaint {
 
 export interface Notice {
   id: string;
+  tenantId?: string; // To be replaced by societyId
+  societyId?: string; // Placeholder
   title: string;
   content: string;
   postedByUserId: string;
@@ -120,6 +132,8 @@ export interface Notice {
 
 export interface Meeting {
   id: string;
+  tenantId?: string; // To be replaced by societyId
+  societyId?: string; // Placeholder
   title: string;
   description: string;
   dateTime: string; // ISO DateTime string
@@ -157,6 +171,8 @@ export type VendorCategory = (typeof VENDOR_CATEGORIES_LIST)[number];
 
 export interface Vendor {
   id: string;
+  tenantId?: string; // To be replaced by societyId
+  societyId?: string; // Placeholder
   name: string;
   category: VendorCategory;
   contactPerson?: string;
@@ -188,6 +204,8 @@ export type CommitteeMemberRole = (typeof COMMITTEE_MEMBER_ROLES_VALUES)[number]
 
 export interface CommitteeMember {
   id: string;
+  tenantId?: string; // To be replaced by societyId
+  societyId?: string; // Placeholder
   name: string;
   roleInCommittee: CommitteeMemberRole;
   flatNumber: string;
@@ -199,7 +217,9 @@ export interface CommitteeMember {
 }
 
 export interface SocietyPaymentDetails {
-  id: "paymentDetailsDoc"; // Fixed ID for single document pattern
+  id: string; // Will become societyId
+  tenantId?: string; // To be replaced by societyId
+  societyId?: string; // Placeholder
   bankName: string;
   accountHolderName: string;
   accountNumber: string;
@@ -211,7 +231,9 @@ export interface SocietyPaymentDetails {
 }
 
 export interface SocietyInfoSettings {
-  id: "societyInfoDoc"; // Fixed ID for single document pattern
+  id: string; // Will become societyId
+  tenantId?: string; // To be replaced by societyId
+  societyId?: string; // Placeholder
   societyName: string;
   registrationNumber?: string;
   address?: string;
@@ -229,6 +251,8 @@ export type ParkingSpotStatus = (typeof PARKING_SPOT_STATUS_VALUES)[number];
 
 export interface ParkingSpot {
   id: string;
+  tenantId?: string; // To be replaced by societyId
+  societyId?: string; // Placeholder
   spotNumber: string;
   type: ParkingSpotType;
   location: string;
@@ -241,27 +265,10 @@ export interface ParkingSpot {
   updatedAt?: string; // ISO DateTime string
 }
 
-// Reverted SecurityIncident types
-// export type SecurityIncidentSeverity = "Low" | "Medium" | "High";
-// export type SecurityIncidentStatus = "New" | "Under Review" | "Action Taken" | "Resolved" | "Closed";
-
-// export interface SecurityIncident {
-//   id: string;
-//   reportedByUserId: string;
-//   reportedByUserName: string;
-//   reportedByUserFlatNumber?: string;
-//   incidentDateTime: string; // ISO DateTime string
-//   location: string;
-//   description: string;
-//   severity: SecurityIncidentSeverity;
-//   status: SecurityIncidentStatus;
-//   reportedAt: string; // ISO DateTime string of when the report was created
-//   adminNotes?: string;
-//   resolvedAt?: string; // ISO DateTime string
-// }
-
 export interface Facility {
   id: string;
+  tenantId?: string; // To be replaced by societyId
+  societyId?: string; // Placeholder
   name: string;
   description?: string;
   capacity?: number;
@@ -270,3 +277,15 @@ export interface Facility {
   createdAt: string; // ISO DateTime string
   updatedAt?: string; // ISO DateTime string
 }
+
+// New Society type
+export interface Society {
+  id: string; // Primary key, UUID
+  name: string;
+  city: string;
+  isActive: boolean; // To deactivate a society if needed
+  createdAt: string; // ISO DateTime string
+  updatedAt?: string; // ISO DateTime string
+}
+
+    
