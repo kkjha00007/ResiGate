@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth, type UserProfile } from '@/lib/auth-provider';
 import { AppHeader } from '@/components/layout/AppHeader';
 import { AppSidebar, getNavItems, type NavItem } from '@/components/layout/AppSidebar';
-import { AppFooter } from '@/components/layout/AppFooter'; // Import the new footer
+import { AppFooter } from '@/components/layout/AppFooter';
 import { SidebarProvider } from '@/components/ui/sidebar';
 
 
@@ -15,7 +15,7 @@ export default function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const { user, isLoading, logout, isAdmin, isOwnerOrRenter, isGuard, initialDataFetch } = useAuth();
+  const { user, isLoading, logout, isAdmin, isSocietyAdmin, isOwnerOrRenter, isGuard, initialDataFetch } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
@@ -24,8 +24,10 @@ export default function DashboardLayout({
     }
   }, [user, isLoading, router]);
 
+  // Initial data fetch is now handled within AuthProvider's useEffect triggered by user change
 
-  const navItemsForHeader = useMemo(() => getNavItems(user, isAdmin, isOwnerOrRenter, isGuard), [user, isAdmin, isOwnerOrRenter, isGuard]);
+
+  const navItemsForHeader = useMemo(() => getNavItems(user, isAdmin, isSocietyAdmin, isOwnerOrRenter, isGuard), [user, isAdmin, isSocietyAdmin, isOwnerOrRenter, isGuard]);
 
 
   if (isLoading || !user) {
@@ -45,7 +47,7 @@ export default function DashboardLayout({
           <main className="flex-1 overflow-y-auto bg-secondary/30 p-4 md:p-6 lg:p-8">
             {children}
           </main>
-          <AppFooter /> {/* Add the footer here */}
+          <AppFooter />
         </div>
       </div>
     </SidebarProvider>

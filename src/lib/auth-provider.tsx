@@ -128,7 +128,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const fetchActiveSocietiesList = useCallback(async (): Promise<Pick<Society, 'id' | 'name' | 'city'>[]> => {
     try {
-      const response = await fetch('/api/societies'); // Changed from /api/societies/active-list
+      const response = await fetch('/api/societies');
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ message: 'Failed to fetch societies list.' }));
         throw new Error(errorData.message || 'Server error fetching societies.');
@@ -180,12 +180,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
 
   const fetchSocietyInfo = useCallback(async () => {
-    if (!user?.societyId) { // Now uses societyId
+    // This needs to be tenant aware. If superadmin, maybe they select a society?
+    // For now, fetches based on logged-in user's societyId
+    if (!user?.societyId) {
       setSocietyInfoState(null);
       return;
     }
     try {
-      const response = await fetch(`/api/settings/society-info?societyId=${user.societyId}`);
+      // The API should be societyId aware, e.g. /api/settings/society-info (implicitly via user session or explicitly via query)
+      // Assuming the API handles this for now or takes societyId if superadmin context
+      const response = await fetch(`/api/settings/society-info?societyId=${user.societyId}`); // Example, actual API may vary
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ message: 'Failed to fetch society info.' }));
         throw new Error(errorData.message || 'Server error fetching society info.');
@@ -397,7 +401,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, [user, toast]);
 
   const fetchMyComplaints = useCallback(async () => {
-    if (!user || !user.societyId || (!isOwnerOrRenter() && !isAdmin() && !isSocietyAdmin())) { // Admins can also see complaints
+    if (!user || !user.societyId || (!isOwnerOrRenter() && !isAdmin() && !isSocietyAdmin())) {
         setMyComplaintsState([]); return;
     }
     try {
@@ -563,7 +567,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       fetchApprovedResidents(),
       fetchVisitorEntries(),
       fetchFacilities(),
-      fetchActiveSocietiesList(), // For registration page, useful if user logs out and goes to register
+      // fetchActiveSocietiesList(), // Already called on mount, might not be needed here unless context changes
     ];
 
     const roleSpecificFetches = [];
@@ -574,11 +578,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         roleSpecificFetches.push(fetchPendingVendors());
         roleSpecificFetches.push(fetchAllParkingSpots());
     }
-    if (currentUser.role === USER_ROLES.OWNER || currentUser.role === USER_ROLES.RENTER) {
+    if (isOwnerOrRenter()) { // Use the memoized function here
         roleSpecificFetches.push(fetchMyComplaints());
         roleSpecificFetches.push(fetchMyParkingSpots());
     }
-    if (currentUser.role === USER_ROLES.OWNER || currentUser.role === USER_ROLES.RENTER || currentUser.role === USER_ROLES.SUPERADMIN || currentUser.role === USER_ROLES.SOCIETY_ADMIN) {
+    if (isOwnerOrRenter() || isAdmin() || isSocietyAdmin()) { // Use memoized functions
          roleSpecificFetches.push(fetchGatePasses());
     }
 
@@ -586,25 +590,30 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         await Promise.all([...commonFetches, ...roleSpecificFetches]);
     } catch (error) {
         console.error("Error during initial data fetch batch:", error);
+        // Individual fetch functions should handle their own toasts
     } finally {
         setIsFetchingInitialData(false);
     }
   }, [
+      user, // Add user to dependencies as it's used in fetchSocietyInfo etc indirectly.
       fetchSocietyInfo, fetchActiveNotices, fetchUpcomingMeetings, fetchApprovedVendors, fetchCommitteeMembers,
-      fetchSocietyPaymentDetails, fetchApprovedResidents, fetchVisitorEntries, fetchFacilities, fetchActiveSocietiesList,
+      fetchSocietyPaymentDetails, fetchApprovedResidents, fetchVisitorEntries, fetchFacilities,
       fetchAllUsers, fetchAllNoticesForAdmin, fetchAllMeetingsForAdmin, fetchPendingVendors, fetchAllParkingSpots,
-      fetchMyComplaints, fetchMyParkingSpots, fetchGatePasses
+      fetchMyComplaints, fetchMyParkingSpots, fetchGatePasses, isOwnerOrRenter, isAdmin, isSocietyAdmin
   ]);
+
+   useEffect(() => {
+    fetchActiveSocietiesList(); // Fetch societies list on initial mount for registration form
+   }, [fetchActiveSocietiesList]);
 
    useEffect(() => {
     setIsLoadingUser(true);
     if (user) {
         initialDataFetch(user).finally(() => setIsLoadingUser(false));
     } else {
-        // If no user, still fetch active societies list for registration page
-        fetchActiveSocietiesList().finally(() => setIsLoadingUser(false));
+        setIsLoadingUser(false); // No user, so user loading is complete.
     }
-  }, [user, initialDataFetch, fetchActiveSocietiesList]);
+  }, [user, initialDataFetch]);
 
 
   const login = async (email: string, passwordString: string): Promise<boolean> => {
@@ -628,7 +637,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
 
       const loggedInUser = data as UserProfile;
-       if (!loggedInUser.societyId && loggedInUser.role !== USER_ROLES.SUPERADMIN) { // Superadmin might not have a societyId initially
+       if (!loggedInUser.societyId && loggedInUser.role !== USER_ROLES.SUPERADMIN) {
          if (typeof window !== 'undefined') {
           toast({ title: 'Login Failed', description: 'Society information missing for this user.', variant: 'destructive' });
         }
@@ -636,7 +645,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setIsLoadingUser(false);
         return false;
       }
-      // Approval check (Superadmin is always approved implicitly)
+
       if (loggedInUser.role !== USER_ROLES.SUPERADMIN && (loggedInUser.role === USER_ROLES.OWNER || loggedInUser.role === USER_ROLES.RENTER || loggedInUser.role === USER_ROLES.GUARD || loggedInUser.role === USER_ROLES.SOCIETY_ADMIN) && !loggedInUser.isApproved) {
         if (typeof window !== 'undefined') {
           toast({ title: 'Login Failed', description: 'Your account is pending approval.', variant: 'destructive' });
@@ -695,7 +704,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const response = await fetch('/api/users', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(userData), // societyId is now part of userData
+        body: JSON.stringify(userData),
       });
       const data = await response.json();
 
@@ -721,23 +730,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const approveResident = async (userId: string): Promise<boolean> => {
-     if (!user?.societyId && !isAdmin()) { // Superadmin might operate without societyId context for cross-society actions
+     const targetUser = allUsers.find(u => u.id === userId);
+     if (!targetUser?.societyId && !(user?.role === USER_ROLES.SUPERADMIN && targetUser)) {
        if (typeof window !== 'undefined') {
          toast({ title: 'Error', description: 'Society context missing for approval.', variant: 'destructive' });
        }
        return false;
      }
-    try {
-      // If superadmin, they might need to specify which society's user they are approving,
-      // For now, assume societyAdmin approves within their own society.
-      const societyIdForApproval = user?.societyId || allUsers.find(u => u.id === userId)?.societyId;
-      if (!societyIdForApproval) {
-        if (typeof window !== 'undefined') {
-          toast({ title: 'Error', description: 'Target user society not found for approval.', variant: 'destructive' });
-        }
-        return false;
-      }
+    const societyIdForApproval = targetUser.societyId;
 
+    try {
       const response = await fetch(`/api/users/${userId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', 'X-Society-ID': societyIdForApproval },
@@ -805,24 +807,21 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const updateUserProfile = async (userId: string, updates: { name?: string; secondaryPhoneNumber1?: string; secondaryPhoneNumber2?: string }): Promise<UserProfile | null> => {
-    if (!user?.societyId && user?.id !== userId) { // User can update their own profile even if superadmin without societyId
+    const userToUpdate = allUsers.find(u => u.id === userId) || (user?.id === userId ? user : null);
+    const societyIdForUpdate = userToUpdate?.societyId;
+
+    if (!societyIdForUpdate && user?.role !== USER_ROLES.SUPERADMIN) {
         if (typeof window !== 'undefined') {
           toast({ title: 'Error', description: 'Society context missing for profile update.', variant: 'destructive' });
         }
         return null;
     }
-    const societyIdForUpdate = user?.societyId || allUsers.find(u => u.id === userId)?.societyId;
-    if (!societyIdForUpdate) {
-        if (typeof window !== 'undefined') {
-          toast({ title: 'Error', description: 'User society context not found for profile update.', variant: 'destructive' });
-        }
-        return null;
-    }
+
 
     try {
       const response = await fetch(`/api/users/${userId}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json', 'X-Society-ID': societyIdForUpdate },
+        headers: { 'Content-Type': 'application/json', ...(societyIdForUpdate && {'X-Society-ID': societyIdForUpdate}) },
         body: JSON.stringify(updates),
       });
       const data = await response.json();
@@ -857,9 +856,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const societyIdForUpdate = userToUpdate?.societyId;
 
     if (!societyIdForUpdate && user?.role !== USER_ROLES.SUPERADMIN) {
-        // Allow superadmin to change password even if they don't have a societyId set,
-        // assuming they are changing for a user within some society context or their own global account.
-        // This part might need more specific logic if superadmin can change passwords for users across societies.
         if (typeof window !== 'undefined') {
           toast({ title: 'Error', description: 'Society context missing for password change.', variant: 'destructive' });
         }
@@ -963,7 +959,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const markGatePassUsed = async (passId: string, guardId: string): Promise<{visitorEntry: VisitorEntry, updatedPass: GatePass} | null> => {
-    if (!user?.societyId) { // Guard's societyId from their user object
+    if (!user?.societyId) {
       if (typeof window !== 'undefined') {
          toast({ title: 'Error', description: 'Society ID missing for guard action.', variant: 'destructive' });
       }
@@ -982,13 +978,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         }
         return null;
       }
-      if (typeof window !== 'undefined') {
-        toast({
-          title: 'Gate Pass Processed',
-          description: `Visitor ${data.visitorEntry.visitorName} entry created. Pass ${data.updatedPass.tokenCode} marked as used.`,
-        });
-      }
-      if (user?.role !== USER_ROLES.GUARD) {
+      // Toast handled by caller
+      if (user?.role !== USER_ROLES.GUARD) { // Non-guards might still trigger this if they are admin
           await fetchGatePasses();
       }
       await fetchVisitorEntries();
@@ -1314,6 +1305,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         }
         return null;
       }
+      // Toast handled by caller for redirection
       return data as Vendor;
     } catch (error: any) {
       if (typeof window !== 'undefined') {
@@ -1493,7 +1485,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const updateSocietyPaymentDetails = async (details: Omit<SocietyPaymentDetails, 'id' | 'updatedAt' | 'societyId'>): Promise<SocietyPaymentDetails | null> => {
-    if ((!isAdmin() && !isSocietyAdmin()) || !user?.societyId) { // Society Admins can also edit their own society's payment details
+    if ((!isAdmin() && !isSocietyAdmin()) || !user?.societyId) {
       if (typeof window !== 'undefined') {
         toast({ title: 'Unauthorized', description: 'Action not allowed.', variant: 'destructive' });
       }
@@ -1501,7 +1493,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
     const submissionData = { ...details, societyId: user.societyId };
     try {
-      const response = await fetch('/api/settings/payment-details', { // API will use societyId from user or body
+      const response = await fetch('/api/settings/payment-details', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', 'X-Society-ID': user.societyId },
         body: JSON.stringify(submissionData),
@@ -1527,7 +1519,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const updateSocietyInfo = async (settings: Omit<SocietyInfoSettings, 'id' | 'updatedAt' | 'societyId'>): Promise<SocietyInfoSettings | null> => {
-    if ((!isAdmin() && !isSocietyAdmin()) || !user?.societyId) { // Society Admins can also edit their own society's info
+    if ((!isAdmin() && !isSocietyAdmin()) || !user?.societyId) {
       if (typeof window !== 'undefined') {
         toast({ title: 'Unauthorized', description: 'Action not allowed.', variant: 'destructive' });
       }
@@ -1535,7 +1527,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
     const submissionData = { ...settings, societyId: user.societyId };
     try {
-      const response = await fetch('/api/settings/society-info', { // API will use societyId from user or body
+      const response = await fetch('/api/settings/society-info', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', 'X-Society-ID': user.societyId },
         body: JSON.stringify(submissionData),
@@ -1856,5 +1848,3 @@ export const useAuth = (): AuthContextType => {
   }
   return context;
 };
-
-    
