@@ -16,17 +16,18 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'; // Added Select
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useAuth } from '@/lib/auth-provider';
-import { useState } from 'react';
-import { UserPlus, Eye, EyeOff, Building } from 'lucide-react';
+import React, { useState, useEffect } from 'react'; // Added useEffect
+import { UserPlus, Eye, EyeOff, Building, ShieldCheck } from 'lucide-react'; // Changed Building icon
 import { USER_ROLES, SELECTABLE_USER_ROLES } from '@/lib/constants';
-import type { UserRole } from '@/lib/types';
+import type { UserRole, Society } from '@/lib/types'; // Added Society type
 
 const registerSchema = z.object({
   name: z.string().min(2, { message: 'Name must be at least 2 characters.' }),
   email: z.string().email({ message: 'Invalid email address.' }),
-  societyName: z.string().min(3, { message: 'Society Name must be at least 3 characters.'}),
+  societyId: z.string().min(1, { message: 'Please select your society.'}), // Changed from societyName to societyId
   flatNumber: z.string().min(1, { message: 'Flat number is required (e.g., A-101, NA for Guard).' }),
   password: z.string().min(6, { message: 'Password must be at least 6 characters.' }),
   confirmPassword: z.string(),
@@ -48,17 +49,23 @@ const registerSchema = z.object({
 type RegisterFormValues = z.infer<typeof registerSchema>;
 
 export function RegisterForm() {
-  const { register } = useAuth();
+  const { register, fetchActiveSocietiesList, activeSocietiesList } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
+  const [isSocietiesLoading, setIsSocietiesLoading] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
+  useEffect(() => {
+    setIsSocietiesLoading(true);
+    fetchActiveSocietiesList().finally(() => setIsSocietiesLoading(false));
+  }, [fetchActiveSocietiesList]);
 
   const form = useForm<RegisterFormValues>({
     resolver: zodResolver(registerSchema),
     defaultValues: {
       name: '',
       email: '',
-      societyName: '',
+      societyId: undefined, // Changed from societyName
       flatNumber: '',
       password: '',
       confirmPassword: '',
@@ -70,6 +77,7 @@ export function RegisterForm() {
 
   const onSubmit = async (data: RegisterFormValues) => {
     setIsLoading(true);
+    // The API expects societyId directly, no need for societyName in submission
     const { confirmPassword, ...registrationData } = data;
     await register(registrationData);
     setIsLoading(false);
@@ -113,18 +121,34 @@ export function RegisterForm() {
                 </FormItem>
               )}
             />
-             <FormField
+            <FormField
               control={form.control}
-              name="societyName"
+              name="societyId"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Society Name</FormLabel>
-                  <FormControl>
-                    <div className="relative">
-                      <Building className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                      <Input placeholder="Enter your society's name" {...field} className="pl-10" />
-                    </div>
-                  </FormControl>
+                  <FormLabel>Select Your Society</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value} disabled={isSocietiesLoading}>
+                    <FormControl>
+                      <div className="relative">
+                        <ShieldCheck className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <SelectTrigger className="pl-10">
+                          <SelectValue placeholder={isSocietiesLoading ? "Loading societies..." : "Select your society"} />
+                        </SelectTrigger>
+                      </div>
+                    </FormControl>
+                    <SelectContent>
+                      {!isSocietiesLoading && activeSocietiesList.length === 0 && (
+                        <SelectItem value="no-societies" disabled>
+                          No societies available. Contact admin.
+                        </SelectItem>
+                      )}
+                      {activeSocietiesList.map((society) => (
+                        <SelectItem key={society.id} value={society.id}>
+                          {society.name} ({society.city || 'N/A'})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                   <FormMessage />
                 </FormItem>
               )}
@@ -148,13 +172,13 @@ export function RegisterForm() {
                       value={field.value}
                       className="flex flex-col space-y-1 sm:flex-row sm:space-y-0 sm:space-x-4"
                     >
-                      {SELECTABLE_USER_ROLES.map((role) => (
-                         <FormItem key={role} className="flex items-center space-x-2 space-y-0">
+                      {SELECTABLE_USER_ROLES.map((roleValue) => (
+                         <FormItem key={roleValue} className="flex items-center space-x-2 space-y-0">
                             <FormControl>
-                              <RadioGroupItem value={role} />
+                              <RadioGroupItem value={roleValue} />
                             </FormControl>
                             <FormLabel className="font-normal capitalize">
-                              {role}
+                              {roleValue}
                             </FormLabel>
                           </FormItem>
                       ))}
@@ -230,7 +254,7 @@ export function RegisterForm() {
                 </FormItem>
               )}
             />
-            <Button type="submit" className="w-full" disabled={isLoading}>
+            <Button type="submit" className="w-full" disabled={isLoading || isSocietiesLoading}>
               {isLoading ? (
                 <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary-foreground"></div>
               ) : (
@@ -242,8 +266,8 @@ export function RegisterForm() {
           </form>
         </Form>
         <p className="mt-6 text-center text-sm text-muted-foreground">
-          New User?, Don&apos;t have an account?{' '}
-          <Link href="/login" className="font-medium text-primary hover:underline">
+          Already have an account?{' '}
+          <Link href="/" className="font-medium text-primary hover:underline">
             Sign in here
           </Link>
         </p>
