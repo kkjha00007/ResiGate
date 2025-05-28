@@ -1,4 +1,3 @@
-
 import { CosmosClient, ConsistencyLevel } from "@azure/cosmos";
 import type { User, VisitorEntry, LoginAudit, GatePass, Complaint, Notice, Meeting, Vendor, CommitteeMember, SocietyPaymentDetails, ParkingSpot, SocietyInfoSettings, Facility, Society } from './types';
 
@@ -34,6 +33,9 @@ export const facilitiesContainerId = process.env.COSMOS_FACILITIES_CONTAINER_ID 
 // New Container ID for Societies
 export const societiesContainerId = process.env.COSMOS_SOCIETIES_CONTAINER_ID || "Societies";
 
+// --- Audit Logs Container Setup ---
+const auditLogsContainerId = process.env.COSMOS_AUDIT_LOGS_CONTAINER_ID || "AuditLogs";
+
 
 export const client = new CosmosClient({
   endpoint: endpoint || "https://placeholder.documents.azure.com", // Fallback for environments where vars might not be loaded (e.g. client-side, though this module is server-side)
@@ -60,6 +62,22 @@ export const facilitiesContainer = database.container(facilitiesContainerId);
 // New container instance for Societies
 export const societiesContainer = database.container(societiesContainerId);
 
+export const auditLogsContainer = database.container(auditLogsContainerId);
+
+async function ensureAuditLogsContainerExists() {
+  const database = client.database(databaseId);
+  const { resources: containers } = await database.containers.readAll().fetchAll();
+  const exists = containers.some((c: any) => c.id === auditLogsContainerId);
+  if (!exists) {
+    await database.containers.createIfNotExists({
+      id: auditLogsContainerId,
+      partitionKey: "/societyId",
+    });
+  }
+}
+
+// Call this on app/server startup or first login
+ensureAuditLogsContainerExists().catch(console.error);
 
 export async function initializeCosmosDB() {
   if (!endpoint || !key) {
@@ -126,4 +144,3 @@ if (process.env.NODE_ENV !== 'test') { // Avoid running during test suites if th
 
 export type { User, VisitorEntry, LoginAudit, GatePass, Complaint, Notice, Meeting, Vendor, CommitteeMember, SocietyPaymentDetails, SocietyInfoSettings, ParkingSpot, Facility, Society };
 
-    

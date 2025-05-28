@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
@@ -211,7 +210,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       return;
     }
     try {
-      const response = await fetch(`/api/notices?societyId=${user.societyId}`);
+      const response = await fetch(`/api/notices?societyId=${user.societyId}`, {
+        headers: { 'X-Society-ID': user.societyId }
+      });
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ message: 'Failed to fetch active notices.' }));
         throw new Error(errorData.message || 'Server error while fetching active notices.');
@@ -233,7 +234,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       return;
     }
     try {
-      const response = await fetch(`/api/meetings?societyId=${user.societyId}`);
+      const response = await fetch(`/api/meetings?societyId=${user.societyId}`, {
+        headers: { 'X-Society-ID': user.societyId }
+      });
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ message: 'Failed to fetch upcoming meetings.' }));
         throw new Error(errorData.message || 'Server error while fetching upcoming meetings.');
@@ -277,7 +280,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
        return;
     }
     try {
-      const response = await fetch(`/api/committee-members?societyId=${user.societyId}`);
+      const response = await fetch(`/api/committee-members?societyId=${user.societyId}`, {
+        headers: { 'X-Society-ID': user.societyId }
+      });
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ message: 'Failed to fetch committee members.' }));
         throw new Error(errorData.message || 'Server error while fetching committee members.');
@@ -742,7 +747,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     try {
       const response = await fetch(`/api/users/${userId}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json', 'X-Society-ID': societyIdForApproval },
+        headers: societyIdForApproval
+          ? { 'Content-Type': 'application/json', 'X-Society-ID': societyIdForApproval }
+          : { 'Content-Type': 'application/json' },
         body: JSON.stringify({ isApproved: true }),
       });
       const data = await response.json();

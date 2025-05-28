@@ -1,4 +1,3 @@
-
 // src/app/api/settings/society-info/route.ts
 import { NextResponse, type NextRequest } from 'next/server';
 import { societySettingsContainer } from '@/lib/cosmosdb';
@@ -25,6 +24,7 @@ export async function GET(request: NextRequest) {
       // Return default empty structure if not found, so client can still render the form
       const defaultSettings: SocietyInfoSettings = {
         id: SOCIETY_INFO_DOC_ID,
+        societyId: SOCIETY_INFO_DOC_ID, // Add required field
         societyName: '',
         registrationNumber: '',
         address: '',
@@ -38,6 +38,7 @@ export async function GET(request: NextRequest) {
     if (error.code === 404) { // Cosmos DB not found error code
         const defaultSettings: SocietyInfoSettings = {
             id: SOCIETY_INFO_DOC_ID,
+            societyId: SOCIETY_INFO_DOC_ID, // Add required field
             societyName: '',
             registrationNumber: '',
             address: '',
@@ -53,9 +54,9 @@ export async function GET(request: NextRequest) {
 
 // Update society info settings (Super Admin only)
 export async function PUT(request: NextRequest) {
-//   if (!isSuperAdmin(request)) { // Placeholder for actual superadmin check
-//     return NextResponse.json({ message: 'Unauthorized' }, { status: 403 });
-//   }
+  if (!isSuperAdmin(request)) {
+    return NextResponse.json({ message: 'Unauthorized: Only Super Admins can update society info.' }, { status: 403 });
+  }
 
   try {
     const body = await request.json() as Omit<SocietyInfoSettings, 'id' | 'updatedAt'>;

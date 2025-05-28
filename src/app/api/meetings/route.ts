@@ -1,4 +1,3 @@
-
 // src/app/api/meetings/route.ts
 import { NextResponse, type NextRequest } from 'next/server';
 import { meetingsContainer } from '@/lib/cosmosdb';
@@ -6,11 +5,29 @@ import type { Meeting } from '@/lib/types';
 import { v4 as uuidv4 } from 'uuid';
 import { format, parseISO } from 'date-fns';
 
+// Helper to extract societyId from request (header, query, or body)
+async function getSocietyId(request: NextRequest): Promise<string | null> {
+  const headerId = request.headers.get('x-society-id');
+  if (headerId) return headerId;
+  const urlId = request.nextUrl.searchParams.get('societyId');
+  if (urlId) return urlId;
+  try {
+    const body = await request.json();
+    if (body.societyId) return body.societyId;
+  } catch {}
+  return null;
+}
+
 // Create a new meeting (Super Admin only)
 export async function POST(request: NextRequest) {
+  const societyId = await getSocietyId(request);
+  if (!societyId) {
+    return NextResponse.json({ message: 'societyId is required' }, { status: 400 });
+  }
+
   try {
     // TODO: Add robust authentication and authorization (Super Admin only)
-    const body = await request.json();
+    const body = typeof request.body === 'object' ? request.body : await request.json();
     const { 
         title, 
         description,
@@ -42,6 +59,7 @@ export async function POST(request: NextRequest) {
       createdAt: now.toISOString(),
       isActive: true, 
       monthYear: format(meetingDateTime, 'yyyy-MM'), // Partition key from meeting date
+      societyId,
     };
 
     const { resource: createdMeeting } = await meetingsContainer.items.create(newMeeting);
@@ -61,11 +79,18 @@ export async function POST(request: NextRequest) {
 
 // Get all active and upcoming meetings (for all users)
 export async function GET(request: NextRequest) {
+  const societyId = request.headers.get('x-society-id') || request.nextUrl.searchParams.get('societyId');
+  if (!societyId) {
+    return NextResponse.json({ message: 'societyId is required' }, { status: 400 });
+  }
   try {
     const now = new Date().toISOString();
     const querySpec = {
-      query: "SELECT * FROM c WHERE c.isActive = true AND c.dateTime >= @now ORDER BY c.dateTime ASC",
-      parameters: [{ name: "@now", value: now }]
+      query: 'SELECT * FROM c WHERE c.isActive = true AND c.dateTime >= @now AND c.societyId = @societyId ORDER BY c.dateTime ASC',
+      parameters: [
+        { name: '@now', value: now },
+        { name: '@societyId', value: societyId },
+      ],
     };
 
     const { resources: upcomingMeetings } = await meetingsContainer.items.query<Meeting>(querySpec).fetchAll();

@@ -1,4 +1,3 @@
-
 // src/app/api/facilities/route.ts
 import { NextResponse, type NextRequest } from 'next/server';
 import { facilitiesContainer } from '@/lib/cosmosdb';
@@ -12,11 +11,29 @@ const isSuperAdmin = (request: NextRequest): boolean => {
   return true; // !!IMPORTANT!!: Replace with actual robust admin check
 };
 
+// Helper to extract societyId from request (header, query, or body)
+async function getSocietyId(request: NextRequest): Promise<string | null> {
+  const headerId = request.headers.get('x-society-id');
+  if (headerId) return headerId;
+  const urlId = request.nextUrl.searchParams.get('societyId');
+  if (urlId) return urlId;
+  try {
+    const body = await request.json();
+    if (body.societyId) return body.societyId;
+  } catch {}
+  return null;
+}
+
 // Get all facilities
 export async function GET(request: NextRequest) {
+  const societyId = request.headers.get('x-society-id') || request.nextUrl.searchParams.get('societyId');
+  if (!societyId) {
+    return NextResponse.json({ message: 'societyId is required' }, { status: 400 });
+  }
   try {
     const querySpec = {
-      query: "SELECT * FROM c ORDER BY c.name ASC"
+      query: 'SELECT * FROM c WHERE c.societyId = @societyId ORDER BY c.name ASC',
+      parameters: [{ name: '@societyId', value: societyId }],
     };
     const { resources } = await facilitiesContainer.items.query<Facility>(querySpec).fetchAll();
     return NextResponse.json(resources, { status: 200 });
@@ -28,12 +45,16 @@ export async function GET(request: NextRequest) {
 
 // Create a new facility (Super Admin only)
 export async function POST(request: NextRequest) {
+  const societyId = await getSocietyId(request);
+  if (!societyId) {
+    return NextResponse.json({ message: 'societyId is required' }, { status: 400 });
+  }
 //   if (!isSuperAdmin(request)) {
 //     return NextResponse.json({ message: 'Unauthorized' }, { status: 403 });
 //   }
 
   try {
-    const body = await request.json() as Omit<Facility, 'id' | 'createdAt' | 'updatedAt' | 'isActive'>;
+    const body = typeof request.body === 'object' ? request.body : await request.json();
     const { name, description, capacity, bookingRules } = body;
 
     if (!name) {
@@ -50,6 +71,7 @@ export async function POST(request: NextRequest) {
       isActive: true, // Default to active
       createdAt: now,
       updatedAt: now,
+      societyId,
     };
 
     const { resource: createdFacility } = await facilitiesContainer.items.create(newFacility);

@@ -1,10 +1,8 @@
-
 export type UserRole = "superadmin" | "societyAdmin" | "owner" | "renter" | "guard";
 
 export interface User {
   id: string;
-  tenantId?: string; // This will be replaced by societyId in a later batch
-  societyId?: string; // Placeholder for future, will be mandatory for most roles
+  societyId: string; // Now required for all users
   email: string;
   password?: string; // Hashed password
   name: string;
@@ -26,8 +24,7 @@ export interface NeighbourProfile {
 
 export interface VisitorEntry {
   id: string;
-  tenantId?: string; // To be replaced by societyId
-  societyId?: string; // Placeholder
+  societyId: string; // Now required
   visitorName: string;
   mobileNumber: string;
   purposeOfVisit: string;
@@ -63,8 +60,7 @@ export type GatePassStatus = typeof GATE_PASS_STATUSES[keyof typeof GATE_PASS_ST
 
 export interface GatePass {
   id: string;
-  tenantId?: string; // To be replaced by societyId
-  societyId?: string; // Placeholder
+  societyId: string; // Now required
   residentUserId: string;
   residentFlatNumber: string;
   visitorName: string;
@@ -102,8 +98,7 @@ export type ComplaintCategory = (typeof COMPLAINT_CATEGORIES_VALUES)[number];
 
 export interface Complaint {
   id: string;
-  tenantId?: string; // To be replaced by societyId
-  societyId?: string; // Placeholder
+  societyId: string; // Now required
   userId: string;
   userName: string;
   userFlatNumber: string;
@@ -118,8 +113,7 @@ export interface Complaint {
 
 export interface Notice {
   id: string;
-  tenantId?: string; // To be replaced by societyId
-  societyId?: string; // Placeholder
+  societyId: string; // Now required
   title: string;
   content: string;
   postedByUserId: string;
@@ -132,8 +126,7 @@ export interface Notice {
 
 export interface Meeting {
   id: string;
-  tenantId?: string; // To be replaced by societyId
-  societyId?: string; // Placeholder
+  societyId: string; // Now required
   title: string;
   description: string;
   dateTime: string; // ISO DateTime string
@@ -171,8 +164,7 @@ export type VendorCategory = (typeof VENDOR_CATEGORIES_LIST)[number];
 
 export interface Vendor {
   id: string;
-  tenantId?: string; // To be replaced by societyId
-  societyId?: string; // Placeholder
+  societyId: string; // Now required
   name: string;
   category: VendorCategory;
   contactPerson?: string;
@@ -204,8 +196,7 @@ export type CommitteeMemberRole = (typeof COMMITTEE_MEMBER_ROLES_VALUES)[number]
 
 export interface CommitteeMember {
   id: string;
-  tenantId?: string; // To be replaced by societyId
-  societyId?: string; // Placeholder
+  societyId: string; // Now required
   name: string;
   roleInCommittee: CommitteeMemberRole;
   flatNumber: string;
@@ -218,8 +209,7 @@ export interface CommitteeMember {
 
 export interface SocietyPaymentDetails {
   id: string; // Will become societyId
-  tenantId?: string; // To be replaced by societyId
-  societyId?: string; // Placeholder
+  societyId: string; // Now required
   bankName: string;
   accountHolderName: string;
   accountNumber: string;
@@ -232,8 +222,7 @@ export interface SocietyPaymentDetails {
 
 export interface SocietyInfoSettings {
   id: string; // Will become societyId
-  tenantId?: string; // To be replaced by societyId
-  societyId?: string; // Placeholder
+  societyId: string; // Now required
   societyName: string;
   registrationNumber?: string;
   address?: string;
@@ -251,8 +240,7 @@ export type ParkingSpotStatus = (typeof PARKING_SPOT_STATUS_VALUES)[number];
 
 export interface ParkingSpot {
   id: string;
-  tenantId?: string; // To be replaced by societyId
-  societyId?: string; // Placeholder
+  societyId: string; // Now required
   spotNumber: string;
   type: ParkingSpotType;
   location: string;
@@ -267,8 +255,7 @@ export interface ParkingSpot {
 
 export interface Facility {
   id: string;
-  tenantId?: string; // To be replaced by societyId
-  societyId?: string; // Placeholder
+  societyId: string; // Now required
   name: string;
   description?: string;
   capacity?: number;
@@ -288,4 +275,18 @@ export interface Society {
   updatedAt?: string; // ISO DateTime string
 }
 
-    
+export interface AuditLogEntry {
+  id: string;
+  societyId: string;
+  userId: string;
+  userName: string;
+  userRole: UserRole;
+  action: string; // e.g., "CREATE_NOTICE"
+  targetType: string; // e.g., "Notice", "User"
+  targetId?: string; // e.g., noticeId, userId
+  timestamp: string; // ISO string
+  details?: any; // JSON object with extra info (before/after, etc.)
+  ipAddress?: string;
+  userAgent?: string;
+}
+

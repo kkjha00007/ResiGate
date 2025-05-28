@@ -1,4 +1,3 @@
-
 // src/app/api/committee-members/route.ts
 import { NextResponse, type NextRequest } from 'next/server';
 import { committeeMembersContainer } from '@/lib/cosmosdb';
@@ -17,11 +16,29 @@ const isSuperAdmin = (request: NextRequest): boolean => {
   return true; // !!IMPORTANT!!: Replace with actual admin check
 };
 
+// Helper to extract societyId from request (header, query, or body)
+async function getSocietyId(request: NextRequest): Promise<string | null> {
+  const headerId = request.headers.get('x-society-id');
+  if (headerId) return headerId;
+  const urlId = request.nextUrl.searchParams.get('societyId');
+  if (urlId) return urlId;
+  try {
+    const body = await request.json();
+    if (body.societyId) return body.societyId;
+  } catch {}
+  return null;
+}
+
 // Get all committee members
 export async function GET(request: NextRequest) {
+  const societyId = request.headers.get('x-society-id') || request.nextUrl.searchParams.get('societyId');
+  if (!societyId) {
+    return NextResponse.json({ message: 'societyId is required' }, { status: 400 });
+  }
   try {
     const querySpec = {
-      query: "SELECT * FROM c ORDER BY c.name ASC"
+      query: 'SELECT * FROM c WHERE c.societyId = @societyId ORDER BY c.name ASC',
+      parameters: [{ name: '@societyId', value: societyId }],
     };
     const { resources } = await committeeMembersContainer.items.query<CommitteeMember>(querySpec).fetchAll();
     return NextResponse.json(resources, { status: 200 });
@@ -31,15 +48,31 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// Add a new committee member (Super Admin only)
+// Add a new committee member (Super Admin or Society Admin only)
 export async function POST(request: NextRequest) {
-  // if (!isSuperAdmin(request)) {
-  //   return NextResponse.json({ message: 'Unauthorized' }, { status: 403 });
-  // }
+  const societyId = await getSocietyId(request);
+  if (!societyId) {
+    return NextResponse.json({ message: 'societyId is required' }, { status: 400 });
+  }
+  // Enforce admin role: only Super Admin or Society Admin can add committee members
+  const userRole = request.headers.get('x-user-role');
+  const userSocietyId = request.headers.get('x-society-id');
+  if (userRole !== 'superadmin' && userRole !== 'societyAdmin') {
+    return NextResponse.json({ message: 'Unauthorized: Only Super Admins or Society Admins can add committee members.' }, { status: 403 });
+  }
+  // Security: Society Admins can only add to their own society
+  if (userRole === 'societyAdmin' && userSocietyId !== societyId) {
+    return NextResponse.json({ message: 'Forbidden: Society Admins can only manage their own society.' }, { status: 403 });
+  }
 
   try {
-    const body = await request.json() as Omit<CommitteeMember, 'id' | 'createdAt' | 'updatedAt'>;
+    const body = typeof request.body === 'object' ? request.body : await request.json();
     const { name, roleInCommittee, flatNumber } = body;
+
+    // Prevent cross-society data creation
+    if (body.societyId && body.societyId !== societyId) {
+      return NextResponse.json({ message: 'societyId mismatch between request and body' }, { status: 403 });
+    }
 
     if (!name || !roleInCommittee || !flatNumber) {
       return NextResponse.json({ message: 'Missing required fields: name, roleInCommittee, flatNumber' }, { status: 400 });
@@ -48,6 +81,7 @@ export async function POST(request: NextRequest) {
     const newMember: CommitteeMember = {
       id: uuidv4(),
       ...body,
+      societyId,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };

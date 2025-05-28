@@ -1,17 +1,35 @@
-
 // src/app/api/notices/route.ts
 import { NextResponse, type NextRequest } from 'next/server';
 import { noticesContainer } from '@/lib/cosmosdb';
 import type { Notice } from '@/lib/types';
 import { v4 as uuidv4 } from 'uuid';
 import { format } from 'date-fns';
+import { logAuditAction } from '@/lib/utils';
+
+// Helper to extract societyId from request (header, query, or body)
+async function getSocietyId(request: NextRequest): Promise<string | null> {
+  const headerId = request.headers.get('x-society-id');
+  if (headerId) return headerId;
+  const urlId = request.nextUrl.searchParams.get('societyId');
+  if (urlId) return urlId;
+  try {
+    const body = await request.json();
+    if (body.societyId) return body.societyId;
+  } catch {}
+  return null;
+}
 
 // Create a new notice (Super Admin only)
 export async function POST(request: NextRequest) {
+  const societyId = await getSocietyId(request);
+  if (!societyId) {
+    return NextResponse.json({ message: 'societyId is required' }, { status: 400 });
+  }
+
   try {
     // TODO: Add authentication and authorization to ensure only Super Admin can create notices
     // For now, we'll assume this check is handled by client-side routing or a higher-level middleware
-    const body = await request.json();
+    const body = typeof request.body === 'object' ? request.body : await request.json();
     const { 
         title, 
         content,
@@ -24,15 +42,16 @@ export async function POST(request: NextRequest) {
     }
 
     const now = new Date();
+    const currentMonthYear = format(now, 'yyyy-MM');
     const newNotice: Notice = {
       id: uuidv4(),
-      title,
-      content,
+      ...body,
+      societyId,
       postedByUserId,
       postedByName,
       createdAt: now.toISOString(),
-      isActive: true, // Notices are active by default
-      monthYear: format(now, 'yyyy-MM'), // For partitioning
+      isActive: true,
+      monthYear: currentMonthYear,
     };
 
     const { resource: createdNotice } = await noticesContainer.items.create(newNotice);
@@ -40,6 +59,21 @@ export async function POST(request: NextRequest) {
     if (!createdNotice) {
       return NextResponse.json({ message: 'Failed to create notice' }, { status: 500 });
     }
+
+    // --- Audit Log ---
+    await logAuditAction({
+      societyId,
+      userId: postedByUserId,
+      userName: postedByName,
+      userRole: 'superadmin', // Adjust as needed
+      action: 'CREATE_NOTICE',
+      targetType: 'Notice',
+      targetId: createdNotice.id,
+      details: { title: createdNotice.title },
+      ipAddress: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || '',
+      userAgent: request.headers.get('user-agent') || '',
+    });
+    // --- End Audit Log ---
 
     return NextResponse.json(createdNotice, { status: 201 });
 
@@ -53,9 +87,14 @@ export async function POST(request: NextRequest) {
 
 // Get all active notices (for all users)
 export async function GET(request: NextRequest) {
+  const societyId = request.headers.get('x-society-id') || request.nextUrl.searchParams.get('societyId');
+  if (!societyId) {
+    return NextResponse.json({ message: 'societyId is required' }, { status: 400 });
+  }
   try {
     const querySpec = {
-      query: "SELECT * FROM c WHERE c.isActive = true ORDER BY c.createdAt DESC"
+      query: 'SELECT * FROM c WHERE c.isActive = true AND c.societyId = @societyId ORDER BY c.createdAt DESC',
+      parameters: [{ name: '@societyId', value: societyId }],
     };
 
     const { resources: activeNotices } = await noticesContainer.items.query<Notice>(querySpec).fetchAll();
