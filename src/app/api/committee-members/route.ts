@@ -3,6 +3,8 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { committeeMembersContainer } from '@/lib/cosmosdb';
 import type { CommitteeMember } from '@/lib/types';
 import { v4 as uuidv4 } from 'uuid';
+import { logAuditAction } from '@/lib/utils'; // Import logAuditAction
+
 // import { getAuth } from '@clerk/nextjs/server'; // Placeholder if using Clerk for auth
 
 // Helper to check if user is superadmin (replace with your actual auth check)
@@ -91,6 +93,21 @@ export async function POST(request: NextRequest) {
     if (!createdMember) {
       return NextResponse.json({ message: 'Failed to add committee member' }, { status: 500 });
     }
+    // Audit log
+    try {
+      const userId = request.headers.get('x-user-id') || 'unknown';
+      const userName = request.headers.get('x-user-name') || 'unknown';
+      await logAuditAction({
+        societyId,
+        userId,
+        userName,
+        userRole,
+        action: 'create',
+        targetType: 'CommitteeMember',
+        targetId: createdMember.id,
+        details: { name, roleInCommittee, flatNumber }
+      });
+    } catch (e) { console.error('Audit log failed:', e); }
     return NextResponse.json(createdMember, { status: 201 });
   } catch (error) {
     console.error('Add Committee Member API error:', error);

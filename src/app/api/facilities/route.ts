@@ -1,8 +1,9 @@
 // src/app/api/facilities/route.ts
 import { NextResponse, type NextRequest } from 'next/server';
 import { facilitiesContainer } from '@/lib/cosmosdb';
-import type { Facility } from '@/lib/types';
+import type { Facility, UserRole } from '@/lib/types';
 import { v4 as uuidv4 } from 'uuid';
+import { logAuditAction } from '@/lib/utils';
 
 // Helper to check if user is superadmin (replace with your actual auth check)
 const isSuperAdmin = (request: NextRequest): boolean => {
@@ -79,6 +80,22 @@ export async function POST(request: NextRequest) {
     if (!createdFacility) {
       return NextResponse.json({ message: 'Failed to create facility' }, { status: 500 });
     }
+    // Audit log
+    try {
+      const userId = request.headers.get('x-user-id') || 'unknown';
+      const userName = request.headers.get('x-user-name') || 'unknown';
+      const userRole = request.headers.get('x-user-role') || 'unknown';
+      await logAuditAction({
+        societyId,
+        userId,
+        userName,
+        userRole: userRole as UserRole,
+        action: 'create',
+        targetType: 'Facility',
+        targetId: createdFacility.id,
+        details: { name, description, capacity, bookingRules }
+      });
+    } catch (e) { console.error('Audit log failed:', e); }
     return NextResponse.json(createdFacility, { status: 201 });
   } catch (error) {
     console.error('Create Facility API error:', error);

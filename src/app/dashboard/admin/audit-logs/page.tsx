@@ -18,7 +18,13 @@ export default function AuditLogsPage() {
       setLoading(true);
       setError(null);
       try {
-        const res = await fetch(`/api/audit-logs?societyId=${user.societyId}`);
+        let url = '';
+        if (isAdmin() && !user.societyId) {
+          url = '/api/audit-logs';
+        } else {
+          url = `/api/audit-logs?societyId=${user.societyId}`;
+        }
+        const res = await fetch(url);
         if (!res.ok) throw new Error('Failed to fetch audit logs');
         const data = await res.json();
         setLogs(data);
@@ -29,10 +35,10 @@ export default function AuditLogsPage() {
       }
     };
     fetchLogs();
-  }, [user]);
+  }, [user, isAdmin]);
 
   if (!user || (!isAdmin() && !isSocietyAdmin())) {
-     <div className="p-8 text-center text-destructive">Access denied.</div>;
+    return <div className="p-8 text-center text-destructive">Access denied.</div>;
   }
 
   return (

@@ -1,4 +1,3 @@
-
 'use client';
 import React, { useMemo } from 'react';
 import Link from 'next/link';
@@ -226,6 +225,13 @@ export const getNavItems = (
       iconColor: 'text-rose-400',
       isUserTypeCheck: (u, iA, iSA, iOR, iG) => iA() || iSA()
     },
+    {
+      href: '/dashboard/admin/audit-logs',
+      label: 'Audit Logs',
+      icon: ShieldAlert,
+      iconColor: 'text-yellow-600',
+      isUserTypeCheck: (u, iA, iSA, iOR, iG) => iA() // SuperAdmin only
+    },
     { href: '/dashboard/my-profile', label: 'My Profile', icon: Settings2, iconColor: 'text-slate-400' }, // Slate color for general settings
   ];
   return allItems.filter(item => checkVisibility(user, isAdminFn, isSocietyAdminFn, isOwnerOrRenterFn, isGuardFn, item));
@@ -244,6 +250,10 @@ export function AppSidebar() {
     children: "Logout",
     className: "ml-2"
   }), []);
+
+  // DEBUG: Log user and role for troubleshooting sidebar visibility
+  console.log('[AppSidebar] user:', user);
+  if (user) console.log('[AppSidebar] user.role:', user.role);
 
   if (!user) return null;
 

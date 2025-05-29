@@ -1,4 +1,3 @@
-
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -31,16 +30,18 @@ const registerSchema = z.object({
   flatNumber: z.string().min(1, { message: 'Flat number is required (e.g., A-101, NA for Guard).' }),
   password: z.string().min(6, { message: 'Password must be at least 6 characters.' }),
   confirmPassword: z.string(),
-  role: z.enum(SELECTABLE_USER_ROLES, {
+  role: z.enum(["owner", "renter", "guard"], {
     required_error: "You need to select a user type.",
   }),
 }).refine(data => data.password === data.confirmPassword, {
   message: "Passwords don't match",
   path: ["confirmPassword"],
-}).refine(data => data.role === USER_ROLES.GUARD ? data.flatNumber.toUpperCase() === 'NA' : true, {
+})
+.refine(data => data.role === USER_ROLES.GUARD ? data.flatNumber.toUpperCase() === 'NA' : true, {
   message: "Flat number must be 'NA' for Guard role.",
   path: ["flatNumber"],
-}).refine(data => (data.role === USER_ROLES.OWNER || data.role === USER_ROLES.RENTER) ? data.flatNumber.toUpperCase() !== 'NA' && data.flatNumber.length > 0 : true, {
+})
+.refine(data => (data.role === USER_ROLES.OWNER || data.role === USER_ROLES.RENTER) ? data.flatNumber.toUpperCase() !== 'NA' && data.flatNumber.length > 0 : true, {
   message: "Flat number is required for Owner/Renter and cannot be 'NA'.",
   path: ["flatNumber"],
 });
@@ -79,7 +80,8 @@ export function RegisterForm() {
     setIsLoading(true);
     // The API expects societyId directly, no need for societyName in submission
     const { confirmPassword, ...registrationData } = data;
-    await register(registrationData);
+    // Ensure role is typed as 'owner' | 'renter' | 'guard'
+    await register({ ...registrationData, role: registrationData.role as 'owner' | 'renter' | 'guard' });
     setIsLoading(false);
   };
 

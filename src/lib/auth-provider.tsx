@@ -1403,7 +1403,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     try {
       const response = await fetch('/api/committee-members', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'x-user-role': user.role,
+          'x-user-id': user.id,
+          'x-user-name': user.name,
+          'x-society-id': user.societyId,
+        },
         body: JSON.stringify(submissionData),
       });
       const data = await response.json();

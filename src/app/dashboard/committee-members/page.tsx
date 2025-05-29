@@ -1,4 +1,3 @@
-
 'use client';
 import { CommitteeMembersDisplay } from '@/components/dashboard/CommitteeMembersDisplay';
 import { CommitteeMemberFormDialog } from '@/components/dashboard/admin/CommitteeMemberFormDialog';
@@ -46,11 +45,31 @@ export default function CommitteeMembersPage() {
     // AuthProvider will update committeeMembers state and trigger re-render
   };
 
-  const handleFormSubmit = async (data: Omit<CommitteeMember, 'id' | 'createdAt' | 'updatedAt'>, memberId?: string) => {
-    if (memberId) { // Editing existing member
-      await updateCommitteeMember(memberId, data);
-    } else { // Adding new member
-      await addCommitteeMember(data);
+  // Fix: match the expected type for addCommitteeMember and updateCommitteeMember
+  const handleFormSubmit = async (
+    data: {
+      name: string;
+      flatNumber: string;
+      roleInCommittee: string;
+      email?: string;
+      imageUrl?: string;
+      phone?: string;
+    },
+    memberId?: string
+  ) => {
+    // Ensure roleInCommittee is cast to CommitteeMemberRole
+    const cleanedData = {
+      name: data.name,
+      roleInCommittee: data.roleInCommittee as import("@/lib/types").CommitteeMemberRole,
+      flatNumber: data.flatNumber,
+      email: data.email || undefined,
+      phone: data.phone || undefined,
+      imageUrl: data.imageUrl || undefined,
+    };
+    if (memberId) {
+      await updateCommitteeMember(memberId, cleanedData);
+    } else {
+      await addCommitteeMember(cleanedData);
     }
     setIsFormOpen(false);
     setEditingMember(null);

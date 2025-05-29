@@ -1,8 +1,8 @@
-
 // src/app/api/committee-members/[memberId]/route.ts
 import { NextResponse, type NextRequest } from 'next/server';
 import { committeeMembersContainer } from '@/lib/cosmosdb';
 import type { CommitteeMember } from '@/lib/types';
+import { logAuditAction } from '@/lib/utils';
 
 // Helper to check if user is superadmin (replace with your actual auth check)
 const isSuperAdmin = (request: NextRequest): boolean => {
@@ -66,6 +66,24 @@ export async function PUT(
     if (!replacedMember) {
         return NextResponse.json({ message: 'Failed to update committee member' }, { status: 500 });
     }
+    // Audit log
+    try {
+      const userId = request.headers.get('x-user-id') || 'unknown';
+      const userName = request.headers.get('x-user-name') || 'unknown';
+      const userRole = request.headers.get('x-user-role') || 'unknown';
+      const validRoles = ["superadmin", "societyAdmin", "owner", "renter", "guard"];
+      const safeUserRole = validRoles.includes(userRole) ? userRole : "superadmin";
+      await logAuditAction({
+        societyId: updatedMemberData.societyId,
+        userId,
+        userName,
+        userRole: safeUserRole as import('@/lib/types').UserRole,
+        action: 'update',
+        targetType: 'CommitteeMember',
+        targetId: replacedMember.id,
+        details: updates
+      });
+    } catch (e) { console.error('Audit log failed:', e); }
     return NextResponse.json(replacedMember, { status: 200 });
   } catch (error) {
     console.error(`Update Committee Member ${params.memberId} API error:`, error);
@@ -88,9 +106,27 @@ export async function DELETE(
     if (!memberId) {
       return NextResponse.json({ message: 'Member ID is required' }, { status: 400 });
     }
-    
+    // Fetch the member before deleting to get the correct societyId
+    const { resource: member } = await committeeMembersContainer.item(memberId, memberId).read<CommitteeMember>();
     await committeeMembersContainer.item(memberId, memberId).delete();
-    
+    // Audit log
+    try {
+      const userId = request.headers.get('x-user-id') || 'unknown';
+      const userName = request.headers.get('x-user-name') || 'unknown';
+      const userRole = request.headers.get('x-user-role') || 'unknown';
+      const validRoles = ["superadmin", "societyAdmin", "owner", "renter", "guard"];
+      const safeUserRole = validRoles.includes(userRole) ? userRole : "superadmin";
+      await logAuditAction({
+        societyId: member?.societyId || 'unknown',
+        userId,
+        userName,
+        userRole: safeUserRole as import('@/lib/types').UserRole,
+        action: 'delete',
+        targetType: 'CommitteeMember',
+        targetId: memberId,
+        details: {}
+      });
+    } catch (e) { console.error('Audit log failed:', e); }
     return NextResponse.json({ message: `Committee member ${memberId} deleted successfully` }, { status: 200 });
   } catch (error) {
     console.error(`Delete Committee Member ${params.memberId} API error:`, error);
@@ -101,3 +137,4 @@ export async function DELETE(
     return NextResponse.json({ message: 'Internal server error', error: errorMessage }, { status: 500 });
   }
 }
+
