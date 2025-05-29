@@ -25,7 +25,7 @@ interface AuthContextType {
   isOwnerOrRenter: () => boolean;
   isGuard: () => boolean;
   allUsers: UserProfile[];
-  fetchAllUsers: () => Promise<void>;
+  fetchAllUsers: (isApproved?: boolean) => Promise<void>;
   visitorEntries: VisitorEntry[];
   fetchVisitorEntries: () => Promise<void>;
   gatePasses: GatePass[];
@@ -341,12 +341,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [user?.societyId, toast]);
 
-  const fetchAllUsers = useCallback(async () => {
+  // Update: fetchAllUsers now accepts isApproved (optional) to filter users server-side
+  const fetchAllUsers = useCallback(async (isApproved?: boolean) => {
     if (!user?.societyId || (!isAdmin() && !isSocietyAdmin())) {
         setAllUsersState([]); return;
     }
     try {
-      const response = await fetch(`/api/users?societyId=${user.societyId}`);
+      let url = `/api/users?societyId=${user.societyId}`;
+      if (typeof isApproved === 'boolean') {
+        url += `&isApproved=${isApproved}`;
+      }
+      const response = await fetch(url);
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ message: 'Failed to fetch users and could not parse error response.' }));
         throw new Error(errorData.message || 'Server error while fetching users.');

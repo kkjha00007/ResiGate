@@ -7,9 +7,13 @@ import { PUBLIC_ENTRY_SOURCE } from '@/lib/constants';
 
 // Add a new visitor entry from the public form
 export async function POST(request: NextRequest) {
+  let entryData: any;
   try {
-    const entryData = await request.json() as Omit<VisitorEntry, 'id' | 'entryTimestamp' | 'enteredBy' | 'tokenCode'>;
-
+    entryData = await request.json();
+  } catch {
+    return NextResponse.json({ message: 'Invalid or missing JSON body' }, { status: 400 });
+  }
+  try {
     if (!entryData.visitorName || !entryData.mobileNumber || !entryData.flatNumber || !entryData.purposeOfVisit) {
       return NextResponse.json({ message: 'Missing required fields for public visitor entry' }, { status: 400 });
     }

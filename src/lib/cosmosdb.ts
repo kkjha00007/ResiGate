@@ -45,8 +45,55 @@ export const client = new CosmosClient({
 
 export const database = client.database(databaseId);
 
-// Exporting container instances
-export const usersContainer = database.container(usersContainerId);
+// --- Users Container: Ensure it exists and is ready before export ---
+let usersContainerInstance: ReturnType<typeof database.container> | undefined;
+export let usersContainerReady: Promise<void>;
+
+async function ensureUsersContainerAndWait() {
+  try {
+    // Check if the container exists and has the correct partition key
+    const { resources: containers } = await database.containers.readAll().fetchAll();
+    const usersContainerMeta = containers.find((c: any) => c.id === usersContainerId);
+    if (usersContainerMeta) {
+      const pkPaths = usersContainerMeta.partitionKey?.paths || [];
+      if (!pkPaths.includes('/societyId')) {
+        const msg = `[CosmosDB] Users container exists but has wrong partition key: ${JSON.stringify(pkPaths)}. Expected: ['/societyId']`;
+        if (process.env.NODE_ENV === 'development') {
+          console.warn(msg + ' Attempting to delete and recreate container in development.');
+          await database.container(usersContainerId).delete();
+        } else {
+          throw new Error(msg + ' (Refusing to delete in production!)');
+        }
+      }
+    }
+    if (!usersContainerInstance) {
+      const { container } = await database.containers.createIfNotExists({
+        id: usersContainerId,
+        partitionKey: { paths: ['/societyId'] }
+        // throughput removed for serverless
+      });
+      usersContainerInstance = container;
+    }
+  } catch (err) {
+    console.error('[CosmosDB] ensureUsersContainerAndWait error:', err);
+    throw err;
+  }
+}
+
+// Top-level promise to ensure container is ready before export
+usersContainerReady = ensureUsersContainerAndWait();
+
+export const getUsersContainer = async () => {
+  try {
+    await usersContainerReady;
+    if (!usersContainerInstance) throw new Error('Users container not initialized');
+    return usersContainerInstance;
+  } catch (err) {
+    console.error('[CosmosDB] getUsersContainer error:', err);
+    throw err;
+  }
+};
+
 export const visitorEntriesContainer = database.container(visitorEntriesContainerId);
 export const loginAuditsContainer = database.container(loginAuditsContainerId);
 export const gatePassesContainer = database.container(gatePassesContainerId);
@@ -99,22 +146,21 @@ export async function initializeCosmosDB() {
     // will be updated in subsequent batches.
     
     const containerDefinitions = [
-      // Existing containers - partition keys will be updated in later batches
-      { id: usersContainerId, partitionKey: { paths: ["/role"] } }, // Will change to ["/societyId", "/role"]
-      { id: visitorEntriesContainerId, partitionKey: { paths: ["/flatNumber"] } }, // Will change to ["/societyId", "/flatNumber"]
-      { id: loginAuditsContainerId, partitionKey: { paths: ["/userId"] }, defaultTtl: 30 * 24 * 60 * 60 }, // Will change to ["/societyId", "/userId"]
-      { id: gatePassesContainerId, partitionKey: { paths: ["/residentUserId"] } }, // Will change to ["/societyId", "/residentUserId"]
-      { id: complaintsContainerId, partitionKey: { paths: ["/userId"] } }, // Will change to ["/societyId", "/userId"]
-      { id: noticesContainerId, partitionKey: { paths: ["/monthYear"] } }, // Will change to ["/societyId", "/monthYear"]
-      { id: meetingsContainerId, partitionKey: { paths: ["/monthYear"] } }, // Will change to ["/societyId", "/monthYear"]
-      { id: vendorsContainerId, partitionKey: { paths: ["/category"] } }, // Will change to ["/societyId", "/category"]
-      { id: committeeMembersContainerId, partitionKey: { paths: ["/id"] } }, // Will change to ["/societyId", "/id"]
-      { id: societySettingsContainerId, partitionKey: { paths: ["/id"] } }, // ID will be societyId, so partition key /id is effectively /societyId
-      { id: parkingSpotsContainerId, partitionKey: { paths: ["/id"] } }, // Will change to ["/societyId", "/id"]
-      { id: facilitiesContainerId, partitionKey: { paths: ["/id"] } }, // Will change to ["/societyId", "/id"]
-      
-      // New container for Societies
-      { id: societiesContainerId, partitionKey: { paths: ["/id"] } }, // Partition by society ID itself
+      // All containers now use '/societyId' as partition key for strict society isolation
+      { id: usersContainerId, partitionKey: { paths: ['/societyId'] } },
+      { id: visitorEntriesContainerId, partitionKey: { paths: ['/societyId'] } },
+      { id: loginAuditsContainerId, partitionKey: { paths: ['/societyId'] }, defaultTtl: 30 * 24 * 60 * 60 },
+      { id: gatePassesContainerId, partitionKey: { paths: ['/societyId'] } },
+      { id: complaintsContainerId, partitionKey: { paths: ['/societyId'] } },
+      { id: noticesContainerId, partitionKey: { paths: ['/societyId'] } },
+      { id: meetingsContainerId, partitionKey: { paths: ['/societyId'] } },
+      { id: vendorsContainerId, partitionKey: { paths: ['/societyId'] } },
+      { id: committeeMembersContainerId, partitionKey: { paths: ['/societyId'] } },
+      { id: societySettingsContainerId, partitionKey: { paths: ['/societyId'] } },
+      { id: parkingSpotsContainerId, partitionKey: { paths: ['/societyId'] } },
+      { id: facilitiesContainerId, partitionKey: { paths: ['/societyId'] } },
+      // Societies container uses '/id' as partition key (each society is a root doc)
+      { id: societiesContainerId, partitionKey: { paths: ['/id'] } },
     ];
 
     for (const containerDef of containerDefinitions) {
@@ -135,6 +181,20 @@ export async function initializeCosmosDB() {
     console.error("Error initializing Cosmos DB:", error.message || error);
   }
 }
+
+// Ensure Users container exists on app startup
+async function ensureUsersContainerOnStartup() {
+  if (!endpoint || !key || !databaseId) return;
+  const { database } = await client.databases.createIfNotExists({ id: databaseId });
+  await database.containers.createIfNotExists({
+    id: usersContainerId,
+    partitionKey: { paths: ['/societyId'] }
+    // throughput removed for serverless
+  });
+}
+
+// Immediately invoke on module load
+ensureUsersContainerOnStartup();
 
 // Initialize DB on server start (for environments like Next.js server components/API routes)
 // Ensure this runs only once, typically at module load for server-side contexts.

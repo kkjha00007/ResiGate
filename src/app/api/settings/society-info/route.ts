@@ -15,16 +15,17 @@ const SOCIETY_INFO_DOC_ID = "societyInfoDoc";
 
 // Get current society info settings
 export async function GET(request: NextRequest) {
-  // if (!isSuperAdmin(request)) { // Placeholder for actual superadmin check
-  //   return NextResponse.json({ message: 'Unauthorized' }, { status: 403 });
-  // }
+  const societyId = request.nextUrl.searchParams.get('societyId');
+  if (!societyId) {
+    return NextResponse.json({ message: 'Society ID is required.' }, { status: 400 });
+  }
   try {
-    const { resource } = await societySettingsContainer.item(SOCIETY_INFO_DOC_ID, SOCIETY_INFO_DOC_ID).read<SocietyInfoSettings>();
+    const { resource } = await societySettingsContainer.item(societyId, societyId).read<SocietyInfoSettings>();
     if (!resource) {
       // Return default empty structure if not found, so client can still render the form
       const defaultSettings: SocietyInfoSettings = {
-        id: SOCIETY_INFO_DOC_ID,
-        societyId: SOCIETY_INFO_DOC_ID, // Add required field
+        id: societyId,
+        societyId: societyId, // Add required field
         societyName: '',
         registrationNumber: '',
         address: '',
@@ -36,16 +37,16 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(resource, { status: 200 });
   } catch (error: any) {
     if (error.code === 404) { // Cosmos DB not found error code
-        const defaultSettings: SocietyInfoSettings = {
-            id: SOCIETY_INFO_DOC_ID,
-            societyId: SOCIETY_INFO_DOC_ID, // Add required field
-            societyName: '',
-            registrationNumber: '',
-            address: '',
-            contactEmail: '',
-            contactPhone: '',
-        };
-        return NextResponse.json(defaultSettings, { status: 200 });
+      const defaultSettings: SocietyInfoSettings = {
+        id: societyId,
+        societyId: societyId, // Add required field
+        societyName: '',
+        registrationNumber: '',
+        address: '',
+        contactEmail: '',
+        contactPhone: '',
+      };
+      return NextResponse.json(defaultSettings, { status: 200 });
     }
     console.error('Get Society Info API error:', error);
     return NextResponse.json({ message: 'Internal server error fetching society info' }, { status: 500 });

@@ -1,27 +1,37 @@
 // src/app/api/users/route.ts
 import { NextResponse, type NextRequest } from 'next/server';
-import { usersContainer, societySettingsContainer } from '@/lib/cosmosdb';
+import { getUsersContainer, usersContainerReady, societySettingsContainer } from '@/lib/cosmosdb';
 import type { User, UserRole, SocietyInfoSettings } from '@/lib/types';
 import { v4 as uuidv4 } from 'uuid';
 import { USER_ROLES, SELECTABLE_USER_ROLES } from '@/lib/constants'; // Ensure USER_ROLES is imported
 import bcrypt from 'bcryptjs';
+import { CosmosClient } from '@azure/cosmos';
 
 const SALT_ROUNDS = 10;
 
 // Get all users (potentially for admin) - Requires societyId
 export async function GET(request: NextRequest) {
+  const usersContainer = await getUsersContainer();
   // Accept societyId (not tenantId)
   const societyId = request.nextUrl.searchParams.get('societyId');
   if (!societyId) {
     return NextResponse.json({ message: 'Society ID is required for fetching users.' }, { status: 400 });
   }
+  // Optional: filter by approval status
+  const isApprovedParam = request.nextUrl.searchParams.get('isApproved');
+  let query = "SELECT * FROM c WHERE c.societyId = @societyId";
+  const parameters: any[] = [{ name: "@societyId", value: societyId }];
+  if (isApprovedParam === 'true' || isApprovedParam === 'false') {
+    query += " AND c.isApproved = @isApproved";
+    parameters.push({ name: "@isApproved", value: isApprovedParam === 'true' });
+  }
   try {
     const querySpec = {
-      query: "SELECT * FROM c WHERE c.societyId = @societyId",
-      parameters: [{ name: "@societyId", value: societyId }]
+      query,
+      parameters
     };
     const { resources: userItems } = await usersContainer.items.query<User>(querySpec, { partitionKey: societyId }).fetchAll();
-    const users = userItems.map(u => {
+    const users = userItems.map((u: User) => {
       const { password, ...userProfile } = u;
       return userProfile;
     });
@@ -35,6 +45,7 @@ export async function GET(request: NextRequest) {
 
 // Register (create) a new user
 export async function POST(request: NextRequest) {
+  const usersContainer = await getUsersContainer();
   try {
     // Accept societyId instead of societyName/tenantId
     const userData = await request.json() as Omit<User, 'id' | 'isApproved' | 'registrationDate' | 'password'> & {password: string, role: (typeof SELECTABLE_USER_ROLES)[number], societyId: string};
@@ -61,6 +72,7 @@ export async function POST(request: NextRequest) {
         query: "SELECT * FROM c WHERE c.email = @email",
         parameters: [{ name: "@email", value: email }]
       };
+      // Cross-partition query for email uniqueness
       const { resources } = await usersContainer.items.query<User>(querySpecEmailCheck).fetchAll();
       existingUsers = resources;
     } catch (dbError: any) {
@@ -133,8 +145,7 @@ export async function POST(request: NextRequest) {
     
     const { password, ...userProfile } = createdUser;
     return NextResponse.json(userProfile, { status: 201 });
-
-  } catch (error: any) { 
+  } catch (error: any) {
     console.error('Register User API error (Outer Catch):', error);
     const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred during registration.';
     return NextResponse.json({ message: 'Internal server error', error: errorMessage }, { status: 500 });

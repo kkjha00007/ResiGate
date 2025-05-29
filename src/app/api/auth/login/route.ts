@@ -1,7 +1,6 @@
-
 // src/app/api/auth/login/route.ts
 import { NextResponse, type NextRequest } from 'next/server';
-import { usersContainer, loginAuditsContainer } from '@/lib/cosmosdb'; // Added loginAuditsContainer
+import { getUsersContainer, loginAuditsContainer } from '@/lib/cosmosdb'; // Changed to getUsersContainer
 import type { User, LoginAudit } from '@/lib/types'; // Added LoginAudit type
 import bcrypt from 'bcryptjs';
 import { v4 as uuidv4 } from 'uuid';
@@ -14,6 +13,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ message: 'Email and password are required' }, { status: 400 });
     }
 
+    const usersContainer = await getUsersContainer(); // Get the users container
     const querySpec = {
       query: "SELECT * FROM c WHERE c.email = @email",
       parameters: [

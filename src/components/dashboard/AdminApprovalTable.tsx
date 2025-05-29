@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -29,15 +28,16 @@ export function AdminApprovalTable() {
 
   useEffect(() => {
     if (isAdmin()) {
-      fetchAllUsers();
+      fetchAllUsers(false); // Only fetch unapproved users from backend
     }
   }, [isAdmin, fetchAllUsers]);
 
   useEffect(() => {
-     setPendingUsers(
-        allUsers.filter(u => u.role !== USER_ROLES.SUPERADMIN && !u.isApproved)
-                .sort((a,b) => new Date(a.registrationDate).getTime() - new Date(b.registrationDate).getTime())
-      );
+    setPendingUsers(
+      allUsers
+        .filter(u => u.role !== USER_ROLES.SUPERADMIN) // Still filter out superadmins
+        .sort((a, b) => new Date(a.registrationDate).getTime() - new Date(b.registrationDate).getTime())
+    );
   }, [allUsers]);
 
 

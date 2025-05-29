@@ -40,13 +40,19 @@ export async function GET(request: NextRequest) {
 
 // Add a new visitor entry (typically by guard/admin)
 export async function POST(request: NextRequest) {
-  const societyId = await getSocietyId(request);
+  let body: any;
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ message: 'Invalid or missing JSON body' }, { status: 400 });
+  }
+  // Use body for societyId extraction
+  const societyId = body.societyId || request.headers.get('x-society-id') || request.nextUrl.searchParams.get('societyId');
   if (!societyId) {
     return NextResponse.json({ message: 'societyId is required' }, { status: 400 });
   }
   try {
     // TODO: Add authentication to ensure only authorized users can add entries
-    const body = typeof request.body === 'object' ? request.body : await request.json();
     const { 
         visitorName, 
         mobileNumber, 
@@ -57,7 +63,6 @@ export async function POST(request: NextRequest) {
         notes,
         enteredBy, // Should come from authenticated user context if by guard/admin
     } = body as Omit<VisitorEntry, 'id' | 'entryTimestamp' | 'tokenCode'> & { tenantId: string };
-
 
     if (!visitorName || !mobileNumber || !flatNumber || !purposeOfVisit) {
       return NextResponse.json({ message: 'Missing required fields for visitor entry' }, { status: 400 });
@@ -79,12 +84,11 @@ export async function POST(request: NextRequest) {
     };
 
     const { resource: createdEntry } = await visitorEntriesContainer.items.create(newEntry);
-    
+
     if (!createdEntry) {
-        return NextResponse.json({ message: 'Failed to create visitor entry' }, { status: 500 });
+      return NextResponse.json({ message: 'Failed to add visitor entry' }, { status: 500 });
     }
     return NextResponse.json(createdEntry, { status: 201 });
-
   } catch (error: any) {
     console.error('Add Visitor Entry API error:', error);
     const errorMessage = error.body?.message || error.message || 'An unknown error occurred during visitor entry creation.';

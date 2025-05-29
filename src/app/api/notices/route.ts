@@ -21,15 +21,19 @@ async function getSocietyId(request: NextRequest): Promise<string | null> {
 
 // Create a new notice (Super Admin only)
 export async function POST(request: NextRequest) {
-  const societyId = await getSocietyId(request);
+  let body: any;
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ message: 'Invalid or missing JSON body' }, { status: 400 });
+  }
+  // Use body for societyId extraction
+  const societyId = body.societyId || request.headers.get('x-society-id') || request.nextUrl.searchParams.get('societyId');
   if (!societyId) {
     return NextResponse.json({ message: 'societyId is required' }, { status: 400 });
   }
 
   try {
-    // TODO: Add authentication and authorization to ensure only Super Admin can create notices
-    // For now, we'll assume this check is handled by client-side routing or a higher-level middleware
-    const body = typeof request.body === 'object' ? request.body : await request.json();
     const { 
         title, 
         content,

@@ -1,4 +1,3 @@
-
 // src/app/api/parking/spots/route.ts
 import { NextResponse, type NextRequest } from 'next/server';
 import { parkingSpotsContainer } from '@/lib/cosmosdb';
@@ -10,11 +9,16 @@ import { v4 as uuidv4 } from 'uuid';
 
 // Create a new parking spot (Admin only)
 export async function POST(request: NextRequest) {
+  let body: any;
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ message: 'Invalid or missing JSON body' }, { status: 400 });
+  }
   // const isAdmin = true; // Replace with actual auth check
   // if (!isAdmin) return NextResponse.json({ message: 'Unauthorized' }, { status: 403 });
 
   try {
-    const body = await request.json() as Omit<ParkingSpot, 'id' | 'createdAt' | 'updatedAt' | 'status'>;
     const { spotNumber, type, location, notes } = body;
 
     if (!spotNumber || !type || !location) {
@@ -24,6 +28,7 @@ export async function POST(request: NextRequest) {
     const now = new Date().toISOString();
     const newSpot: ParkingSpot = {
       id: uuidv4(),
+      societyId: body.societyId || body.societyID || body.societyid || request.headers.get('x-society-id') || request.nextUrl.searchParams.get('societyId') || '',
       spotNumber,
       type: type as ParkingSpotType,
       location,

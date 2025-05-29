@@ -20,14 +20,19 @@ async function getSocietyId(request: NextRequest): Promise<string | null> {
 
 // Create a new meeting (Super Admin only)
 export async function POST(request: NextRequest) {
-  const societyId = await getSocietyId(request);
+  let body: any;
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ message: 'Invalid or missing JSON body' }, { status: 400 });
+  }
+  // Use body for societyId extraction
+  const societyId = body.societyId || request.headers.get('x-society-id') || request.nextUrl.searchParams.get('societyId');
   if (!societyId) {
     return NextResponse.json({ message: 'societyId is required' }, { status: 400 });
   }
 
   try {
-    // TODO: Add robust authentication and authorization (Super Admin only)
-    const body = typeof request.body === 'object' ? request.body : await request.json();
     const { 
         title, 
         description,

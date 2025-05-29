@@ -1,7 +1,6 @@
-
 // src/app/api/users/[userId]/route.ts
 import { NextResponse, type NextRequest } from 'next/server';
-import { usersContainer } from '@/lib/cosmosdb';
+import { getUsersContainer } from '@/lib/cosmosdb';
 import type { User } from '@/lib/types';
 import bcrypt from 'bcryptjs';
 
@@ -13,6 +12,7 @@ export async function GET(
   { params }: { params: { userId: string } }
 ) {
   try {
+    const usersContainer = await getUsersContainer();
     const userId = params.userId;
     if (!userId) {
       return NextResponse.json({ message: 'User ID is required' }, { status: 400 });
@@ -46,6 +46,7 @@ export async function PUT(
   { params }: { params: { userId: string } }
 ) {
   try {
+    const usersContainer = await getUsersContainer();
     const userId = params.userId;
     const updates = await request.json() as Partial<User> & { currentPassword?: string, newPassword?: string };
 
@@ -101,7 +102,8 @@ export async function PUT(
     }
 
 
-    const { resource: replacedUser } = await usersContainer.item(userId, userToUpdate.role).replace(updatedUserData); 
+    // Use correct partition key value (societyId) for replace
+    const { resource: replacedUser } = await usersContainer.item(userId, userToUpdate.societyId).replace(updatedUserData); 
 
     if (!replacedUser) {
         return NextResponse.json({ message: 'Failed to update user' }, { status: 500 });
@@ -123,6 +125,7 @@ export async function DELETE(
   { params }: { params: { userId: string } }
 ) {
   try {
+    const usersContainer = await getUsersContainer();
     const userId = params.userId;
     if (!userId) {
       return NextResponse.json({ message: 'User ID is required' }, { status: 400 });
@@ -138,8 +141,8 @@ export async function DELETE(
       return NextResponse.json({ message: 'User not found to delete' }, { status: 404 });
     }
     const userToDelete = foundUsers[0];
-    const userRoleForPartitionKey = userToDelete.role;
-
+    // Use correct partition key value (societyId) for delete
+    const userRoleForPartitionKey = userToDelete.societyId;
     const { resource: deletedUserResponse } = await usersContainer.item(userId, userRoleForPartitionKey).delete();
     
     // Cosmos DB delete operation returns a response, not necessarily the deleted item.

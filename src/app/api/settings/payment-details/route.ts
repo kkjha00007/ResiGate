@@ -1,4 +1,3 @@
-
 // src/app/api/settings/payment-details/route.ts
 import { NextResponse, type NextRequest } from 'next/server';
 import { societySettingsContainer } from '@/lib/cosmosdb';
@@ -17,16 +16,26 @@ const isSuperAdmin = (request: NextRequest): boolean => {
   return true; // !!IMPORTANT!!: Replace with actual robust admin check based on your auth setup
 };
 
-const PAYMENT_DETAILS_DOC_ID = "paymentDetailsDoc";
+const getSocietyId = (request: NextRequest): string | null => {
+  return (
+    request.headers.get('x-society-id') ||
+    request.nextUrl.searchParams.get('societyId') ||
+    null
+  );
+};
 
-// Get current payment details
+// Get current payment details for a society
 export async function GET(request: NextRequest) {
+  const societyId = getSocietyId(request);
+  if (!societyId) {
+    return NextResponse.json({ message: 'societyId is required' }, { status: 400 });
+  }
   try {
-    const { resource } = await societySettingsContainer.item(PAYMENT_DETAILS_DOC_ID, PAYMENT_DETAILS_DOC_ID).read<SocietyPaymentDetails>();
+    const { resource } = await societySettingsContainer.item(societyId, societyId).read<SocietyPaymentDetails>();
     if (!resource) {
-      // Return default empty structure if not found, so client can still render the form
       const defaultDetails: SocietyPaymentDetails = {
-        id: PAYMENT_DETAILS_DOC_ID,
+        id: societyId,
+        societyId,
         bankName: '',
         accountHolderName: '',
         accountNumber: '',
@@ -40,47 +49,50 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(resource, { status: 200 });
   } catch (error: any) {
     if (error.code === 404) {
-        const defaultDetails: SocietyPaymentDetails = {
-            id: PAYMENT_DETAILS_DOC_ID,
-            bankName: '',
-            accountHolderName: '',
-            accountNumber: '',
-            ifscCode: '',
-            branchName: '',
-            accountType: '',
-            upiId: '',
-          };
-        return NextResponse.json(defaultDetails, { status: 200 });
+      const defaultDetails: SocietyPaymentDetails = {
+        id: societyId,
+        societyId,
+        bankName: '',
+        accountHolderName: '',
+        accountNumber: '',
+        ifscCode: '',
+        branchName: '',
+        accountType: '',
+        upiId: '',
+      };
+      return NextResponse.json(defaultDetails, { status: 200 });
     }
-    console.error('Get Payment Details API error:', error);
-    return NextResponse.json({ message: 'Internal server error' }, { status: 500 });
+    return NextResponse.json({ message: 'Internal server error', error: error.message }, { status: 500 });
   }
 }
 
-// Update payment details (Super Admin only)
-export async function PUT(request: NextRequest) {
-//   if (!isSuperAdmin(request)) { // Placeholder for actual superadmin check
-//     return NextResponse.json({ message: 'Unauthorized' }, { status: 403 });
-//   }
-
+// Update payment details for a society
+export async function POST(request: NextRequest) {
+  let body: any;
   try {
-    const body = await request.json() as Omit<SocietyPaymentDetails, 'id' | 'updatedAt'>;
-    
-    const itemToUpsert: SocietyPaymentDetails = {
-      ...body,
-      id: PAYMENT_DETAILS_DOC_ID, // Ensure the ID is always this fixed value
-      updatedAt: new Date().toISOString(),
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ message: 'Invalid or missing JSON body' }, { status: 400 });
+  }
+  const societyId = body.societyId || getSocietyId(request);
+  if (!societyId) {
+    return NextResponse.json({ message: 'societyId is required' }, { status: 400 });
+  }
+  try {
+    const paymentDetails: SocietyPaymentDetails = {
+      id: societyId,
+      societyId,
+      bankName: body.bankName || '',
+      accountHolderName: body.accountHolderName || '',
+      accountNumber: body.accountNumber || '',
+      ifscCode: body.ifscCode || '',
+      branchName: body.branchName || '',
+      accountType: body.accountType || '',
+      upiId: body.upiId || '',
     };
-
-    const { resource: updatedDetails } = await societySettingsContainer.items.upsert(itemToUpsert);
-
-    if (!updatedDetails) {
-      return NextResponse.json({ message: 'Failed to update payment details' }, { status: 500 });
-    }
-    return NextResponse.json(updatedDetails, { status: 200 });
-  } catch (error) {
-    console.error('Update Payment Details API error:', error);
-    const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
-    return NextResponse.json({ message: 'Internal server error', error: errorMessage }, { status: 500 });
+    const { resource } = await societySettingsContainer.items.upsert(paymentDetails);
+    return NextResponse.json(resource, { status: 200 });
+  } catch (error: any) {
+    return NextResponse.json({ message: 'Internal server error', error: error.message }, { status: 500 });
   }
 }

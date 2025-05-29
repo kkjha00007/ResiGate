@@ -1,4 +1,3 @@
-
 // src/app/api/vendors/route.ts
 import { NextResponse, type NextRequest } from 'next/server';
 import { vendorsContainer } from '@/lib/cosmosdb';
@@ -9,6 +8,10 @@ import { v4 as uuidv4 } from 'uuid';
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
+    const societyId = body.societyId || request.nextUrl.searchParams.get('societyId');
+    if (!societyId) {
+      return NextResponse.json({ message: 'Society ID is required for vendor creation.' }, { status: 400 });
+    }
     const { 
         name, 
         category, 
@@ -40,6 +43,7 @@ export async function POST(request: NextRequest) {
       submittedAt: new Date().toISOString(),
       isApproved: false, // New vendors are not approved by default
       notes,
+      societyId, // Ensure vendor is linked to the correct society
     };
 
     const { resource: createdVendor } = await vendorsContainer.items.create(newVendor);
@@ -47,9 +51,7 @@ export async function POST(request: NextRequest) {
     if (!createdVendor) {
       return NextResponse.json({ message: 'Failed to submit vendor for review' }, { status: 500 });
     }
-
     return NextResponse.json(createdVendor, { status: 201 });
-
   } catch (error) {
     console.error('Submit Vendor API error:', error);
     const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
@@ -60,14 +62,18 @@ export async function POST(request: NextRequest) {
 // Get all APPROVED vendors
 export async function GET(request: NextRequest) {
   try {
+    const societyId = request.nextUrl.searchParams.get('societyId');
+    if (!societyId) {
+      return NextResponse.json({ message: 'Society ID is required.' }, { status: 400 });
+    }
     const querySpec = {
-      query: "SELECT * FROM c WHERE c.isApproved = true ORDER BY c.name ASC"
+      query: "SELECT * FROM c WHERE c.isApproved = true AND c.societyId = @societyId ORDER BY c.name ASC",
+      parameters: [
+        { name: "@societyId", value: societyId }
+      ]
     };
-
-    const { resources: approvedVendors } = await vendorsContainer.items.query<Vendor>(querySpec).fetchAll();
-
+    const { resources: approvedVendors } = await vendorsContainer.items.query<Vendor>(querySpec, { partitionKey: societyId }).fetchAll();
     return NextResponse.json(approvedVendors, { status: 200 });
-
   } catch (error) {
     console.error('Get Approved Vendors API error:', error);
     const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
