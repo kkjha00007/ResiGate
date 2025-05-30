@@ -93,218 +93,89 @@ export const getNavItems = (
   isGuardFn: () => boolean
 ): NavItem[] => {
   const allItems: NavItem[] = [
+    // 1. General/All Users
     { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, iconColor: 'text-sky-500' },
-    {
-      href: '/dashboard/add-visitor',
-      label: 'Add Visitor Entry',
-      icon: UserPlus,
-      iconColor: 'text-emerald-500',
-      isUserTypeCheck: (u, iA, iSA, iOR, iG) => iG() || iSA() // Guard or SocietyAdmin
-    },
-    {
-      href: '/dashboard/gate-pass/validate',
-      label: 'Validate Gate Pass',
-      icon: ShieldCheckIcon,
-      iconColor: 'text-blue-500',
-      isUserTypeCheck: (u, iA, iSA, iOR, iG) => iG() || iSA() // Guard or SocietyAdmin
-    },
-    {
-      href: '/dashboard/visitor-log',
-      label: 'Visitor Log',
-      icon: ClipboardList,
-      iconColor: 'text-amber-500',
-      isUserTypeCheck: (u, iA, iSA, iOR, iG) => iA() || iSA() || iG() // SuperAdmin, SocietyAdmin, or Guard
-    },
-    {
-      href: '/dashboard/gate-pass/create',
-      label: 'Create Gate Pass',
-      icon: CalendarPlus,
-      iconColor: 'text-violet-500',
-      isUserTypeCheck: (u, iA, iSA, iOR, iG) => iOR() || iSA() || iA() // Owner/Renter, SocietyAdmin or SuperAdmin
-    },
-    {
-      href: '/dashboard/gate-pass/my-passes',
-      label: 'My Gate Passes',
-      icon: Ticket,
-      iconColor: 'text-rose-500',
-      isUserTypeCheck: (u, iA, iSA, iOR, iG) => iOR() || iSA() || iA() // Owner/Renter, SocietyAdmin or SuperAdmin
-    },
-    {
-      href: '/dashboard/personal-logs',
-      label: 'My Visitor Logs',
-      icon: FileText,
-      iconColor: 'text-teal-500',
-      isUserTypeCheck: (u, iA, iSA, iOR, iG) => iOR() // Owner/Renter only
-    },
-    {
-      href: '/dashboard/complaints',
-      label: 'My Complaints',
-      icon: Megaphone,
-      iconColor: 'text-orange-500',
-      isUserTypeCheck: (u, iA, iSA, iOR, iG) => iOR() // Owner/Renter only
-    },
-     {
-      href: '/dashboard/my-parking',
-      label: 'My Parking',
-      icon: ParkingCircle,
-      iconColor: 'text-indigo-400',
-      isUserTypeCheck: (u, iA, iSA, iOR, iG) => iOR() // Owner/Renter only
-    },
+    { href: '/dashboard/my-profile', label: 'My Profile', icon: Settings2, iconColor: 'text-slate-400' },
+
+    // 2. Add Visitor Entry (Owner/Renter, Guard, SocietyAdmin)
+    { href: '/dashboard/add-visitor', label: 'Add Visitor Entry', icon: UserPlus, iconColor: 'text-emerald-500', isUserTypeCheck: (u, iA, iSA, iOR, iG) => iOR() || iG() || iSA() },
+
+    // 3. Visitor Log (SuperAdmin, SocietyAdmin, Guard)
+    { href: '/dashboard/visitor-log', label: 'Visitor Log', icon: ClipboardList, iconColor: 'text-amber-500', isUserTypeCheck: (u, iA, iSA, iOR, iG) => iA() || iSA() || iG() },
+
+    // 4. Validate Gate Pass (Guard, SocietyAdmin)
+    { href: '/dashboard/gate-pass/validate', label: 'Validate Gate Pass', icon: ShieldCheckIcon, iconColor: 'text-blue-500', isUserTypeCheck: (u, iA, iSA, iOR, iG) => iG() || iSA() },
+
+    // 5. Gate Passes
+    { href: '/dashboard/gate-pass/create', label: 'Create Gate Pass', icon: CalendarPlus, iconColor: 'text-violet-500', isUserTypeCheck: (u, iA, iSA, iOR, iG) => iOR() || iSA() || iA() },
+    { href: '/dashboard/gate-pass/my-passes', label: 'My Gate Passes', icon: Ticket, iconColor: 'text-rose-500', isUserTypeCheck: (u, iA, iSA, iOR, iG) => iOR() || iSA() || iA() },
+
+    // 6. Owner/Renter
+    { href: '/dashboard/personal-logs', label: 'My Visitor Logs', icon: FileText, iconColor: 'text-teal-500', isUserTypeCheck: (u, iA, iSA, iOR, iG) => iOR() },
+    { href: '/dashboard/complaints', label: 'My Complaints', icon: Megaphone, iconColor: 'text-orange-500', isUserTypeCheck: (u, iA, iSA, iOR, iG) => iOR() },
+    { href: '/dashboard/my-parking', label: 'My Parking', icon: ParkingCircle, iconColor: 'text-indigo-400', isUserTypeCheck: (u, iA, iSA, iOR, iG) => iOR() },
+    { href: '/dashboard/payment-details', label: 'Payment Details', icon: Landmark, iconColor: 'text-fuchsia-500', isUserTypeCheck: (u, iA, iSA, iOR, iG) => iOR() || iA() || iSA() },
+    { href: '/dashboard/facilities', label: 'Facilities', icon: Sparkles, iconColor: 'text-yellow-400' },
     { href: '/dashboard/neighbours', label: 'Our Neighbours', icon: NeighboursIcon, iconColor: 'text-cyan-600' },
     { href: '/dashboard/vendors/directory', label: 'Vendor Directory', icon: Store, iconColor: 'text-cyan-500' },
     { href: '/dashboard/vendors/add', label: 'Add Vendor', icon: ConciergeBell, iconColor: 'text-purple-500' },
     { href: '/dashboard/committee-members', label: 'Committee Members', icon: Users, iconColor: 'text-green-500' },
-    {
-      href: '/dashboard/payment-details',
-      label: 'Payment Details',
-      icon: Landmark,
-      iconColor: 'text-fuchsia-500',
-      isUserTypeCheck: (u, iA, iSA, iOR, iG) => iOR() || iA() || iSA() // Owner/Renter, SuperAdmin or SocietyAdmin
-    },
-    {
-      href: '/dashboard/facilities',
-      label: 'Facilities',
-      icon: Sparkles,
-      iconColor: 'text-yellow-400',
-    },
-    // Admin Specific Links (SuperAdmin or SocietyAdmin)
-    {
-      href: '/dashboard/admin-approvals',
-      label: 'User Account Approvals',
-      icon: UsersRound, // Changed icon
-      iconColor: 'text-pink-500',
-      isUserTypeCheck: (u, iA, iSA, iOR, iG) => iA() || iSA()
-    },
-    {
-      href: '/dashboard/admin/manage-notices',
-      label: 'Manage Notices',
-      icon: ClipboardEdit,
-      iconColor: 'text-indigo-500',
-      isUserTypeCheck: (u, iA, iSA, iOR, iG) => iA() || iSA()
-    },
-    {
-      href: '/dashboard/admin/manage-meetings',
-      label: 'Manage Meetings',
-      icon: UsersRound,
-      iconColor: 'text-lime-500',
-      isUserTypeCheck: (u, iA, iSA, iOR, iG) => iA() || iSA()
-    },
-    {
-      href: '/dashboard/admin/manage-facilities',
-      label: 'Manage Facilities',
-      icon: Building,
-      iconColor: 'text-teal-600',
-      isUserTypeCheck: (u, iA, iSA, iOR, iG) => iA() || iSA()
-    },
-    {
-      href: '/dashboard/admin/manage-vendors',
-      label: 'Manage Vendors',
-      icon: ListFilter,
-      iconColor: 'text-yellow-500',
-      isUserTypeCheck: (u, iA, iSA, iOR, iG) => iA() || iSA()
-    },
-    {
-      href: '/dashboard/admin/manage-parking',
-      label: 'Manage Parking',
-      icon: ParkingSquare,
-      iconColor: 'text-orange-600',
-      isUserTypeCheck: (u, iA, iSA, iOR, iG) => iA() || iSA()
-    },
-     // SuperAdmin ONLY links
-    {
-      href: '/dashboard/admin/manage-societies',
-      label: 'Manage Societies',
-      icon: Briefcase,
-      iconColor: 'text-gray-400',
-      isUserTypeCheck: (u, iA, iSA, iOR, iG) => iA() // SuperAdmin only
-    },
-    {
-      href: '/dashboard/admin/society-settings',
-      label: 'Society Settings', // Can be managed by SocietyAdmin too for their specific society
-      icon: Building2,
-      iconColor: 'text-rose-400',
-      isUserTypeCheck: (u, iA, iSA, iOR, iG) => iA() || iSA()
-    },
-    {
-      href: '/dashboard/admin/audit-logs',
-      label: 'Audit Logs',
-      icon: ShieldAlert,
-      iconColor: 'text-yellow-600',
-      isUserTypeCheck: (u, iA, iSA, iOR, iG) => iA() // SuperAdmin only
-    },
-    { href: '/dashboard/my-profile', label: 'My Profile', icon: Settings2, iconColor: 'text-slate-400' }, // Slate color for general settings
+
+    // 7. Admin/Management (SuperAdmin, SocietyAdmin)
+    { href: '/dashboard/admin-approvals', label: 'User Account Approvals', icon: UsersRound, iconColor: 'text-pink-500', isUserTypeCheck: (u, iA, iSA, iOR, iG) => iA() || iSA() },
+    { href: '/dashboard/admin/manage-notices', label: 'Manage Notices', icon: ClipboardEdit, iconColor: 'text-indigo-500', isUserTypeCheck: (u, iA, iSA, iOR, iG) => iA() || iSA() },
+    { href: '/dashboard/admin/manage-meetings', label: 'Manage Meetings', icon: UsersRound, iconColor: 'text-lime-500', isUserTypeCheck: (u, iA, iSA, iOR, iG) => iA() || iSA() },
+    { href: '/dashboard/admin/manage-facilities', label: 'Manage Facilities', icon: Building, iconColor: 'text-teal-600', isUserTypeCheck: (u, iA, iSA, iOR, iG) => iA() || iSA() },
+    { href: '/dashboard/admin/manage-vendors', label: 'Manage Vendors', icon: ListFilter, iconColor: 'text-yellow-500', isUserTypeCheck: (u, iA, iSA, iOR, iG) => iA() || iSA() },
+    { href: '/dashboard/admin/manage-parking', label: 'Manage Parking', icon: ParkingSquare, iconColor: 'text-orange-600', isUserTypeCheck: (u, iA, iSA, iOR, iG) => iA() || iSA() },
+    { href: '/dashboard/admin/society-settings', label: 'Society Settings', icon: Building2, iconColor: 'text-rose-400', isUserTypeCheck: (u, iA, iSA, iOR, iG) => iA() || iSA() },
+
+    // 8. SuperAdmin Only
+    { href: '/dashboard/admin/manage-societies', label: 'Manage Societies', icon: Briefcase, iconColor: 'text-gray-400', isUserTypeCheck: (u, iA, iSA, iOR, iG) => iA() },
+    { href: '/dashboard/admin/audit-logs', label: 'Audit Logs', icon: ShieldAlert, iconColor: 'text-yellow-600', isUserTypeCheck: (u, iA, iSA, iOR, iG) => iA() },
+    { href: '/dashboard/admin/manage-personas', label: 'Manage Personas', icon: Sparkles, iconColor: 'text-indigo-500', isUserTypeCheck: (u, iA, iSA, iOR, iG) => iA() }
   ];
   return allItems.filter(item => checkVisibility(user, isAdminFn, isSocietyAdminFn, isOwnerOrRenterFn, isGuardFn, item));
 };
 
-
-export function AppSidebar() {
+const SidebarNav = () => {
   const pathname = usePathname();
-  const { user, logout, isAdmin, isSocietyAdmin, isOwnerOrRenter, isGuard, societyInfo } = useAuth();
-  const currentAppName = societyInfo?.societyName && societyInfo.societyName.trim() !== '' ? societyInfo.societyName : APP_NAME;
-
-
-  const navItems = React.useMemo(() => getNavItems(user, isAdmin, isSocietyAdmin, isOwnerOrRenter, isGuard), [user, isAdmin, isSocietyAdmin, isOwnerOrRenter, isGuard]);
-
-  const logoutTooltipProps = React.useMemo(() => ({
-    children: "Logout",
-    className: "ml-2"
-  }), []);
-
-  // DEBUG: Log user and role for troubleshooting sidebar visibility
-  console.log('[AppSidebar] user:', user);
-  if (user) console.log('[AppSidebar] user.role:', user.role);
-
-  if (!user) return null;
+  const { user, isAdmin, isSocietyAdmin, isOwnerOrRenter, isGuard, logout } = useAuth();
+  const items = useMemo(() => getNavItems(user, isAdmin, isSocietyAdmin, isOwnerOrRenter, isGuard), [user, isAdmin, isSocietyAdmin, isOwnerOrRenter, isGuard]);
 
   return (
-      <Sidebar collapsible="icon" className="hidden border-r bg-sidebar text-sidebar-foreground shadow-sm md:flex">
-        <SidebarHeader className="p-4 border-b border-sidebar-border">
-          <Link href="/dashboard" className="flex items-center gap-2 group-data-[collapsible=icon]:justify-center">
-             <ShieldCheckIcon className="h-7 w-7 text-sidebar-primary" />
-            <span className="text-xl font-semibold text-sidebar-primary group-data-[collapsible=icon]:hidden">{currentAppName}</span>
-          </Link>
-        </SidebarHeader>
-
-        <SidebarContent className="p-2">
-          <SidebarMenu>
-            {navItems.map((item) => {
-              const isActive = pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href) && item.href.split('/').length >= 3);
-              const tooltipProps = React.useMemo(() => ({
-                children: item.label,
-                className: "ml-2"
-              }), [item.label]);
-
-              return (
-                <SidebarMenuItem key={item.href}>
-                  <SidebarMenuButton
-                    asChild
-                    isActive={isActive}
-                    tooltip={tooltipProps}
-                    disabled={item.disabled}
-                    className="justify-start group"
-                  >
-                    <Link href={item.href}>
-                      <item.icon className={cn("h-5 w-5", item.iconColor || 'text-sidebar-foreground')} />
-                      <span className="group-data-[collapsible=icon]:hidden group-hover/menu-item:font-semibold">{item.label}</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              );
-            })}
-          </SidebarMenu>
-        </SidebarContent>
-
-        <SidebarFooter className="p-2 border-t border-sidebar-border">
-           <SidebarMenuButton
-              tooltip={logoutTooltipProps}
-              className="justify-start group"
-              onClick={logout}
-            >
-              <LogOut className="h-5 w-5 text-red-500" />
-              <span className="group-data-[collapsible=icon]:hidden group-hover:font-semibold">Logout</span>
-          </SidebarMenuButton>
-        </SidebarFooter>
-      </Sidebar>
+    <Sidebar>
+      <SidebarHeader>
+        <Link href='/' className='flex items-center space-x-2'>
+          <h1 className='text-lg font-semibold'>{APP_NAME}</h1>
+        </Link>
+      </SidebarHeader>
+      <SidebarContent>
+        <SidebarMenu>
+          {items.map(item => (
+            <SidebarMenuItem key={item.href} className={cn('rounded-md', { 'opacity-50 cursor-not-allowed': item.disabled })}>
+              <Link href={item.href} className='flex items-center p-2 text-sm font-medium'>
+                <item.icon className={cn('mr-3 h-5 w-5', item.iconColor)} />
+                <span className='flex-1'>{item.label}</span>
+                {pathname === item.href && <span className='text-xs font-semibold text-sky-500'>&nbsp;&gt;</span>}
+              </Link>
+            </SidebarMenuItem>
+          ))}
+        </SidebarMenu>
+      </SidebarContent>
+      <SidebarFooter>
+        <div className='flex items-center justify-start p-4 text-sm'>
+          <button onClick={logout} className='flex items-center text-red-500'>
+            <LogOut className='mr-2 h-4 w-4' />
+            Logout
+          </button>
+        </div>
+      </SidebarFooter>
+    </Sidebar>
   );
+};
+
+export default SidebarNav;
+export function AppSidebar() {
+  return <SidebarNav />;
 }

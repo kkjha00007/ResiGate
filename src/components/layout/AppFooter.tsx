@@ -1,4 +1,3 @@
-
 // src/components/layout/AppFooter.tsx
 import React from 'react';
 import { APP_NAME } from '@/lib/constants';
@@ -10,7 +9,9 @@ export function AppFooter() {
   return (
     <footer className="py-4 px-6 text-center text-xs text-muted-foreground border-t bg-card">
       <p>
-        {APP_NAME} © {currentYear} | Made in India with <Heart className="inline-block h-3 w-3 text-red-500 fill-red-500" />
+        {APP_NAME} © {currentYear} | Made with{' '}
+        <Heart className="inline-block h-3 w-3 text-red-500 fill-red-500" /> in
+        India
       </p>
     </footer>
   );

@@ -1,4 +1,3 @@
-
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -86,10 +85,10 @@ export function VisitorEntryForm() {
       toast({ title: 'Photo "Handling"', description: 'Photo upload is mocked. Using placeholder.' });
     }
 
-    const submissionData: Omit<VisitorEntry, 'id' | 'entryTimestamp' | 'tokenCode' | 'enteredBy'> & { visitorPhotoUrl?: string } = {
+    const submissionData = {
       ...data,
       visitorPhotoUrl,
-      enteredBy: user.id, 
+      societyId: user.societyId, // Always include societyId for all roles
     };
     delete (submissionData as any).visitorPhoto;
 

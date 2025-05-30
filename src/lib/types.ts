@@ -290,3 +290,14 @@ export interface AuditLogEntry {
   userAgent?: string;
 }
 
+export interface Persona {
+  id: string;
+  societyId?: string; // If undefined, global persona (SuperAdmin only)
+  name: string;
+  description?: string;
+  roleKeys: UserRole[];
+  featureAccess: {
+    [featureKey: string]: boolean;
+  };
+}
+

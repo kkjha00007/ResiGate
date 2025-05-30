@@ -5,16 +5,24 @@ import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 
 export default function AdminApprovalsPage() {
-  const { user, isLoading, isAdmin } = useAuth();
+  const { user, isLoading, isAdmin, isSocietyAdmin } = useAuth();
   const router = useRouter();
 
-  useEffect(() => {
-    if (!isLoading && (!user || !isAdmin())) {
-      router.replace('/dashboard'); 
+  // Helper to check admin access (support both isAdmin and isSocietyAdmin if available)
+  const hasAdminAccess = () => {
+    if (typeof isSocietyAdmin === 'function') {
+      return isAdmin() || isSocietyAdmin();
     }
-  }, [user, isLoading, isAdmin, router]);
+    return isAdmin();
+  };
 
-  if (isLoading || !user || !isAdmin()) {
+  useEffect(() => {
+    if (!isLoading && (!user || !hasAdminAccess())) {
+      router.replace('/no-access'); 
+    }
+  }, [user, isLoading, isAdmin, isSocietyAdmin, router]);
+
+  if (isLoading || !user || !hasAdminAccess()) {
     return (
       <div className="flex h-[calc(100vh-10rem)] items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>

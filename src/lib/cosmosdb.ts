@@ -32,6 +32,7 @@ export const facilitiesContainerId = process.env.COSMOS_FACILITIES_CONTAINER_ID 
 
 // New Container ID for Societies
 export const societiesContainerId = process.env.COSMOS_SOCIETIES_CONTAINER_ID || "Societies";
+export const personasContainerId = process.env.COSMOS_PERSONAS_CONTAINER_ID || "Personas";
 
 // --- Audit Logs Container Setup ---
 const auditLogsContainerId = process.env.COSMOS_AUDIT_LOGS_CONTAINER_ID || "AuditLogs";
@@ -49,39 +50,12 @@ export const database = client.database(databaseId);
 let usersContainerInstance: ReturnType<typeof database.container> | undefined;
 export let usersContainerReady: Promise<void>;
 
-async function ensureUsersContainerAndWait() {
-  try {
-    // Check if the container exists and has the correct partition key
-    const { resources: containers } = await database.containers.readAll().fetchAll();
-    const usersContainerMeta = containers.find((c: any) => c.id === usersContainerId);
-    if (usersContainerMeta) {
-      const pkPaths = usersContainerMeta.partitionKey?.paths || [];
-      if (!pkPaths.includes('/societyId')) {
-        const msg = `[CosmosDB] Users container exists but has wrong partition key: ${JSON.stringify(pkPaths)}. Expected: ['/societyId']`;
-        if (process.env.NODE_ENV === 'development') {
-          console.warn(msg + ' Attempting to delete and recreate container in development.');
-          await database.container(usersContainerId).delete();
-        } else {
-          throw new Error(msg + ' (Refusing to delete in production!)');
-        }
-      }
-    }
-    if (!usersContainerInstance) {
-      const { container } = await database.containers.createIfNotExists({
-        id: usersContainerId,
-        partitionKey: { paths: ['/societyId'] }
-        // throughput removed for serverless
-      });
-      usersContainerInstance = container;
-    }
-  } catch (err) {
-    console.error('[CosmosDB] ensureUsersContainerAndWait error:', err);
-    throw err;
-  }
-}
-
-// Top-level promise to ensure container is ready before export
-usersContainerReady = ensureUsersContainerAndWait();
+// Refactored: All container creation is handled by initializeCosmosDB
+// usersContainerReady now depends on initializeCosmosDB
+usersContainerReady = (async () => {
+  await initializeCosmosDB();
+  usersContainerInstance = database.container(usersContainerId);
+})();
 
 export const getUsersContainer = async () => {
   try {
@@ -105,9 +79,8 @@ export const committeeMembersContainer = database.container(committeeMembersCont
 export const societySettingsContainer = database.container(societySettingsContainerId);
 export const parkingSpotsContainer = database.container(parkingSpotsContainerId);
 export const facilitiesContainer = database.container(facilitiesContainerId);
-
-// New container instance for Societies
 export const societiesContainer = database.container(societiesContainerId);
+export const personasContainer = database.container(personasContainerId);
 
 export const auditLogsContainer = database.container(auditLogsContainerId);
 
@@ -159,14 +132,14 @@ export async function initializeCosmosDB() {
       { id: societySettingsContainerId, partitionKey: { paths: ['/societyId'] } },
       { id: parkingSpotsContainerId, partitionKey: { paths: ['/societyId'] } },
       { id: facilitiesContainerId, partitionKey: { paths: ['/societyId'] } },
+      { id: personasContainerId, partitionKey: { paths: ['/societyId'] } },
       // Societies container uses '/id' as partition key (each society is a root doc)
       { id: societiesContainerId, partitionKey: { paths: ['/id'] } },
     ];
 
     for (const containerDef of containerDefinitions) {
-      // Only attempt to create the new 'Societies' container in this batch.
-      // Creation/recreation of other containers will be handled when their partition keys change.
-      if (containerDef.id === societiesContainerId) {
+      // Always ensure Personas and Societies containers exist
+      if (containerDef.id === societiesContainerId || containerDef.id === personasContainerId) {
         try {
           console.log(`Ensuring container '${containerDef.id}' exists...`);
           const { container } = await db.containers.createIfNotExists(containerDef);
@@ -181,20 +154,6 @@ export async function initializeCosmosDB() {
     console.error("Error initializing Cosmos DB:", error.message || error);
   }
 }
-
-// Ensure Users container exists on app startup
-async function ensureUsersContainerOnStartup() {
-  if (!endpoint || !key || !databaseId) return;
-  const { database } = await client.databases.createIfNotExists({ id: databaseId });
-  await database.containers.createIfNotExists({
-    id: usersContainerId,
-    partitionKey: { paths: ['/societyId'] }
-    // throughput removed for serverless
-  });
-}
-
-// Immediately invoke on module load
-ensureUsersContainerOnStartup();
 
 // Initialize DB on server start (for environments like Next.js server components/API routes)
 // Ensure this runs only once, typically at module load for server-side contexts.

@@ -1,4 +1,3 @@
-
 // src/app/dashboard/payment-details/page.tsx
 'use client';
 
@@ -13,7 +12,7 @@ import { EditPaymentDetailsDialog } from '@/components/dashboard/admin/EditPayme
 import { Skeleton } from '@/components/ui/skeleton';
 
 export default function PaymentDetailsPage() {
-  const { user, isLoading: authLoading, isOwnerOrRenter, isAdmin, societyPaymentDetails, fetchSocietyPaymentDetails } = useAuth();
+  const { user, isLoading: authLoading, isOwnerOrRenter, isAdmin, isSocietyAdmin, societyPaymentDetails, fetchSocietyPaymentDetails } = useAuth();
   const router = useRouter();
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isLoadingDetails, setIsLoadingDetails] = useState(true);
@@ -69,7 +68,7 @@ export default function PaymentDetailsPage() {
     );
   }
   
-  if (!user || (!isOwnerOrRenter() && !isAdmin())) {
+  if (!user || (!isOwnerOrRenter() && !isAdmin() && !isSocietyAdmin())) {
      router.replace('/dashboard'); // Should not happen if useEffect above works, but good failsafe
      return <div className="flex h-[calc(100vh-10rem)] items-center justify-center"><Loader2 className="h-12 w-12 animate-spin text-primary"/></div>;
   }
@@ -97,7 +96,7 @@ export default function PaymentDetailsPage() {
                 <CardDescription>Details for paying your society maintenance fees.</CardDescription>
               </div>
             </div>
-            {isAdmin() && (
+            {(isAdmin() || isSocietyAdmin()) && (
               <Button onClick={() => setIsEditDialogOpen(true)} variant="outline">
                 <Edit3 className="mr-2 h-4 w-4" /> Edit Details
               </Button>
@@ -157,7 +156,7 @@ export default function PaymentDetailsPage() {
           </div>
         </CardContent>
       </Card>
-      {isAdmin() && societyPaymentDetails && (
+      {(isAdmin() || isSocietyAdmin()) && societyPaymentDetails && (
         <EditPaymentDetailsDialog
           isOpen={isEditDialogOpen}
           onOpenChange={setIsEditDialogOpen}

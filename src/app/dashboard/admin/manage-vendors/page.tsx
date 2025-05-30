@@ -1,4 +1,3 @@
-
 // src/app/dashboard/admin/manage-vendors/page.tsx
 'use client';
 import { PendingVendorsTable } from '@/components/dashboard/admin/PendingVendorsTable';
@@ -11,16 +10,16 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 // import { ApprovedVendorsTable } from '@/components/dashboard/admin/ApprovedVendorsTable';
 
 export default function ManageVendorsPage() {
-  const { user, isLoading, isAdmin } = useAuth();
+  const { user, isLoading, isAdmin, isSocietyAdmin } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
-    if (!isLoading && (!user || !isAdmin())) {
-      router.replace('/dashboard'); 
+    if (!isLoading && (!user || (!isAdmin() && !isSocietyAdmin()))) {
+      router.replace('/no-access'); 
     }
-  }, [user, isLoading, isAdmin, router]);
+  }, [user, isLoading, isAdmin, isSocietyAdmin, router]);
 
-  if (isLoading || !user || !isAdmin()) {
+  if (isLoading || !user || (!isAdmin() && !isSocietyAdmin())) {
     return (
       <div className="flex h-[calc(100vh-10rem)] items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
