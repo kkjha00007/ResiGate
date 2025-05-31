@@ -36,7 +36,7 @@ export async function GET(request: NextRequest) {
       query: 'SELECT * FROM c WHERE c.societyId = @societyId ORDER BY c.name ASC',
       parameters: [{ name: '@societyId', value: societyId }],
     };
-    const { resources } = await facilitiesContainer.items.query<Facility>(querySpec).fetchAll();
+    const { resources } = await facilitiesContainer.items.query(querySpec, { partitionKey: societyId }).fetchAll();
     return NextResponse.json(resources, { status: 200 });
   } catch (error) {
     console.error('Get All Facilities API error:', error);

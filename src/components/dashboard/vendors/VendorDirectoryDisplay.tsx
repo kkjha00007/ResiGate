@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useEffect, useState, useMemo } from 'react';
@@ -17,13 +16,15 @@ import Link from 'next/link';
 const ALL_CATEGORIES_SENTINEL_VALUE = "__ALL_CATEGORIES__"; // Sentinel value for "All Categories"
 
 export function VendorDirectoryDisplay() {
-  const { approvedVendors, fetchApprovedVendors, isLoading: authLoading } = useAuth();
+  const { approvedVendors, fetchApprovedVendors, isLoading: authLoading, user } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<VendorCategory | ''>(''); // '' means all categories
 
   useEffect(() => {
-    fetchApprovedVendors();
-  }, [fetchApprovedVendors]);
+    if (user?.societyId) {
+      fetchApprovedVendors();
+    }
+  }, [fetchApprovedVendors, user?.societyId]);
 
   const filteredVendors = useMemo(() => {
     return approvedVendors

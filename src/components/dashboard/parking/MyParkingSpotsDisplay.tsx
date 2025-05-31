@@ -1,4 +1,3 @@
-
 // src/components/dashboard/parking/MyParkingSpotsDisplay.tsx
 'use client';
 
@@ -9,6 +8,8 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Car, Bike, MapPin, Hash, ParkingCircleOff, ParkingSquare } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
+import { ParkingRequestForm } from './ParkingRequestForm';
+import { MyParkingRequestsList } from './MyParkingRequestsList';
 
 export function MyParkingSpotsDisplay() {
   const { myParkingSpots, fetchMyParkingSpots, isLoading: authIsLoading, user } = useAuth();
@@ -39,10 +40,16 @@ export function MyParkingSpotsDisplay() {
 
   if (myParkingSpots.length === 0) {
     return (
-      <div className="text-center py-10 text-muted-foreground">
-        <ParkingCircleOff className="h-16 w-16 mx-auto mb-4 opacity-50" />
-        <p className="text-lg">No parking spot has been assigned to you at the moment.</p>
-        <p className="text-sm mt-1">Please contact the society admin for allocation inquiries.</p>
+      <div>
+        <div className="text-center py-10 text-muted-foreground">
+          <ParkingCircleOff className="h-16 w-16 mx-auto mb-4 opacity-50" />
+          <p className="text-lg">No parking spot has been assigned to you at the moment.</p>
+          <p className="text-sm mt-1">If you need a parking spot, you can request allocation below.</p>
+        </div>
+        <div className="max-w-xl mx-auto">
+          <ParkingRequestForm />
+        </div>
+        <MyParkingRequestsList />
       </div>
     );
   }

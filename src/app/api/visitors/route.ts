@@ -29,7 +29,7 @@ export async function GET(request: NextRequest) {
       query: 'SELECT * FROM c WHERE c.societyId = @societyId',
       parameters: [{ name: '@societyId', value: societyId }],
     };
-    const { resources: visitorItems } = await visitorEntriesContainer.items.query<VisitorEntry>(querySpec).fetchAll();
+    const { resources: visitorItems } = await visitorEntriesContainer.items.query(querySpec, { partitionKey: societyId }).fetchAll();
     return NextResponse.json(visitorItems, { status: 200 });
   } catch (error: any) {
     console.error('Get Visitor Entries API error:', error);

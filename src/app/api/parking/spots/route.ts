@@ -52,14 +52,16 @@ export async function POST(request: NextRequest) {
 
 // Get all parking spots (Admin only)
 export async function GET(request: NextRequest) {
-  // const isAdmin = true; // Replace with actual auth check
-  // if (!isAdmin) return NextResponse.json({ message: 'Unauthorized' }, { status: 403 });
-
+  const societyId = request.headers.get('x-society-id') || request.nextUrl.searchParams.get('societyId');
+  if (!societyId) {
+    return NextResponse.json({ message: 'societyId is required' }, { status: 400 });
+  }
   try {
     const querySpec = {
-      query: "SELECT * FROM c" // Removed ORDER BY c.location ASC, c.spotNumber ASC
+      query: 'SELECT * FROM c WHERE c.societyId = @societyId',
+      parameters: [{ name: '@societyId', value: societyId }],
     };
-    const { resources } = await parkingSpotsContainer.items.query<ParkingSpot>(querySpec).fetchAll();
+    const { resources } = await parkingSpotsContainer.items.query(querySpec, { partitionKey: societyId }).fetchAll();
     return NextResponse.json(resources, { status: 200 });
   } catch (error) {
     console.error('Get All Parking Spots API error:', error);

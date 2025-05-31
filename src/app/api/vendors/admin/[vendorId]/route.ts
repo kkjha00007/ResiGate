@@ -1,4 +1,3 @@
-
 // src/app/api/vendors/admin/[vendorId]/route.ts
 import { NextResponse, type NextRequest } from 'next/server';
 import { vendorsContainer } from '@/lib/cosmosdb';
@@ -29,8 +28,7 @@ export async function PUT(
         return NextResponse.json({ message: 'Vendor not found' }, { status: 404 });
     }
     const existingVendor = existingVendors[0];
-    const vendorCategoryForPartitionKey = existingVendor.category;
-
+    const vendorSocietyIdForPartitionKey = existingVendor.societyId;
 
     const updatedVendorData: Partial<Vendor> = { ...otherUpdates };
 
@@ -51,8 +49,17 @@ export async function PUT(
         id: existingVendor.id, // Ensure ID is not changed
         category: existingVendor.category, // Ensure partition key is not changed
     };
+
+    // Debug log for partition key and document
+    console.log('Approving vendor:', {
+      vendorId,
+      partitionKey: vendorSocietyIdForPartitionKey,
+      docSocietyId: finalVendorData.societyId,
+      docId: finalVendorData.id,
+      doc: finalVendorData
+    });
     
-    const { resource: replacedVendor } = await vendorsContainer.item(vendorId, vendorCategoryForPartitionKey).replace(finalVendorData);
+    const { resource: replacedVendor } = await vendorsContainer.item(vendorId, vendorSocietyIdForPartitionKey).replace(finalVendorData);
 
     if (!replacedVendor) {
         return NextResponse.json({ message: 'Failed to update vendor' }, { status: 500 });
@@ -90,9 +97,9 @@ export async function DELETE(
         return NextResponse.json({ message: 'Vendor not found to delete' }, { status: 404 });
     }
     const vendorToDelete = existingVendors[0];
-    const vendorCategoryForPartitionKey = vendorToDelete.category;
+    const vendorSocietyIdForPartitionKey = vendorToDelete.societyId;
 
-    await vendorsContainer.item(vendorId, vendorCategoryForPartitionKey).delete();
+    await vendorsContainer.item(vendorId, vendorSocietyIdForPartitionKey).delete();
     
     return NextResponse.json({ message: `Vendor submission ${vendorId} rejected and deleted successfully` }, { status: 200 });
 

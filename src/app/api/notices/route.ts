@@ -100,11 +100,8 @@ export async function GET(request: NextRequest) {
       query: 'SELECT * FROM c WHERE c.isActive = true AND c.societyId = @societyId ORDER BY c.createdAt DESC',
       parameters: [{ name: '@societyId', value: societyId }],
     };
-
-    const { resources: activeNotices } = await noticesContainer.items.query<Notice>(querySpec).fetchAll();
-
+    const { resources: activeNotices } = await noticesContainer.items.query(querySpec, { partitionKey: societyId }).fetchAll();
     return NextResponse.json(activeNotices, { status: 200 });
-
   } catch (error) {
     console.error('Get Active Notices API error:', error);
     const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';

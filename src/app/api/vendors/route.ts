@@ -61,17 +61,19 @@ export async function POST(request: NextRequest) {
 
 // Get all APPROVED vendors
 export async function GET(request: NextRequest) {
+  let societyId = request.nextUrl.searchParams.get('societyId');
+  if (!societyId) {
+    return NextResponse.json({ message: 'Society ID is required.' }, { status: 400 });
+  }
+  societyId = societyId.trim(); // Remove whitespace just in case
+  console.log('API societyId:', societyId, typeof societyId); // Debug log
+  const querySpec = {
+    query: "SELECT * FROM c WHERE c.isApproved = true AND c.societyId = @societyId ORDER BY c.name ASC",
+    parameters: [
+      { name: "@societyId", value: societyId }
+    ]
+  };
   try {
-    const societyId = request.nextUrl.searchParams.get('societyId');
-    if (!societyId) {
-      return NextResponse.json({ message: 'Society ID is required.' }, { status: 400 });
-    }
-    const querySpec = {
-      query: "SELECT * FROM c WHERE c.isApproved = true AND c.societyId = @societyId ORDER BY c.name ASC",
-      parameters: [
-        { name: "@societyId", value: societyId }
-      ]
-    };
     const { resources: approvedVendors } = await vendorsContainer.items.query<Vendor>(querySpec, { partitionKey: societyId }).fetchAll();
     return NextResponse.json(approvedVendors, { status: 200 });
   } catch (error) {

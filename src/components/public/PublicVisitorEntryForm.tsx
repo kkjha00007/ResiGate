@@ -1,4 +1,3 @@
-
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -62,10 +61,21 @@ export function PublicVisitorEntryForm() {
   const onSubmit = async (data: PublicVisitorEntryFormValues) => {
     setIsSubmitting(true);
 
-    const submissionData: Omit<VisitorEntry, 'id' | 'entryTimestamp' | 'tokenCode' | 'enteredBy'> = {
+    // Get societyId from URL query param
+    let societyId: string | null = null;
+    if (typeof window !== 'undefined') {
+      const urlParams = new URLSearchParams(window.location.search);
+      societyId = urlParams.get('societyId');
+    }
+    if (!societyId) {
+      toast({ title: 'Missing Society', description: 'This link is invalid. Please contact your society admin.', variant: 'destructive' });
+      setIsSubmitting(false);
+      return;
+    }
+
+    const submissionData: Omit<VisitorEntry, 'id' | 'entryTimestamp' | 'tokenCode' | 'enteredBy'> & { societyId: string } = {
       ...data,
-      // entryTimestamp and tokenCode will be set by the API
-      // enteredBy will be set by the API to PUBLIC_ENTRY_SOURCE
+      societyId, // Always include societyId from URL
     };
 
     try {

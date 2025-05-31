@@ -61,14 +61,26 @@ export async function POST(request: NextRequest) {
 // Get all complaints for a society
 export async function GET(request: NextRequest) {
   const societyId = request.headers.get('x-society-id') || request.nextUrl.searchParams.get('societyId');
-  if (!societyId) {
+  // If SuperAdmin, allow fetching all complaints (no societyId required)
+  const userRole = request.headers.get('x-user-role');
+  if (!societyId && userRole !== 'superadmin') {
     return NextResponse.json({ message: 'societyId is required' }, { status: 400 });
   }
   try {
-    const querySpec = {
-      query: 'SELECT * FROM c WHERE c.societyId = @societyId ORDER BY c.submittedAt DESC',
-      parameters: [{ name: '@societyId', value: societyId }],
-    };
+    let querySpec;
+    if (userRole === 'superadmin') {
+      // SuperAdmin: fetch all complaints
+      querySpec = {
+        query: 'SELECT * FROM c ORDER BY c.submittedAt DESC',
+        parameters: [],
+      };
+    } else {
+      // SocietyAdmin: fetch only for their society
+      querySpec = {
+        query: 'SELECT * FROM c WHERE c.societyId = @societyId ORDER BY c.submittedAt DESC',
+        parameters: [{ name: '@societyId', value: societyId }],
+      };
+    }
     const { resources: complaints } = await complaintsContainer.items.query<Complaint>(querySpec).fetchAll();
     return NextResponse.json(complaints, { status: 200 });
   } catch (error) {

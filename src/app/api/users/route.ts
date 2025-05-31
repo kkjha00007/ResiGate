@@ -12,12 +12,10 @@ const SALT_ROUNDS = 10;
 // Get all users (potentially for admin) - Requires societyId
 export async function GET(request: NextRequest) {
   const usersContainer = await getUsersContainer();
-  // Accept societyId (not tenantId)
   const societyId = request.nextUrl.searchParams.get('societyId');
   if (!societyId) {
     return NextResponse.json({ message: 'Society ID is required for fetching users.' }, { status: 400 });
   }
-  // Optional: filter by approval status
   const isApprovedParam = request.nextUrl.searchParams.get('isApproved');
   let query = "SELECT * FROM c WHERE c.societyId = @societyId";
   const parameters: any[] = [{ name: "@societyId", value: societyId }];

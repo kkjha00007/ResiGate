@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useEffect, useState } from 'react';
@@ -26,7 +25,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 
 
 export function ParkingSpotsTable() {
-  const { allParkingSpots, fetchAllParkingSpots, deleteParkingSpot, isLoading: authIsLoading, allUsers } = useAuth();
+  const { allParkingSpots, fetchAllParkingSpots, deleteParkingSpot, updateParkingSpot, isLoading: authIsLoading, allUsers } = useAuth();
   const [isProcessing, setIsProcessing] = useState<string | null>(null);
   const [editingSpot, setEditingSpot] = useState<ParkingSpot | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -144,6 +143,27 @@ export function ParkingSpotsTable() {
                         >
                           <Edit3 className="mr-1 h-4 w-4" /> Edit/Assign
                         </Button>
+                        {spot.status === 'allocated' && (
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            onClick={async () => {
+                              setIsProcessing(spot.id);
+                              await updateParkingSpot(spot.id, {
+                                status: 'available',
+                                allocatedToUserId: undefined,
+                                allocatedToFlatNumber: undefined,
+                                vehicleNumber: undefined,
+                              });
+                              setIsProcessing(null);
+                              fetchAllParkingSpots();
+                            }}
+                            disabled={isProcessing === spot.id}
+                            className="ml-2"
+                          >
+                            Deallocate
+                          </Button>
+                        )}
                         <AlertDialog>
                           <AlertDialogTrigger asChild>
                             <Button variant="destructive" size="sm" disabled={isProcessing === spot.id}>

@@ -1,6 +1,7 @@
 'use client';
 import { CreateParkingSpotForm } from '@/components/dashboard/admin/parking/CreateParkingSpotForm';
 import { ParkingSpotsTable } from '@/components/dashboard/admin/parking/ParkingSpotsTable';
+import { ParkingRequestsAdminTable } from '@/components/dashboard/admin/parking/ParkingRequestsAdminTable';
 import { useAuth } from '@/lib/auth-provider';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
@@ -29,6 +30,7 @@ export default function ManageParkingPage() {
       <CreateParkingSpotForm />
       <Separator />
       <ParkingSpotsTable />
+      <ParkingRequestsAdminTable />
     </div>
   );
 }

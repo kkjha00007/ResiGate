@@ -79,6 +79,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ message: 'societyId is required' }, { status: 400 });
   }
   try {
+    // Cosmos DB upsert uses the partition key from the document itself.
+    // Ensure the document has the correct societyId (partition key) and id fields.
     const paymentDetails: SocietyPaymentDetails = {
       id: societyId,
       societyId,
@@ -90,9 +92,16 @@ export async function POST(request: NextRequest) {
       accountType: body.accountType || '',
       upiId: body.upiId || '',
     };
+    // Do NOT pass a partitionKey option here; the SDK uses paymentDetails.societyId automatically.
     const { resource } = await societySettingsContainer.items.upsert(paymentDetails);
     return NextResponse.json(resource, { status: 200 });
   } catch (error: any) {
     return NextResponse.json({ message: 'Internal server error', error: error.message }, { status: 500 });
   }
+}
+
+// Update payment details for a society (PUT, same as POST)
+export async function PUT(request: NextRequest) {
+  // Reuse the POST logic for upsert
+  return POST(request);
 }

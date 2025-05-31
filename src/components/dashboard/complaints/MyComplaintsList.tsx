@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useEffect } from 'react';
@@ -83,19 +82,39 @@ export function MyComplaintsList() {
               </TableHeader>
               <TableBody>
                 {myComplaints.map((complaint) => (
-                  <TableRow key={complaint.id}>
-                    <TableCell>{format(parseISO(complaint.submittedAt), 'PPpp')}</TableCell>
-                    <TableCell className="font-medium">{complaint.subject}</TableCell>
-                    <TableCell>{complaint.category}</TableCell>
-                    <TableCell>
-                      <Badge variant={getStatusVariant(complaint.status)}>
-                        {complaint.status}
-                      </Badge>
-                    </TableCell>
-                    {/* <TableCell className="text-right">
-                      <Button variant="outline" size="sm" disabled>View</Button>
-                    </TableCell> */}
-                  </TableRow>
+                  <React.Fragment key={complaint.id}>
+                    <TableRow>
+                      <TableCell>{format(parseISO(complaint.submittedAt), 'PPpp')}</TableCell>
+                      <TableCell className="font-medium">{complaint.subject}</TableCell>
+                      <TableCell>{complaint.category}</TableCell>
+                      <TableCell>
+                        <Badge variant={getStatusVariant(complaint.status)}>
+                          {complaint.status}
+                        </Badge>
+                      </TableCell>
+                    </TableRow>
+                    {/* Show replies if any */}
+                    {complaint.replies && complaint.replies.length > 0 && (
+                      <TableRow>
+                        <TableCell colSpan={4} className="bg-slate-50 text-xs text-slate-700">
+                          <div className="pl-2">
+                            <div className="font-semibold mb-1">Replies from Admin:</div>
+                            <ul className="space-y-1">
+                              {complaint.replies.map((r, idx) => (
+                                <li key={idx} className="flex gap-2 items-center">
+                                  <span className="inline-block px-2 py-1 bg-blue-100 rounded text-blue-900 font-medium">{format(parseISO(r.repliedAt), 'PPpp')}</span>
+                                  <span className="inline-block px-2 py-1 bg-slate-100 rounded text-slate-800">{r.reply}</span>
+                                  {r.repliedBy && (
+                                    <span className="ml-2 text-xs text-muted-foreground">— {r.repliedBy}</span>
+                                  )}
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </React.Fragment>
                 ))}
               </TableBody>
             </Table>

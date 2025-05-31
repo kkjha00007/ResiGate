@@ -82,28 +82,25 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// Get all active and upcoming meetings (for all users)
+// Get all meetings for a society
 export async function GET(request: NextRequest) {
   const societyId = request.headers.get('x-society-id') || request.nextUrl.searchParams.get('societyId');
   if (!societyId) {
     return NextResponse.json({ message: 'societyId is required' }, { status: 400 });
   }
   try {
-    const now = new Date().toISOString();
+    // Strict society isolation: Only fetch meetings where c.societyId matches the partition key
     const querySpec = {
-      query: 'SELECT * FROM c WHERE c.isActive = true AND c.dateTime >= @now AND c.societyId = @societyId ORDER BY c.dateTime ASC',
-      parameters: [
-        { name: '@now', value: now },
-        { name: '@societyId', value: societyId },
-      ],
+      query: 'SELECT * FROM c WHERE c.societyId = @societyId ORDER BY c.dateTime DESC',
+      parameters: [{ name: '@societyId', value: societyId }],
     };
-
-    const { resources: upcomingMeetings } = await meetingsContainer.items.query<Meeting>(querySpec).fetchAll();
-
-    return NextResponse.json(upcomingMeetings, { status: 200 });
-
+    // Enforce partitionKey in query options
+    const { resources: meetings } = await meetingsContainer.items.query(querySpec, { partitionKey: societyId }).fetchAll();
+    // Filter again in-memory as a failsafe (should not be needed, but double isolation)
+    const strictlyIsolatedMeetings = meetings.filter((m: any) => m.societyId === societyId);
+    return NextResponse.json(strictlyIsolatedMeetings, { status: 200 });
   } catch (error) {
-    console.error('Get Upcoming Meetings API error:', error);
+    console.error('Get Meetings API error:', error);
     const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
     return NextResponse.json({ message: 'Internal server error', error: errorMessage }, { status: 500 });
   }

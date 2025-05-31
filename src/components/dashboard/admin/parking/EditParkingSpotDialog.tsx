@@ -1,4 +1,3 @@
-
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -33,7 +32,7 @@ import { Edit3, Save, Car, Bike, MapPin, Home, User, Hash, Info } from 'lucide-r
 
 const editParkingSpotSchema = z.object({
   location: z.string().min(3, { message: 'Location must be at least 3 characters.' }).max(100, "Max 100 chars"),
-  status: z.enum(PARKING_SPOT_STATUSES, { required_error: "Status is required."}),
+  status: z.enum(["available", "allocated"], { required_error: "Status is required." }),
   allocatedToFlatNumber: z.string().optional(),
   allocatedToUserId: z.string().optional(),
   vehicleNumber: z.string().optional(),
@@ -219,7 +218,6 @@ export function EditParkingSpotDialog({
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="">None (Make Available)</SelectItem>
                           {availableResidents.map((res) => (
                             <SelectItem key={res.id} value={res.id}>
                               {res.flatNumber} - {res.name}

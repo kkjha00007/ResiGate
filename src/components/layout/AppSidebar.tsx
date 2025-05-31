@@ -123,6 +123,7 @@ export const getNavItems = (
 
     // 7. Admin/Management (SuperAdmin, SocietyAdmin)
     { href: '/dashboard/admin-approvals', label: 'User Account Approvals', icon: UsersRound, iconColor: 'text-pink-500', isUserTypeCheck: (u, iA, iSA, iOR, iG) => iA() || iSA() },
+    { href: '/dashboard/admin/complaints', label: 'Complaints (All)', icon: Megaphone, iconColor: 'text-orange-700', isUserTypeCheck: (u, iA, iSA, iOR, iG) => iA() || iSA() },
     { href: '/dashboard/admin/manage-notices', label: 'Manage Notices', icon: ClipboardEdit, iconColor: 'text-indigo-500', isUserTypeCheck: (u, iA, iSA, iOR, iG) => iA() || iSA() },
     { href: '/dashboard/admin/manage-meetings', label: 'Manage Meetings', icon: UsersRound, iconColor: 'text-lime-500', isUserTypeCheck: (u, iA, iSA, iOR, iG) => iA() || iSA() },
     { href: '/dashboard/admin/manage-facilities', label: 'Manage Facilities', icon: Building, iconColor: 'text-teal-600', isUserTypeCheck: (u, iA, iSA, iOR, iG) => iA() || iSA() },

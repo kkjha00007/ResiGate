@@ -81,6 +81,7 @@ export const parkingSpotsContainer = database.container(parkingSpotsContainerId)
 export const facilitiesContainer = database.container(facilitiesContainerId);
 export const societiesContainer = database.container(societiesContainerId);
 export const personasContainer = database.container(personasContainerId);
+export const parkingRequestsContainer = database.container('ParkingRequests');
 
 export const auditLogsContainer = database.container(auditLogsContainerId);
 
@@ -133,6 +134,7 @@ export async function initializeCosmosDB() {
       { id: parkingSpotsContainerId, partitionKey: { paths: ['/societyId'] } },
       { id: facilitiesContainerId, partitionKey: { paths: ['/societyId'] } },
       { id: personasContainerId, partitionKey: { paths: ['/societyId'] } },
+      { id: 'ParkingRequests', partitionKey: { paths: ['/societyId'] } },
       // Societies container uses '/id' as partition key (each society is a root doc)
       { id: societiesContainerId, partitionKey: { paths: ['/id'] } },
     ];

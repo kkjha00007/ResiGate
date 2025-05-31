@@ -18,7 +18,18 @@ export default function DashboardLayout({
 
   useEffect(() => {
     if (!isLoading && !user) {
-      router.replace('/');
+      router.replace('/login'); // Use /login for unauthenticated users
+      return;
+    }
+    if (!isLoading && user && typeof window !== 'undefined') {
+      const path = window.location.pathname;
+      if (path.startsWith('/dashboard/admin')) {
+        const isSuperAdmin = user.role === 'superadmin';
+        const isSocietyAdmin = user.role === 'societyAdmin';
+        if (!isSuperAdmin && !isSocietyAdmin) {
+          router.replace('/no-access'); // Use /no-access for forbidden
+        }
+      }
     }
   }, [user, isLoading, router]);
 

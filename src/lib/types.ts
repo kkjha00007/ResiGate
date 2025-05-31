@@ -96,6 +96,13 @@ export const COMPLAINT_CATEGORIES_VALUES = [
 ] as const;
 export type ComplaintCategory = (typeof COMPLAINT_CATEGORIES_VALUES)[number];
 
+export interface ComplaintReply {
+  reply: string;
+  repliedAt: string;
+  repliedBy?: string;
+  repliedById?: string;
+}
+
 export interface Complaint {
   id: string;
   societyId: string; // Now required
@@ -109,6 +116,7 @@ export interface Complaint {
   status: ComplaintStatus;
   adminNotes?: string;
   resolvedAt?: string; // ISO DateTime string
+  replies?: ComplaintReply[];
 }
 
 export interface Notice {
@@ -299,5 +307,20 @@ export interface Persona {
   featureAccess: {
     [featureKey: string]: boolean;
   };
+}
+
+export interface ParkingRequest {
+  id: string;
+  userId: string;
+  userName: string;
+  flatNumber: string;
+  societyId: string;
+  type: 'car' | 'bike' | 'both';
+  vehicleNumber: string;
+  notes?: string;
+  status: 'pending' | 'approved' | 'queued' | 'rejected';
+  adminComment?: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
