@@ -13,10 +13,11 @@ export default function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const { user, isLoading, logout, isAdmin, isSocietyAdmin, isOwnerOrRenter, isGuard, initialDataFetch } = useAuth();
+  const { user, isLoading, logout, isAdmin, isSocietyAdmin, isOwnerOrRenter, isGuard } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
+    console.log('DashboardLayout user:', user, 'isLoading:', isLoading);
     if (!isLoading && !user) {
       router.replace('/login'); // Use /login for unauthenticated users
       return;

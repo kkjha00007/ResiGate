@@ -4,6 +4,7 @@ import { getUsersContainer, loginAuditsContainer } from '@/lib/cosmosdb'; // Cha
 import type { User, LoginAudit } from '@/lib/types'; // Added LoginAudit type
 import bcrypt from 'bcryptjs';
 import { v4 as uuidv4 } from 'uuid';
+import { createJWT } from '@/lib/utils'; // Import JWT helper
 
 export async function POST(request: NextRequest) {
   try {
@@ -30,7 +31,6 @@ export async function POST(request: NextRequest) {
     const user = foundUsers[0];
 
     if (!user.password) {
-        console.error(`User ${email} found but has no password hash stored.`);
         return NextResponse.json({ message: 'Authentication error' }, { status: 500 });
     }
 
@@ -56,13 +56,29 @@ export async function POST(request: NextRequest) {
       await loginAuditsContainer.items.create(loginAuditEntry);
     } catch (auditError) {
       // Log the audit error but don't fail the login
-      console.error('Failed to create login audit entry:', auditError);
     }
 
-    return NextResponse.json(userProfile, { status: 200 });
+    // --- Set JWT session cookie ---
+    const token = await createJWT(userProfile);
+    const response = NextResponse.json(userProfile, { status: 200 });
+
+    const hostname = request.headers.get('host') || '';
+    const isLocalhost = /localhost|127\.0\.0\.1/i.test(hostname);
+    const secureFlag = !isLocalhost && process.env.NODE_ENV === 'production';
+
+    response.cookies.set({
+      name: 'session',
+      value: token,
+      httpOnly: true,
+      secure: secureFlag, // Only secure in production and not localhost
+      sameSite: 'lax',
+      path: '/',
+      maxAge: 60 * 15, // 15 minutes
+    });
+    return response;
 
   } catch (error) {
-    console.error('Login API error:', error);
+    // Removed debug logging for production cleanliness
     const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
     return NextResponse.json({ message: 'Internal server error', error: errorMessage }, { status: 500 });
   }

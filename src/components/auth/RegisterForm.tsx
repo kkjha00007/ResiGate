@@ -19,7 +19,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useAuth } from '@/lib/auth-provider';
 import React, { useState, useEffect } from 'react'; // Added useEffect
-import { UserPlus, Eye, EyeOff, Building, ShieldCheck } from 'lucide-react'; // Changed Building icon
+import { UserPlus, Eye, EyeOff, ShieldCheck } from 'lucide-react'; // Changed Building icon
 import { USER_ROLES, SELECTABLE_USER_ROLES } from '@/lib/constants';
 import type { UserRole, Society } from '@/lib/types'; // Added Society type
 
@@ -50,16 +50,20 @@ const registerSchema = z.object({
 type RegisterFormValues = z.infer<typeof registerSchema>;
 
 export function RegisterForm() {
-  const { register, fetchActiveSocietiesList, activeSocietiesList } = useAuth();
+  const { register } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [isSocietiesLoading, setIsSocietiesLoading] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [societies, setSocieties] = useState<Society[]>([]);
 
   useEffect(() => {
     setIsSocietiesLoading(true);
-    fetchActiveSocietiesList().finally(() => setIsSocietiesLoading(false));
-  }, [fetchActiveSocietiesList]);
+    fetch('/api/societies')
+      .then(res => res.ok ? res.json() : [])
+      .then((data: Society[]) => setSocieties(data))
+      .finally(() => setIsSocietiesLoading(false));
+  }, []);
 
   const form = useForm<RegisterFormValues>({
     resolver: zodResolver(registerSchema),
@@ -139,12 +143,12 @@ export function RegisterForm() {
                       </div>
                     </FormControl>
                     <SelectContent>
-                      {!isSocietiesLoading && activeSocietiesList.length === 0 && (
+                      {!isSocietiesLoading && societies.length === 0 && (
                         <SelectItem value="no-societies" disabled>
                           No societies available. Contact admin.
                         </SelectItem>
                       )}
-                      {activeSocietiesList.map((society) => (
+                      {societies.map((society: Society) => (
                         <SelectItem key={society.id} value={society.id}>
                           {society.name} ({society.city || 'N/A'})
                         </SelectItem>

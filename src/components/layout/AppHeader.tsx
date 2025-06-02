@@ -1,4 +1,3 @@
-
 'use client';
 
 import { Button } from '@/components/ui/button';
@@ -17,12 +16,20 @@ interface AppHeaderProps {
 }
 
 export function AppHeader({ navItems }: AppHeaderProps) {
-  const { user, logout, societyInfo } = useAuth();
+  const { user, logout, societyInfo, sessionTimeLeft } = useAuth();
   const currentAppName = societyInfo?.societyName && societyInfo.societyName.trim() !== '' ? societyInfo.societyName : APP_NAME;
 
   const getInitials = (name: string = '') => {
     return name.split(' ').map(n => n[0]).join('').toUpperCase() || 'U';
   };
+
+  // Helper to format seconds as mm:ss
+  function formatSessionTimeLeft(seconds: number | null) {
+    if (seconds === null || seconds < 0) return 'Session expired';
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    return `${m}:${s.toString().padStart(2, '0')}`;
+  }
 
   return (
     <header className="sticky top-0 z-30 flex h-16 items-center gap-4 border-b bg-card px-4 sm:px-6 shadow-sm">
@@ -63,6 +70,31 @@ export function AppHeader({ navItems }: AppHeaderProps) {
       <div className="flex-1">
         {/* Optional: Breadcrumbs or page title can go here */}
       </div>
+
+      {/* Session Timer - always visible, right of header but left of user icon */}
+      {user && (
+        <div className="flex items-center mr-2">
+          <Clock className="h-5 w-5 mr-1" />
+          {sessionTimeLeft === null || sessionTimeLeft < 0 ? (
+            <span className="text-xs font-semibold px-2 py-1 rounded bg-red-100 text-red-700 border border-red-300 animate-pulse">
+              Session expired
+            </span>
+          ) : (
+            <span className={
+              cn(
+                "text-xs font-semibold px-2 py-1 rounded border",
+                sessionTimeLeft < 60
+                  ? "bg-red-100 text-red-700 border-red-300 animate-pulse"
+                  : sessionTimeLeft < 300
+                  ? "bg-orange-100 text-orange-700 border-orange-300"
+                  : "bg-green-100 text-green-700 border-green-300"
+              )
+            }>
+              {formatSessionTimeLeft(sessionTimeLeft)}
+            </span>
+          )}
+        </div>
+      )}
 
       {user && (
         <DropdownMenu>
@@ -105,10 +137,6 @@ export function AppHeader({ navItems }: AppHeaderProps) {
                   <span>Society: {societyInfo.societyName}</span>
                 </div>
               )}
-              <div className="flex items-center px-2 py-1 text-sm text-foreground">
-                <Clock className="mr-3 h-5 w-5 text-muted-foreground" />
-                <span>Last Login: Not tracked</span>
-              </div>
             </div>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={logout} className="cursor-pointer py-2">

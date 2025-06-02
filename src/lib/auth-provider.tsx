@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
+import React, { useEffect, useState, createContext, useContext, ReactNode, useCallback } from 'react';
 import type { User, UserProfile, VisitorEntry, GatePass, UserRole, Complaint, Notice, Meeting, Vendor, CommitteeMember, SocietyPaymentDetails, NeighbourProfile, ParkingSpot, SocietyInfoSettings, Facility, Society } from './types';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
@@ -83,10 +83,8 @@ interface AuthContextType {
   createFacility: (facilityData: Omit<Facility, 'id' | 'createdAt' | 'updatedAt' | 'isActive' | 'societyId'>) => Promise<Facility | null>;
   updateFacility: (facilityId: string, updates: Partial<Omit<Facility, 'id' | 'createdAt' | 'updatedAt' | 'societyId'>>) => Promise<Facility | null>;
   deleteFacility: (facilityId: string) => Promise<boolean>;
-  initialDataFetch: (currentUser: UserProfile | null) => Promise<void>;
-  activeSocietiesList: Pick<Society, 'id' | 'name' | 'city'>[];
-  fetchActiveSocietiesList: () => Promise<Pick<Society, 'id' | 'name' | 'city'>[]>;
-  createSociety: (societyData: { name: string; city: string }) => Promise<Society | null>;
+  sessionExp: number | null;
+  sessionTimeLeft: number | null;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -110,7 +108,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [allParkingSpots, setAllParkingSpotsState] = useState<ParkingSpot[]>([]);
   const [myParkingSpots, setMyParkingSpotsState] = useState<ParkingSpot[]>([]);
   const [facilities, setFacilitiesState] = useState<Facility[]>([]);
-  const [activeSocietiesList, setActiveSocietiesListState] = useState<Pick<Society, 'id' | 'name' | 'city'>[]>([]);
+  const [sessionExp, setSessionExp] = useState<number | null>(null);
+  const [sessionTimeLeft, setSessionTimeLeft] = useState<number | null>(null);
 
 
   const [isLoadingUser, setIsLoadingUser] = useState(true);
@@ -124,59 +123,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const isSocietyAdmin = useCallback(() => user?.role === USER_ROLES.SOCIETY_ADMIN, [user]);
   const isOwnerOrRenter = useCallback(() => user?.role === USER_ROLES.OWNER || user?.role === USER_ROLES.RENTER, [user]);
   const isGuard = useCallback(() => user?.role === USER_ROLES.GUARD, [user]);
-
-  const fetchActiveSocietiesList = useCallback(async (): Promise<Pick<Society, 'id' | 'name' | 'city'>[]> => {
-    try {
-      const response = await fetch('/api/societies');
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ message: 'Failed to fetch societies list.' }));
-        throw new Error(errorData.message || 'Server error fetching societies.');
-      }
-      const societies: Pick<Society, 'id' | 'name' | 'city'>[] = await response.json();
-      setActiveSocietiesListState(societies);
-      return societies;
-    } catch (error: any) {
-      if (typeof window !== 'undefined') {
-        toast({ title: 'Error Loading Societies', description: error.message, variant: 'destructive' });
-      }
-      setActiveSocietiesListState([]);
-      return [];
-    }
-  }, [toast]);
-
-  const createSociety = useCallback(async (societyData: { name: string; city: string }): Promise<Society | null> => {
-    if (!isAdmin()) {
-      if (typeof window !== 'undefined') {
-        toast({ title: 'Unauthorized', description: 'Only Super Admins can create societies.', variant: 'destructive' });
-      }
-      return null;
-    }
-    try {
-      const response = await fetch('/api/societies', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(societyData),
-      });
-      const data = await response.json();
-      if (!response.ok) {
-        if (typeof window !== 'undefined') {
-          toast({ title: 'Society Creation Failed', description: data.message || 'Could not create society.', variant: 'destructive' });
-        }
-        return null;
-      }
-      if (typeof window !== 'undefined') {
-        toast({ title: 'Society Created', description: `Society "${data.name}" has been created successfully.` });
-      }
-      await fetchActiveSocietiesList(); // Refresh the list
-      return data as Society;
-    } catch (error: any) {
-      if (typeof window !== 'undefined') {
-        toast({ title: 'Society Creation Error', description: error.message || 'An unexpected error occurred.', variant: 'destructive' });
-      }
-      return null;
-    }
-  }, [isAdmin, toast, fetchActiveSocietiesList]);
-
 
   const fetchSocietyInfo = useCallback(async () => {
     // This needs to be tenant aware. If superadmin, maybe they select a society?
@@ -196,7 +142,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const info: SocietyInfoSettings = await response.json();
       setSocietyInfoState(info);
     } catch (error: any) {
-      console.error("Failed to fetch society info:", error.message);
       if (typeof window !== 'undefined') {
         toast({ title: 'Error Loading Society Info', description: error.message, variant: 'destructive' });
       }
@@ -220,7 +165,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const noticesData: Notice[] = await response.json();
       setActiveNoticesState(noticesData);
     } catch (error: any) {
-      console.error("Failed to fetch active notices:", error.message);
       if (typeof window !== 'undefined') {
         toast({ title: 'Error Loading Announcements', description: error.message, variant: 'destructive' });
       }
@@ -244,8 +188,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const meetingsData: Meeting[] = await response.json();
       setUpcomingMeetingsState(meetingsData);
     } catch (error: any) {
-      console.error("Failed to fetch upcoming meetings:", error.message);
-       if (typeof window !== 'undefined') {
+      if (typeof window !== 'undefined') {
         toast({ title: 'Error Loading Meetings', description: error.message, variant: 'destructive' });
       }
       setUpcomingMeetingsState([]);
@@ -266,8 +209,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const vendorsData: Vendor[] = await response.json();
       setApprovedVendorsState(vendorsData);
     } catch (error: any) {
-      console.error("Failed to fetch approved vendors:", error.message);
-       if (typeof window !== 'undefined') {
+      if (typeof window !== 'undefined') {
         toast({ title: 'Error Loading Vendor Directory', description: error.message, variant: 'destructive' });
       }
       setApprovedVendorsState([]);
@@ -290,8 +232,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const membersData: CommitteeMember[] = await response.json();
       setCommitteeMembersState(membersData);
     } catch (error: any) {
-      console.error("Failed to fetch committee members:", error.message);
-       if (typeof window !== 'undefined') {
+      if (typeof window !== 'undefined') {
         toast({ title: 'Error Loading Committee Members', description: error.message, variant: 'destructive' });
       }
       setCommitteeMembersState([]);
@@ -311,8 +252,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const details: SocietyPaymentDetails = await response.json();
       setSocietyPaymentDetailsState(details);
     } catch (error: any) {
-      console.error("Failed to fetch society payment details:", error.message);
-       if (typeof window !== 'undefined') {
+      if (typeof window !== 'undefined') {
         toast({ title: 'Error Loading Payment Details', description: error.message, variant: 'destructive' });
       }
       setSocietyPaymentDetailsState(null);
@@ -333,7 +273,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const residentsData: NeighbourProfile[] = await response.json();
       setApprovedResidentsState(residentsData);
     } catch (error: any) {
-      console.error("Failed to fetch approved residents:", error.message);
       if (typeof window !== 'undefined') {
         toast({ title: 'Error Loading Residents Directory', description: error.message, variant: 'destructive' });
       }
@@ -359,7 +298,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const usersData: UserProfile[] = await response.json();
       setAllUsersState(usersData);
     } catch (error: any) {
-      console.error("Failed to fetch users:", error.message);
       if (typeof window !== 'undefined') {
         toast({ title: 'Error Loading Users', description: `Failed to retrieve user list from database. Detail: ${error.message}`, variant: 'destructive' });
       }
@@ -381,7 +319,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const entriesData: VisitorEntry[] = await response.json();
       setVisitorEntriesState(entriesData);
     } catch (error: any) {
-      console.error("Failed to fetch visitor entries:", error.message);
       if (typeof window !== 'undefined') {
         toast({ title: 'Error Loading Visitor Entries', description: error.message, variant: 'destructive' });
       }
@@ -402,7 +339,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const passesData: GatePass[] = await response.json();
       setGatePassesState(passesData);
     } catch (error: any) {
-      console.error("Failed to fetch gate passes:", error.message);
       if (typeof window !== 'undefined') {
         toast({ title: 'Error Loading Gate Passes', description: error.message, variant: 'destructive' });
       }
@@ -423,7 +359,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const complaintsData: Complaint[] = await response.json();
       setMyComplaintsState(complaintsData);
     } catch (error: any) {
-      console.error("Failed to fetch my complaints:", error.message);
       if (typeof window !== 'undefined') {
         toast({ title: 'Error Loading Complaints', description: error.message, variant: 'destructive' });
       }
@@ -444,7 +379,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const noticesData: Notice[] = await response.json();
       setAllNoticesForAdminState(noticesData);
     } catch (error: any) {
-      console.error("Failed to fetch all notices for admin:", error.message);
       if (typeof window !== 'undefined') {
         toast({ title: 'Error Loading Admin Notices', description: error.message, variant: 'destructive' });
       }
@@ -465,7 +399,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const meetingsData: Meeting[] = await response.json();
       setAllMeetingsForAdminState(meetingsData);
     } catch (error: any) {
-      console.error("Failed to fetch all meetings for admin:", error.message);
       if (typeof window !== 'undefined') {
         toast({ title: 'Error Loading Admin Meetings', description: error.message, variant: 'destructive' });
       }
@@ -487,7 +420,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const vendorsData: Vendor[] = await response.json();
       setPendingVendorsState(vendorsData);
     } catch (error: any) {
-      console.error("Failed to fetch pending vendors:", error.message);
       if (typeof window !== 'undefined') {
         toast({ title: 'Error Loading Pending Vendors', description: error.message, variant: 'destructive' });
       }
@@ -509,7 +441,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const spots: ParkingSpot[] = await response.json();
       setAllParkingSpotsState(spots);
     } catch (error: any) {
-      console.error("Failed to fetch all parking spots:", error.message);
       if (typeof window !== 'undefined') {
         toast({ title: 'Error Loading Parking Spots', description: error.message, variant: 'destructive' });
       }
@@ -531,7 +462,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const spots: ParkingSpot[] = await response.json();
       setMyParkingSpotsState(spots);
     } catch (error: any) {
-      console.error("Failed to fetch my parking spots:", error.message);
       if (typeof window !== 'undefined') {
         toast({ title: 'Error Loading Your Parking Spots', description: error.message, variant: 'destructive' });
       }
@@ -553,7 +483,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const facilitiesData: Facility[] = await response.json();
       setFacilitiesState(facilitiesData);
     } catch (error: any) {
-      console.error("Failed to fetch facilities:", error.message);
       if (typeof window !== 'undefined') {
         toast({ title: 'Error Loading Facilities', description: error.message, variant: 'destructive' });
       }
@@ -599,7 +528,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     try {
         await Promise.all([...commonFetches, ...roleSpecificFetches]);
     } catch (error) {
-        console.error("Error during initial data fetch batch:", error);
         // Individual fetch functions should handle their own toasts
     } finally {
         setIsFetchingInitialData(false);
@@ -613,10 +541,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   ]);
 
    useEffect(() => {
-    fetchActiveSocietiesList(); // Fetch societies list on initial mount for registration form
-   }, [fetchActiveSocietiesList]);
-
-   useEffect(() => {
     setIsLoadingUser(true);
     if (user) {
         initialDataFetch(user).finally(() => setIsLoadingUser(false));
@@ -626,87 +550,76 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, [user, initialDataFetch]);
 
 
-  const login = async (email: string, passwordString: string): Promise<boolean> => {
+  // Hydrate user from cookie/session on mount
+  useEffect(() => {
+    const fetchUser = async () => {
+      try {
+        const res = await fetch('/api/auth/me', { credentials: 'include' });
+        if (res.ok) {
+          const user = await res.json();
+          setUser(user);
+          if (user.exp) {
+            setSessionExp(user.exp);
+          } else {
+            setSessionExp(null);
+          }
+        } else {
+          setUser(null);
+          setSessionExp(null);
+        }
+      } catch (err) {
+        setUser(null);
+        setSessionExp(null);
+      }
+      setIsLoadingUser(false);
+    };
+    fetchUser();
+  }, []);
+
+  // Also fetch society info after login
+  const login = useCallback(async (email: string, password: string) => {
     setIsLoadingUser(true);
     try {
-      const response = await fetch('/api/auth/login', {
+      const res = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password: passwordString }),
+        body: JSON.stringify({ email, password }),
+        credentials: 'include',
       });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        if (typeof window !== 'undefined') {
-          toast({ title: 'Login Failed', description: data.message || 'Invalid credentials.', variant: 'destructive' });
-        }
+      if (!res.ok) {
         setUser(null);
         setIsLoadingUser(false);
         return false;
       }
-
-      const loggedInUser = data as UserProfile;
-       if (!loggedInUser.societyId && loggedInUser.role !== USER_ROLES.SUPERADMIN) {
-         if (typeof window !== 'undefined') {
-          toast({ title: 'Login Failed', description: 'Society information missing for this user.', variant: 'destructive' });
+      // Hydrate user from /api/auth/me
+      const meRes = await fetch('/api/auth/me', { credentials: 'include' });
+      if (meRes.ok) {
+        const user = await meRes.json();
+        setUser(user);
+        if (user.exp) {
+          setSessionExp(user.exp);
+        } else {
+          setSessionExp(null);
         }
+        setIsLoadingUser(false);
+        return true;
+      } else {
         setUser(null);
         setIsLoadingUser(false);
         return false;
       }
-
-      if (loggedInUser.role !== USER_ROLES.SUPERADMIN && (loggedInUser.role === USER_ROLES.OWNER || loggedInUser.role === USER_ROLES.RENTER || loggedInUser.role === USER_ROLES.GUARD || loggedInUser.role === USER_ROLES.SOCIETY_ADMIN) && !loggedInUser.isApproved) {
-        if (typeof window !== 'undefined') {
-          toast({ title: 'Login Failed', description: 'Your account is pending approval.', variant: 'destructive' });
-        }
-        setUser(null);
-        setIsLoadingUser(false);
-        return false;
-      }
-
-      setUser(loggedInUser);
-      if (typeof window !== 'undefined') {
-        toast({ title: 'Login Successful', description: `Welcome back, ${loggedInUser.name}!` });
-      }
-      router.push('/dashboard');
-      return true;
-    } catch (error: any) {
-      if (typeof window !== 'undefined') {
-        toast({ title: 'Login Error', description: error.message || 'An unexpected error occurred during login.', variant: 'destructive' });
-      }
+    } catch (err) {
       setUser(null);
       setIsLoadingUser(false);
       return false;
     }
-  };
+  }, []);
 
-  const logout = () => {
+  // Logout: call logout API and clear user
+  const logout = useCallback(async () => {
+    await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
     setUser(null);
-    setAllUsersState([]);
-    setVisitorEntriesState([]);
-    setGatePassesState([]);
-    setMyComplaintsState([]);
-    setActiveNoticesState([]);
-    setAllNoticesForAdminState([]);
-    setUpcomingMeetingsState([]);
-    setAllMeetingsForAdminState([]);
-    setApprovedVendorsState([]);
-    setPendingVendorsState([]);
-    setCommitteeMembersState([]);
-    setSocietyPaymentDetailsState(null);
-    setSocietyInfoState(null);
-    setApprovedResidentsState([]);
-    setAllParkingSpotsState([]);
-    setMyParkingSpotsState([]);
-    setFacilitiesState([]);
-    // activeSocietiesList is kept for registration page
-
-    router.push('/');
-    if (typeof window !== 'undefined') {
-      toast({ title: 'Logged Out', description: 'You have been successfully logged out.' });
-    }
-  };
+  }, []);
 
   const register = async (userData: Omit<User, 'id' | 'isApproved' | 'registrationDate' | 'password' | 'tenantId'> & {password: string, role: Exclude<UserRole, "superadmin" | "societyAdmin">, societyId: string}): Promise<boolean> => {
     setIsLoadingUser(true);
@@ -1028,7 +941,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
       return await response.json();
     } catch (error: any) {
-      console.error("Failed to fetch gate pass by token:", error);
       if (typeof window !== 'undefined') {
         toast({ title: 'Error Fetching Pass', description: error.message, variant: 'destructive' });
       }
@@ -1771,85 +1683,83 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
 
-  const contextValue = {
-      user,
-      isLoading,
-      isLoadingUser,
-      isFetchingInitialData,
-      login,
-      logout,
-      register,
-      approveResident,
-      rejectUser,
-      updateUserProfile,
-      changePassword,
-      isAdmin,
-      isSocietyAdmin,
-      isOwnerOrRenter,
-      isGuard,
-      allUsers,
-      fetchAllUsers,
-      visitorEntries,
-      fetchVisitorEntries,
-      gatePasses,
-      fetchGatePasses,
-      createGatePass,
-      cancelGatePass,
-      markGatePassUsed,
-      fetchGatePassByToken,
-      myComplaints,
-      submitComplaint,
-      fetchMyComplaints,
-      activeNotices,
-      fetchActiveNotices,
-      createNotice,
-      allNoticesForAdmin,
-      fetchAllNoticesForAdmin,
-      updateNotice,
-      deleteNotice,
-      upcomingMeetings,
-      fetchUpcomingMeetings,
-      createMeeting,
-      allMeetingsForAdmin,
-      fetchAllMeetingsForAdmin,
-      updateMeeting,
-      deleteMeeting,
-      approvedVendors,
-      fetchApprovedVendors,
-      submitNewVendor,
-      pendingVendors,
-      fetchPendingVendors,
-      approveVendor,
-      rejectVendor,
-      committeeMembers,
-      fetchCommitteeMembers,
-      addCommitteeMember,
-      updateCommitteeMember,
-      deleteCommitteeMember,
-      societyPaymentDetails,
-      fetchSocietyPaymentDetails,
-      updateSocietyPaymentDetails,
-      societyInfo,
-      fetchSocietyInfo,
-      updateSocietyInfo,
-      approvedResidents,
-      fetchApprovedResidents,
-      allParkingSpots,
-      fetchAllParkingSpots,
-      myParkingSpots,
-      fetchMyParkingSpots,
-      createParkingSpot,
-      updateParkingSpot,
-      deleteParkingSpot,
-      facilities,
-      fetchFacilities,
-      createFacility,
-      updateFacility,
-      deleteFacility,
-      initialDataFetch,
-      activeSocietiesList,
-      fetchActiveSocietiesList,
-      createSociety,
+  const contextValue: AuthContextType = {
+    user,
+    isLoading,
+    isLoadingUser,
+    isFetchingInitialData,
+    login,
+    logout,
+    register,
+    approveResident,
+    rejectUser,
+    updateUserProfile,
+    changePassword,
+    isAdmin,
+    isSocietyAdmin,
+    isOwnerOrRenter,
+    isGuard,
+    allUsers,
+    fetchAllUsers,
+    visitorEntries,
+    fetchVisitorEntries,
+    gatePasses,
+    fetchGatePasses,
+    createGatePass,
+    cancelGatePass,
+    markGatePassUsed,
+    fetchGatePassByToken,
+    myComplaints,
+    submitComplaint,
+    fetchMyComplaints,
+    activeNotices,
+    fetchActiveNotices,
+    createNotice,
+    allNoticesForAdmin,
+    fetchAllNoticesForAdmin,
+    updateNotice,
+    deleteNotice,
+    upcomingMeetings,
+    fetchUpcomingMeetings,
+    createMeeting,
+    allMeetingsForAdmin,
+    fetchAllMeetingsForAdmin,
+    updateMeeting,
+    deleteMeeting,
+    approvedVendors,
+    fetchApprovedVendors,
+    submitNewVendor,
+    pendingVendors,
+    fetchPendingVendors,
+    approveVendor,
+    rejectVendor,
+    committeeMembers,
+    fetchCommitteeMembers,
+    addCommitteeMember,
+    updateCommitteeMember,
+    deleteCommitteeMember,
+    societyPaymentDetails,
+    fetchSocietyPaymentDetails,
+    updateSocietyPaymentDetails,
+    societyInfo,
+    fetchSocietyInfo,
+    updateSocietyInfo,
+    approvedResidents,
+    fetchApprovedResidents,
+    allParkingSpots,
+    fetchAllParkingSpots,
+    myParkingSpots,
+    fetchMyParkingSpots,
+    createParkingSpot,
+    updateParkingSpot,
+    deleteParkingSpot,
+    facilities,
+    fetchFacilities,
+    createFacility,
+    updateFacility,
+    deleteFacility,
+    sessionExp,
+    sessionTimeLeft,
   };
 
   return (
@@ -1859,10 +1769,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   );
 };
 
-export const useAuth = (): AuthContextType => {
+export function useAuth() {
   const context = useContext(AuthContext);
   if (context === undefined) {
     throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;
-};
+}
