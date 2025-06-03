@@ -55,7 +55,7 @@ export function RightPanel() {
   const displayedMeetings = (upcomingMeetings || []).slice(0, 3);
 
   return (
-    <aside className="w-80 min-w-[260px] max-w-xs flex flex-col gap-4 p-4 bg-white/80 dark:bg-slate-900/80 border-l border-slate-200 dark:border-slate-800 shadow-lg h-full">
+    <aside className="w-80 min-w-[260px] max-w-xs flex flex-col gap-4 p-4 border-l border-slate-200 dark:border-slate-800 shadow-lg h-full">
       {/* Announcements */}
       <section className="rounded-xl bg-gradient-to-br from-indigo-100 to-indigo-200 dark:from-indigo-900 dark:to-indigo-800 p-4 shadow">
         <h2 className="font-bold text-lg mb-2 text-indigo-700 dark:text-indigo-300 flex items-center gap-2">
