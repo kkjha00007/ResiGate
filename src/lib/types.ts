@@ -237,6 +237,7 @@ export interface SocietyInfoSettings {
   contactEmail?: string;
   contactPhone?: string;
   updatedAt?: string;
+  importantContacts?: { label: string; value: string }[]; // Added for persistent contacts
 }
 
 

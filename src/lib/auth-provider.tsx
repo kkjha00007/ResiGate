@@ -1472,7 +1472,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       if (typeof window !== 'undefined') {
         toast({ title: 'Society Info Updated', description: 'Society information has been successfully updated.' });
       }
-      setSocietyInfoState(data as SocietyInfoSettings);
+      // Re-fetch from backend to ensure state is in sync
+      await fetchSocietyInfo();
       return data as SocietyInfoSettings;
     } catch (error: any) {
       if (typeof window !== 'undefined') {
@@ -1682,6 +1683,28 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  // Update sessionTimeLeft every second based on sessionExp
+  useEffect(() => {
+    if (!sessionExp) {
+      setSessionTimeLeft(null);
+      return;
+    }
+    const update = () => {
+      const now = Math.floor(Date.now() / 1000);
+      setSessionTimeLeft(sessionExp - now);
+    };
+    update();
+    const interval = setInterval(update, 1000);
+    return () => clearInterval(interval);
+  }, [sessionExp]);
+
+  // Redirect to login if session expired
+  useEffect(() => {
+    if (user && sessionTimeLeft !== null && sessionTimeLeft <= 0) {
+      setUser(null); // Clear user state
+      router.push('/login');
+    }
+  }, [sessionTimeLeft, user, router]);
 
   const contextValue: AuthContextType = {
     user,

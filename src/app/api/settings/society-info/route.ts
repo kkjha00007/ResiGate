@@ -31,8 +31,13 @@ export async function GET(request: NextRequest) {
         address: '',
         contactEmail: '',
         contactPhone: '',
+        importantContacts: [], // Default empty contacts
       };
       return NextResponse.json(defaultSettings, { status: 200 });
+    }
+    // Ensure importantContacts is always present
+    if (!('importantContacts' in resource)) {
+      resource.importantContacts = [];
     }
     return NextResponse.json(resource, { status: 200 });
   } catch (error: any) {
@@ -45,6 +50,7 @@ export async function GET(request: NextRequest) {
         address: '',
         contactEmail: '',
         contactPhone: '',
+        importantContacts: [],
       };
       return NextResponse.json(defaultSettings, { status: 200 });
     }
@@ -61,15 +67,17 @@ export async function PUT(request: NextRequest) {
 
   try {
     const body = await request.json() as Omit<SocietyInfoSettings, 'id' | 'updatedAt'>;
-    
+    const societyId = body.societyId;
+    if (!societyId) {
+      return NextResponse.json({ message: 'Society ID is required.' }, { status: 400 });
+    }
     const itemToUpsert: SocietyInfoSettings = {
       ...body,
-      id: SOCIETY_INFO_DOC_ID, // Ensure the ID is always this fixed value
+      id: societyId, // Use societyId as the document id
       updatedAt: new Date().toISOString(),
+      importantContacts: body.importantContacts || [],
     };
-
     const { resource: updatedSettings } = await societySettingsContainer.items.upsert(itemToUpsert);
-
     if (!updatedSettings) {
       return NextResponse.json({ message: 'Failed to update society information' }, { status: 500 });
     }

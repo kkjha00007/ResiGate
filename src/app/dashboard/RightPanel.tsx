@@ -2,18 +2,55 @@
 import React from 'react';
 import { useAuth } from '@/lib/auth-provider';
 import { format, parseISO } from 'date-fns';
+import { PencilIcon } from '@/components/ui/PencilIcon';
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 
 export function RightPanel() {
-  const { activeNotices, upcomingMeetings, user, isLoading: authLoading } = useAuth();
-  // Example contacts, replace with real data if available in context
-  const contacts = [
-    { label: 'Security Guard (Day)', value: '98765 43210' },
-    { label: 'Security Guard (Night)', value: '87654 32109' },
-    { label: 'Local Police', value: '100 / 011-2345678' },
-    { label: 'Fire Brigade', value: '101' },
-    { label: 'Ambulance', value: '102 / 108' },
-    { label: 'Estate Manager', value: '76543 21098' },
-  ];
+  const { activeNotices, upcomingMeetings, user, isLoading: authLoading, isAdmin, isSocietyAdmin, societyInfo, updateSocietyInfo, fetchSocietyInfo } = useAuth();
+  const canEditContacts = isAdmin() || isSocietyAdmin();
+  // Load contacts from societyInfo
+  const [contacts, setContacts] = React.useState<{ label: string; value: string }[]>([]);
+  const [editOpen, setEditOpen] = React.useState(false);
+  const [editContacts, setEditContacts] = React.useState<{ label: string; value: string }[]>([]);
+
+  // Sync contacts from societyInfo
+  React.useEffect(() => {
+    if (societyInfo && Array.isArray(societyInfo.importantContacts)) {
+      setContacts(societyInfo.importantContacts);
+    }
+  }, [societyInfo]);
+
+  const handleEditClick = () => {
+    setEditContacts(contacts.length > 0 ? contacts : [
+      { label: '', value: '' },
+    ]);
+    setEditOpen(true);
+  };
+  const handleEditChange = (idx: number, field: 'label' | 'value', val: string) => {
+    setEditContacts(prev => prev.map((c, i) => i === idx ? { ...c, [field]: val } : c));
+  };
+  const handleAddContact = () => {
+    setEditContacts(prev => [...prev, { label: '', value: '' }]);
+  };
+  const handleRemoveContact = (idx: number) => {
+    setEditContacts(prev => prev.filter((_, i) => i !== idx));
+  };
+  const handleEditSave = async () => {
+    // Remove empty contacts
+    const filtered = editContacts.filter(c => c.label.trim() && c.value.trim());
+    setContacts(filtered);
+    setEditOpen(false);
+    // Persist to backend
+    if (canEditContacts && societyInfo) {
+      await updateSocietyInfo({
+        ...societyInfo,
+        importantContacts: filtered,
+      });
+      await fetchSocietyInfo();
+    }
+  };
   const displayedNotices = (activeNotices || []).slice(0, 3);
   const displayedMeetings = (upcomingMeetings || []).slice(0, 3);
 
@@ -57,8 +94,19 @@ export function RightPanel() {
       <section className="rounded-xl bg-gradient-to-br from-yellow-100 to-yellow-200 dark:from-yellow-900 dark:to-yellow-800 p-4 shadow">
         <h2 className="font-bold text-lg mb-2 text-yellow-700 dark:text-yellow-400 flex items-center gap-2">
           <span>Important Contacts</span>
+          {canEditContacts && (
+            <button
+              className="ml-2 p-1 rounded hover:bg-yellow-200 dark:hover:bg-yellow-800"
+              aria-label="Edit Important Contacts"
+              onClick={handleEditClick}
+              type="button"
+            >
+              <PencilIcon className="w-4 h-4 text-yellow-700 dark:text-yellow-300" />
+            </button>
+          )}
         </h2>
         <div className="text-sm text-slate-700 dark:text-slate-200 space-y-2">
+          {contacts.length === 0 && <div className="text-muted-foreground">No important contacts set.</div>}
           {contacts.map((contact, idx) => (
             <div key={idx} className="flex justify-between items-center bg-white/70 dark:bg-slate-800 rounded px-3 py-2 border border-slate-200 dark:border-slate-700">
               <span className="font-medium">{contact.label}</span>
@@ -66,6 +114,35 @@ export function RightPanel() {
             </div>
           ))}
         </div>
+        <Dialog open={editOpen} onOpenChange={setEditOpen}>
+          <DialogContent>
+            <DialogTitle>Edit Important Contacts</DialogTitle>
+            <div className="space-y-3 mt-2">
+              {editContacts.map((contact, idx) => (
+                <div key={idx} className="flex gap-2 items-center">
+                  <Input
+                    value={contact.label}
+                    onChange={e => handleEditChange(idx, 'label', e.target.value)}
+                    className="w-1/2"
+                    placeholder="Label"
+                  />
+                  <Input
+                    value={contact.value}
+                    onChange={e => handleEditChange(idx, 'value', e.target.value)}
+                    className="w-1/2"
+                    placeholder="Contact Info"
+                  />
+                  <Button variant="ghost" size="icon" onClick={() => handleRemoveContact(idx)} aria-label="Remove Contact" type="button">×</Button>
+                </div>
+              ))}
+              <Button variant="outline" onClick={handleAddContact} type="button">Add Contact</Button>
+            </div>
+            <div className="flex justify-end gap-2 mt-4">
+              <Button variant="outline" onClick={() => setEditOpen(false)} type="button">Cancel</Button>
+              <Button onClick={handleEditSave} type="button">Save</Button>
+            </div>
+          </DialogContent>
+        </Dialog>
       </section>
     </aside>
   );

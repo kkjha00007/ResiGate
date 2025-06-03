@@ -74,6 +74,7 @@ export function AppHeader({ navItems }: AppHeaderProps) {
       {/* Session Timer - always visible, right of header but left of user icon */}
       {user && (
         <div className="flex items-center mr-2">
+          <span className="text-xs font-medium text-muted-foreground mr-1">Session expires in:</span>
           <Clock className="h-5 w-5 mr-1" />
           {sessionTimeLeft === null || sessionTimeLeft < 0 ? (
             <span className="text-xs font-semibold px-2 py-1 rounded bg-red-100 text-red-700 border border-red-300 animate-pulse">

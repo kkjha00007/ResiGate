@@ -1,4 +1,3 @@
-
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -42,7 +41,7 @@ const passwordChangeSchema = z.object({
 type PasswordChangeFormValues = z.infer<typeof passwordChangeSchema>;
 
 export function MyProfileForm() {
-  const { user, updateUserProfile, changePassword, isLoading: authLoading } = useAuth();
+  const { user, updateUserProfile, changePassword, isLoading: authLoading, societyInfo } = useAuth();
   const { toast } = useToast();
   const [isProfileSubmitting, setIsProfileSubmitting] = useState(false);
   const [isPasswordSubmitting, setIsPasswordSubmitting] = useState(false);
@@ -126,6 +125,26 @@ export function MyProfileForm() {
               <p><strong>Email:</strong> {user.email}</p>
               {user.flatNumber && <p><strong>Flat Number:</strong> {user.flatNumber}</p>}
               <p><strong>Role:</strong> <span className="capitalize">{user.role}</span></p>
+              {/* Society Info Display */}
+              {societyInfo && (
+                <>
+                  {societyInfo.societyName && (
+                    <p><strong>Society Name:</strong> {societyInfo.societyName}</p>
+                  )}
+                  {societyInfo.registrationNumber && (
+                    <p><strong>Registration Number:</strong> {societyInfo.registrationNumber}</p>
+                  )}
+                  {societyInfo.address && (
+                    <p><strong>Address:</strong> {societyInfo.address}</p>
+                  )}
+                  {societyInfo.contactEmail && (
+                    <p><strong>Society Email:</strong> {societyInfo.contactEmail}</p>
+                  )}
+                  {societyInfo.contactPhone && (
+                    <p><strong>Society Phone:</strong> {societyInfo.contactPhone}</p>
+                  )}
+                </>
+              )}
             </div>
           </div>
           
