@@ -31,11 +31,10 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ message: 'societyId is required' }, { status: 400 });
   }
   try {
-    const { resource } = await societySettingsContainer.item(societyId, societyId).read<SocietyPaymentDetails>();
+    const { resource } = await societySettingsContainer.item(societyId, societyId).read<any>();
     if (!resource) {
-      const defaultDetails: SocietyPaymentDetails = {
-        id: societyId,
-        societyId,
+      // Return default structure for payment details
+      const defaultDetails = {
         bankName: '',
         accountHolderName: '',
         accountNumber: '',
@@ -46,12 +45,25 @@ export async function GET(request: NextRequest) {
       };
       return NextResponse.json(defaultDetails, { status: 200 });
     }
-    return NextResponse.json(resource, { status: 200 });
+    // Return only the paymentDetails field if present, else fallback to top-level fields for backward compatibility
+    if (resource.paymentDetails) {
+      return NextResponse.json(resource.paymentDetails, { status: 200 });
+    } else {
+      // fallback for legacy docs
+      const details = {
+        bankName: resource.bankName || '',
+        accountHolderName: resource.accountHolderName || '',
+        accountNumber: resource.accountNumber || '',
+        ifscCode: resource.ifscCode || '',
+        branchName: resource.branchName || '',
+        accountType: resource.accountType || '',
+        upiId: resource.upiId || '',
+      };
+      return NextResponse.json(details, { status: 200 });
+    }
   } catch (error: any) {
     if (error.code === 404) {
-      const defaultDetails: SocietyPaymentDetails = {
-        id: societyId,
-        societyId,
+      const defaultDetails = {
         bankName: '',
         accountHolderName: '',
         accountNumber: '',
@@ -66,8 +78,8 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// Update payment details for a society
-export async function POST(request: NextRequest) {
+// Update payment details for a society (merge into unified doc)
+async function updatePaymentDetails(request: NextRequest) {
   let body: any;
   try {
     body = await request.json();
@@ -79,29 +91,37 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ message: 'societyId is required' }, { status: 400 });
   }
   try {
-    // Cosmos DB upsert uses the partition key from the document itself.
-    // Ensure the document has the correct societyId (partition key) and id fields.
-    const paymentDetails: SocietyPaymentDetails = {
-      id: societyId,
-      societyId,
-      bankName: body.bankName || '',
-      accountHolderName: body.accountHolderName || '',
-      accountNumber: body.accountNumber || '',
-      ifscCode: body.ifscCode || '',
-      branchName: body.branchName || '',
-      accountType: body.accountType || '',
-      upiId: body.upiId || '',
+    // Read existing doc
+    let { resource: existing } = await societySettingsContainer.item(societyId, societyId).read<any>();
+    if (!existing) {
+      existing = { id: societyId, societyId };
+    }
+    // Merge payment details into the doc
+    const merged = {
+      ...existing,
+      paymentDetails: {
+        bankName: body.bankName || '',
+        accountHolderName: body.accountHolderName || '',
+        accountNumber: body.accountNumber || '',
+        ifscCode: body.ifscCode || '',
+        branchName: body.branchName || '',
+        accountType: body.accountType || '',
+        upiId: body.upiId || '',
+      },
+      updatedAt: new Date().toISOString(),
     };
-    // Do NOT pass a partitionKey option here; the SDK uses paymentDetails.societyId automatically.
-    const { resource } = await societySettingsContainer.items.upsert(paymentDetails);
-    return NextResponse.json(resource, { status: 200 });
+    const { resource } = await societySettingsContainer.items.upsert(merged);
+    // Return the merged paymentDetails (resource may be undefined)
+    return NextResponse.json(merged.paymentDetails, { status: 200 });
   } catch (error: any) {
     return NextResponse.json({ message: 'Internal server error', error: error.message }, { status: 500 });
   }
 }
 
-// Update payment details for a society (PUT, same as POST)
+export async function POST(request: NextRequest) {
+  return updatePaymentDetails(request);
+}
+
 export async function PUT(request: NextRequest) {
-  // Reuse the POST logic for upsert
-  return POST(request);
+  return updatePaymentDetails(request);
 }

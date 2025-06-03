@@ -66,18 +66,28 @@ export async function PUT(request: NextRequest) {
   }
 
   try {
-    const body = await request.json() as Omit<SocietyInfoSettings, 'id' | 'updatedAt'>;
+    const body = await request.json() as Partial<SocietyInfoSettings>;
     const societyId = body.societyId;
     if (!societyId) {
       return NextResponse.json({ message: 'Society ID is required.' }, { status: 400 });
     }
-    const itemToUpsert: SocietyInfoSettings = {
-      ...body,
-      id: societyId, // Use societyId as the document id
+    // Read the existing unified settings document
+    let { resource: existing } = await societySettingsContainer.item(societyId, societyId).read<any>();
+    if (!existing) {
+      existing = { id: societyId, societyId };
+    }
+    // Merge new society info and important contacts into the existing doc
+    const merged = {
+      ...existing,
+      societyName: body.societyName ?? existing.societyName ?? '',
+      registrationNumber: body.registrationNumber ?? existing.registrationNumber ?? '',
+      address: body.address ?? existing.address ?? '',
+      contactEmail: body.contactEmail ?? existing.contactEmail ?? '',
+      contactPhone: body.contactPhone ?? existing.contactPhone ?? '',
+      importantContacts: body.importantContacts ?? existing.importantContacts ?? [],
       updatedAt: new Date().toISOString(),
-      importantContacts: body.importantContacts || [],
     };
-    const { resource: updatedSettings } = await societySettingsContainer.items.upsert(itemToUpsert);
+    const { resource: updatedSettings } = await societySettingsContainer.items.upsert(merged);
     if (!updatedSettings) {
       return NextResponse.json({ message: 'Failed to update society information' }, { status: 500 });
     }
