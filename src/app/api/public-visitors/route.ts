@@ -21,12 +21,15 @@ export async function POST(request: NextRequest) {
     const timestamp = new Date();
     const tokenCode = `RG-${timestamp.getTime().toString().slice(-6)}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
 
+    // Get IP address (Next.js API route)
+    const ip = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || '';
     const newEntry: VisitorEntry = {
       id: uuidv4(),
       ...entryData,
       entryTimestamp: timestamp.toISOString(),
       enteredBy: PUBLIC_ENTRY_SOURCE,
       tokenCode: tokenCode,
+      ip,
     };
 
     const { resource: createdEntry } = await visitorEntriesContainer.items.create(newEntry);
