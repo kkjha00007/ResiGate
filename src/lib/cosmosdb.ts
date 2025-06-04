@@ -110,6 +110,10 @@ export function getParkingRequestsContainer() {
   const client = getCosmosClient();
   return getDatabase(client).container('ParkingRequests');
 }
+export function getContactMessagesContainer() {
+  const client = getCosmosClient();
+  return getDatabase(client).container('ContactMessages');
+}
 
 // ...existing code for types and other exports...
 export type { User, VisitorEntry, LoginAudit, GatePass, Complaint, Notice, Meeting, Vendor, CommitteeMember, SocietyPaymentDetails, SocietyInfoSettings, ParkingSpot, Facility, Society };
