@@ -1,6 +1,6 @@
 // src/app/api/parking/requests/route.ts
 import { NextRequest, NextResponse } from 'next/server';
-import { parkingRequestsContainer } from '@/lib/cosmosdb';
+import { getParkingRequestsContainer } from '@/lib/cosmosdb';
 import type { ParkingRequest } from '@/lib/types';
 
 // POST: Create a new parking request
@@ -29,6 +29,12 @@ export async function POST(request: NextRequest) {
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   };
+  let parkingRequestsContainer;
+  try {
+    parkingRequestsContainer = getParkingRequestsContainer();
+  } catch (err) {
+    return NextResponse.json({ message: 'Cosmos DB connection is not configured.' }, { status: 500 });
+  }
   try {
     await parkingRequestsContainer.items.create(newRequest);
     return NextResponse.json({ success: true, request: newRequest });
@@ -50,6 +56,12 @@ export async function GET(request: NextRequest) {
   const parameters = [];
   if (societyId) parameters.push({ name: '@societyId', value: societyId });
   if (status) parameters.push({ name: '@status', value: status });
+  let parkingRequestsContainer;
+  try {
+    parkingRequestsContainer = getParkingRequestsContainer();
+  } catch (err) {
+    return NextResponse.json({ message: 'Cosmos DB connection is not configured.' }, { status: 500 });
+  }
   try {
     const { resources } = await parkingRequestsContainer.items.query({ query, parameters }).fetchAll();
     return NextResponse.json(resources);

@@ -2,13 +2,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { CosmosClient } from '@azure/cosmos';
 
-// Cosmos DB setup (replace with your actual connection string and container info)
-const COSMOS_CONNECTION_STRING = process.env.COSMOS_CONNECTION_STRING!;
-const client = new CosmosClient(COSMOS_CONNECTION_STRING);
-const database = client.database('ResiGateDB');
-const container = database.container('ContactMessages');
-
 export async function POST(request: NextRequest) {
+  const COSMOS_CONNECTION_STRING = process.env.COSMOS_CONNECTION_STRING;
+  if (!COSMOS_CONNECTION_STRING) {
+    return NextResponse.json({ error: 'Cosmos DB connection string is not configured in environment variables.' }, { status: 500 });
+  }
+  const client = new CosmosClient(COSMOS_CONNECTION_STRING);
+  const database = client.database('ResiGateDB');
+  const container = database.container('ContactMessages');
   try {
     const { name, email, message } = await request.json();
     if (!name || !email || !message) {

@@ -2,12 +2,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { CosmosClient } from '@azure/cosmos';
 
-const COSMOS_CONNECTION_STRING = process.env.COSMOS_CONNECTION_STRING!;
-const client = new CosmosClient(COSMOS_CONNECTION_STRING);
-const database = client.database('ResiGateDB');
-const container = database.container('SocietyInvites');
-
 export async function POST(request: NextRequest) {
+  const COSMOS_CONNECTION_STRING = process.env.COSMOS_CONNECTION_STRING;
+  if (!COSMOS_CONNECTION_STRING) {
+    return NextResponse.json({ error: 'Cosmos DB connection string is not set in environment variables.' }, { status: 500 });
+  }
+  const client = new CosmosClient(COSMOS_CONNECTION_STRING);
+  const database = client.database('ResiGateDB');
+  const container = database.container('SocietyInvites');
+
   try {
     const { societyName, name, email, phone } = await request.json();
     if (!societyName || !name || !email) return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });

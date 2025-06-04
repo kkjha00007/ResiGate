@@ -1,6 +1,6 @@
 // src/app/api/settings/payment-details/route.ts
 import { NextResponse, type NextRequest } from 'next/server';
-import { societySettingsContainer } from '@/lib/cosmosdb';
+import { getSocietySettingsContainer } from '@/lib/cosmosdb';
 import type { SocietyPaymentDetails } from '@/lib/types';
 import { USER_ROLES } from '@/lib/constants';
 // import { getAuth } from '@clerk/nextjs/server'; // Placeholder for actual auth
@@ -29,6 +29,12 @@ export async function GET(request: NextRequest) {
   const societyId = getSocietyId(request);
   if (!societyId) {
     return NextResponse.json({ message: 'societyId is required' }, { status: 400 });
+  }
+  let societySettingsContainer;
+  try {
+    societySettingsContainer = getSocietySettingsContainer();
+  } catch (err) {
+    return NextResponse.json({ message: 'Cosmos DB connection is not configured.' }, { status: 500 });
   }
   try {
     const { resource } = await societySettingsContainer.item(societyId, societyId).read<any>();
@@ -89,6 +95,12 @@ async function updatePaymentDetails(request: NextRequest) {
   const societyId = body.societyId || getSocietyId(request);
   if (!societyId) {
     return NextResponse.json({ message: 'societyId is required' }, { status: 400 });
+  }
+  let societySettingsContainer;
+  try {
+    societySettingsContainer = getSocietySettingsContainer();
+  } catch (err) {
+    return NextResponse.json({ message: 'Cosmos DB connection is not configured.' }, { status: 500 });
   }
   try {
     // Read existing doc

@@ -1,15 +1,17 @@
-
 // src/app/api/vendors/admin/pending/route.ts
 import { NextResponse, type NextRequest } from 'next/server';
-import { vendorsContainer } from '@/lib/cosmosdb';
+import { getVendorsContainer } from '@/lib/cosmosdb';
 import type { Vendor } from '@/lib/types';
 
 // Get all PENDING vendors (for Super Admin approval queue)
 export async function GET(request: NextRequest) {
+  let vendorsContainer;
   try {
-    // TODO: Add robust authentication and authorization (Super Admin only)
-    // For now, assuming client-side routing restricts access appropriately.
-
+    vendorsContainer = getVendorsContainer();
+  } catch (err) {
+    return NextResponse.json({ message: 'Cosmos DB connection is not configured.' }, { status: 500 });
+  }
+  try {
     const querySpec = {
       query: "SELECT * FROM c WHERE c.isApproved = false ORDER BY c.submittedAt ASC"
     };

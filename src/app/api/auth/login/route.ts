@@ -1,10 +1,10 @@
 // src/app/api/auth/login/route.ts
 import { NextResponse, type NextRequest } from 'next/server';
-import { getUsersContainer, loginAuditsContainer } from '@/lib/cosmosdb'; // Changed to getUsersContainer
-import type { User, LoginAudit } from '@/lib/types'; // Added LoginAudit type
+import { getLoginAuditsContainer, getUsersContainer } from '@/lib/cosmosdb';
+import type { User, LoginAudit } from '@/lib/types';
 import bcrypt from 'bcryptjs';
 import { v4 as uuidv4 } from 'uuid';
-import { createJWT } from '@/lib/utils'; // Import JWT helper
+import { createJWT } from '@/lib/utils';
 
 export async function POST(request: NextRequest) {
   try {
@@ -14,7 +14,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ message: 'Email and password are required' }, { status: 400 });
     }
 
-    const usersContainer = await getUsersContainer(); // Get the users container
+    const usersContainer = await getUsersContainer();
     const querySpec = {
       query: "SELECT * FROM c WHERE c.email = @email",
       parameters: [
@@ -53,6 +53,7 @@ export async function POST(request: NextRequest) {
         userEmail: user.email,
         loginTimestamp: new Date().toISOString(),
       };
+      const loginAuditsContainer = getLoginAuditsContainer();
       await loginAuditsContainer.items.create(loginAuditEntry);
     } catch (auditError) {
       // Log the audit error but don't fail the login

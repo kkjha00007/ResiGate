@@ -1,7 +1,7 @@
 // src/app/api/parking/spots/route.ts
 import { NextResponse, type NextRequest } from 'next/server';
-import { parkingSpotsContainer } from '@/lib/cosmosdb';
-import type { ParkingSpot, ParkingSpotStatus, ParkingSpotType } from '@/lib/types';
+import { getParkingSpotsContainer } from '@/lib/cosmosdb';
+import type { ParkingSpot, ParkingSpotType } from '@/lib/types';
 import { PARKING_SPOT_STATUSES } from '@/lib/constants';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -15,9 +15,16 @@ export async function POST(request: NextRequest) {
   } catch {
     return NextResponse.json({ message: 'Invalid or missing JSON body' }, { status: 400 });
   }
-  // const isAdmin = true; // Replace with actual auth check
-  // if (!isAdmin) return NextResponse.json({ message: 'Unauthorized' }, { status: 403 });
-
+  const societyId = body.societyId || request.headers.get('x-society-id') || request.nextUrl.searchParams.get('societyId');
+  if (!societyId) {
+    return NextResponse.json({ message: 'societyId is required' }, { status: 400 });
+  }
+  let parkingSpotsContainer;
+  try {
+    parkingSpotsContainer = getParkingSpotsContainer();
+  } catch (err) {
+    return NextResponse.json({ message: 'Cosmos DB connection is not configured.' }, { status: 500 });
+  }
   try {
     const { spotNumber, type, location, notes } = body;
 
@@ -28,7 +35,7 @@ export async function POST(request: NextRequest) {
     const now = new Date().toISOString();
     const newSpot: ParkingSpot = {
       id: uuidv4(),
-      societyId: body.societyId || body.societyID || body.societyid || request.headers.get('x-society-id') || request.nextUrl.searchParams.get('societyId') || '',
+      societyId,
       spotNumber,
       type: type as ParkingSpotType,
       location,
@@ -55,6 +62,12 @@ export async function GET(request: NextRequest) {
   const societyId = request.headers.get('x-society-id') || request.nextUrl.searchParams.get('societyId');
   if (!societyId) {
     return NextResponse.json({ message: 'societyId is required' }, { status: 400 });
+  }
+  let parkingSpotsContainer;
+  try {
+    parkingSpotsContainer = getParkingSpotsContainer();
+  } catch (err) {
+    return NextResponse.json({ message: 'Cosmos DB connection is not configured.' }, { status: 500 });
   }
   try {
     const querySpec = {

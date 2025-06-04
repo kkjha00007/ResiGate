@@ -1,6 +1,6 @@
 // src/app/api/complaints/route.ts
 import { NextResponse, type NextRequest } from 'next/server';
-import { complaintsContainer } from '@/lib/cosmosdb';
+import { getComplaintsContainer } from '@/lib/cosmosdb';
 import type { Complaint, ComplaintCategory } from '@/lib/types';
 import { COMPLAINT_STATUSES_VALUES } from '@/lib/types';
 import { v4 as uuidv4 } from 'uuid';
@@ -16,6 +16,12 @@ export async function POST(request: NextRequest) {
   const societyId = body.societyId || request.headers.get('x-society-id') || request.nextUrl.searchParams.get('societyId');
   if (!societyId) {
     return NextResponse.json({ message: 'societyId is required' }, { status: 400 });
+  }
+  let complaintsContainer;
+  try {
+    complaintsContainer = getComplaintsContainer();
+  } catch (err) {
+    return NextResponse.json({ message: 'Cosmos DB connection is not configured.' }, { status: 500 });
   }
   try {
     const { 
@@ -65,6 +71,12 @@ export async function GET(request: NextRequest) {
   const userRole = request.headers.get('x-user-role');
   if (!societyId && userRole !== 'superadmin') {
     return NextResponse.json({ message: 'societyId is required' }, { status: 400 });
+  }
+  let complaintsContainer;
+  try {
+    complaintsContainer = getComplaintsContainer();
+  } catch (err) {
+    return NextResponse.json({ message: 'Cosmos DB connection is not configured.' }, { status: 500 });
   }
   try {
     let querySpec;

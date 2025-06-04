@@ -1,7 +1,6 @@
-
 // src/app/api/gate-passes/user/[userId]/route.ts
 import { NextResponse, type NextRequest } from 'next/server';
-import { gatePassesContainer } from '@/lib/cosmosdb';
+import { getGatePassesContainer } from '@/lib/cosmosdb';
 import type { GatePass } from '@/lib/types';
 
 // Get gate passes for a specific user
@@ -9,6 +8,12 @@ export async function GET(
   request: NextRequest,
   { params }: { params: { userId: string } }
 ) {
+  let gatePassesContainer;
+  try {
+    gatePassesContainer = getGatePassesContainer();
+  } catch (err) {
+    return NextResponse.json({ message: 'Cosmos DB connection is not configured.' }, { status: 500 });
+  }
   try {
     const userId = params.userId;
     if (!userId) {

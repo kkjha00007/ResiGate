@@ -1,6 +1,6 @@
 // src/app/api/meetings/route.ts
 import { NextResponse, type NextRequest } from 'next/server';
-import { meetingsContainer } from '@/lib/cosmosdb';
+import { getMeetingsContainer } from '@/lib/cosmosdb';
 import type { Meeting } from '@/lib/types';
 import { v4 as uuidv4 } from 'uuid';
 import { format, parseISO } from 'date-fns';
@@ -26,12 +26,16 @@ export async function POST(request: NextRequest) {
   } catch {
     return NextResponse.json({ message: 'Invalid or missing JSON body' }, { status: 400 });
   }
-  // Use body for societyId extraction
   const societyId = body.societyId || request.headers.get('x-society-id') || request.nextUrl.searchParams.get('societyId');
   if (!societyId) {
     return NextResponse.json({ message: 'societyId is required' }, { status: 400 });
   }
-
+  let meetingsContainer;
+  try {
+    meetingsContainer = getMeetingsContainer();
+  } catch (err) {
+    return NextResponse.json({ message: 'Cosmos DB connection is not configured.' }, { status: 500 });
+  }
   try {
     const { 
         title, 
@@ -87,6 +91,12 @@ export async function GET(request: NextRequest) {
   const societyId = request.headers.get('x-society-id') || request.nextUrl.searchParams.get('societyId');
   if (!societyId) {
     return NextResponse.json({ message: 'societyId is required' }, { status: 400 });
+  }
+  let meetingsContainer;
+  try {
+    meetingsContainer = getMeetingsContainer();
+  } catch (err) {
+    return NextResponse.json({ message: 'Cosmos DB connection is not configured.' }, { status: 500 });
   }
   try {
     // Strict society isolation: Only fetch meetings where c.societyId matches the partition key

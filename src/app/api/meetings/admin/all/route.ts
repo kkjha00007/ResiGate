@@ -1,13 +1,17 @@
-
 // src/app/api/meetings/admin/all/route.ts
 import { NextResponse, type NextRequest } from 'next/server';
-import { meetingsContainer } from '@/lib/cosmosdb';
+import { getMeetingsContainer } from '@/lib/cosmosdb';
 import type { Meeting } from '@/lib/types';
 
 // Get ALL meetings (for Super Admin management table)
 export async function GET(request: NextRequest) {
+  let meetingsContainer;
   try {
-    // TODO: Add authentication and authorization to ensure only Super Admin can access
+    meetingsContainer = getMeetingsContainer();
+  } catch (err) {
+    return NextResponse.json({ message: 'Cosmos DB connection is not configured.' }, { status: 500 });
+  }
+  try {
     const querySpec = {
       query: "SELECT * FROM c ORDER BY c.dateTime DESC" // Fetches all, irrespective of isActive or past/future
     };

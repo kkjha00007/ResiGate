@@ -1,6 +1,6 @@
 // src/app/api/public-visitors/route.ts
 import { NextResponse, type NextRequest } from 'next/server';
-import { visitorEntriesContainer } from '@/lib/cosmosdb';
+import { getVisitorEntriesContainer } from '@/lib/cosmosdb';
 import type { VisitorEntry } from '@/lib/types';
 import { v4 as uuidv4 } from 'uuid';
 import { PUBLIC_ENTRY_SOURCE } from '@/lib/constants';
@@ -12,6 +12,12 @@ export async function POST(request: NextRequest) {
     entryData = await request.json();
   } catch {
     return NextResponse.json({ message: 'Invalid or missing JSON body' }, { status: 400 });
+  }
+  let visitorEntriesContainer;
+  try {
+    visitorEntriesContainer = getVisitorEntriesContainer();
+  } catch (err) {
+    return NextResponse.json({ message: 'Cosmos DB connection is not configured.' }, { status: 500 });
   }
   try {
     if (!entryData.visitorName || !entryData.mobileNumber || !entryData.flatNumber || !entryData.purposeOfVisit) {

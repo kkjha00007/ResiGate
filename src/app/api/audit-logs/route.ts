@@ -1,6 +1,6 @@
 // src/app/api/audit-logs/route.ts
 import { NextResponse, type NextRequest } from 'next/server';
-import { auditLogsContainer } from '@/lib/cosmosdb';
+import { getAuditLogsContainer } from '@/lib/cosmosdb';
 import type { AuditLogEntry } from '@/lib/types';
 
 // Helper to extract societyId from request (header, query, or body)
@@ -31,6 +31,12 @@ export async function GET(request: NextRequest) {
       query: 'SELECT * FROM c ORDER BY c.timestamp DESC',
       parameters: [],
     };
+  }
+  let auditLogsContainer;
+  try {
+    auditLogsContainer = getAuditLogsContainer();
+  } catch (err) {
+    return NextResponse.json({ message: 'Cosmos DB connection is not configured.' }, { status: 500 });
   }
   try {
     const { resources: logs } = await auditLogsContainer.items.query<AuditLogEntry>(querySpec).fetchAll();

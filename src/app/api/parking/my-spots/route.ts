@@ -1,7 +1,6 @@
-
 // src/app/api/parking/my-spots/route.ts
 import { NextResponse, type NextRequest } from 'next/server';
-import { parkingSpotsContainer } from '@/lib/cosmosdb';
+import { getParkingSpotsContainer } from '@/lib/cosmosdb';
 import type { ParkingSpot } from '@/lib/types';
 // Note: In a real app, you'd get the userId from an authenticated session (e.g., JWT, NextAuth session)
 // For now, we'll expect it as a query parameter for simplicity, or you can adapt this.
@@ -16,7 +15,12 @@ export async function GET(request: NextRequest) {
     // In a real app, if no user is authenticated, return 401 or 403
     return NextResponse.json({ message: 'User ID is required as a query parameter for this demo. Ensure user is authenticated.' }, { status: 400 });
   }
-
+  let parkingSpotsContainer;
+  try {
+    parkingSpotsContainer = getParkingSpotsContainer();
+  } catch (err) {
+    return NextResponse.json({ message: 'Cosmos DB connection is not configured.' }, { status: 500 });
+  }
   try {
     const querySpec = {
       query: "SELECT * FROM c WHERE c.allocatedToUserId = @userId AND c.status = 'allocated'",

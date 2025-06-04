@@ -1,17 +1,29 @@
 // src/app/api/vendors/route.ts
 import { NextResponse, type NextRequest } from 'next/server';
-import { vendorsContainer } from '@/lib/cosmosdb';
+import { getVendorsContainer } from '@/lib/cosmosdb';
 import type { Vendor, VendorCategory } from '@/lib/types';
 import { v4 as uuidv4 } from 'uuid';
 
 // Submit a new vendor (will be unapproved by default)
 export async function POST(request: NextRequest) {
+  let body: any;
   try {
-    const body = await request.json();
-    const societyId = body.societyId || request.nextUrl.searchParams.get('societyId');
-    if (!societyId) {
-      return NextResponse.json({ message: 'Society ID is required for vendor creation.' }, { status: 400 });
-    }
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ message: 'Invalid or missing JSON body' }, { status: 400 });
+  }
+  let societyId = body.societyId || request.headers.get('x-society-id') || request.nextUrl.searchParams.get('societyId');
+  if (!societyId) {
+    return NextResponse.json({ message: 'societyId is required' }, { status: 400 });
+  }
+  societyId = societyId.trim(); // Remove whitespace just in case
+  let vendorsContainer;
+  try {
+    vendorsContainer = getVendorsContainer();
+  } catch (err) {
+    return NextResponse.json({ message: 'Cosmos DB connection is not configured.' }, { status: 500 });
+  }
+  try {
     const { 
         name, 
         category, 
@@ -61,12 +73,17 @@ export async function POST(request: NextRequest) {
 
 // Get all APPROVED vendors
 export async function GET(request: NextRequest) {
-  let societyId = request.nextUrl.searchParams.get('societyId');
+  let societyId = request.headers.get('x-society-id') || request.nextUrl.searchParams.get('societyId');
   if (!societyId) {
-    return NextResponse.json({ message: 'Society ID is required.' }, { status: 400 });
+    return NextResponse.json({ message: 'societyId is required' }, { status: 400 });
   }
-  societyId = societyId.trim(); // Remove whitespace just in case
-  console.log('API societyId:', societyId, typeof societyId); // Debug log
+  societyId = societyId.trim();
+  let vendorsContainer;
+  try {
+    vendorsContainer = getVendorsContainer();
+  } catch (err) {
+    return NextResponse.json({ message: 'Cosmos DB connection is not configured.' }, { status: 500 });
+  }
   const querySpec = {
     query: "SELECT * FROM c WHERE c.isApproved = true AND c.societyId = @societyId ORDER BY c.name ASC",
     parameters: [

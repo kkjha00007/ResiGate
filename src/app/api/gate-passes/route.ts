@@ -1,13 +1,18 @@
-
 // src/app/api/gate-passes/route.ts
 import { NextResponse, type NextRequest } from 'next/server';
-import { gatePassesContainer } from '@/lib/cosmosdb';
+import { getGatePassesContainer } from '@/lib/cosmosdb';
 import type { GatePass } from '@/lib/types';
 import { GATE_PASS_STATUSES } from '@/lib/types';
 import { v4 as uuidv4 } from 'uuid';
 
 // Create a new gate pass
 export async function POST(request: NextRequest) {
+  let gatePassesContainer;
+  try {
+    gatePassesContainer = getGatePassesContainer();
+  } catch (err) {
+    return NextResponse.json({ message: 'Cosmos DB connection is not configured.' }, { status: 500 });
+  }
   try {
     const passData = await request.json() as Omit<GatePass, 'id' | 'tokenCode' | 'status' | 'createdAt'>;
 

@@ -1,6 +1,6 @@
 // src/app/api/personas/route.ts
 import { NextRequest, NextResponse } from 'next/server';
-import { personasContainer } from '@/lib/cosmosdb';
+import { getPersonasContainer } from '@/lib/cosmosdb';
 import type { Persona } from '@/lib/types';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -8,6 +8,12 @@ import { v4 as uuidv4 } from 'uuid';
 export async function GET(req: NextRequest) {
   const societyId = req.nextUrl.searchParams.get('societyId');
   if (!societyId) return NextResponse.json({ error: 'Missing societyId' }, { status: 400 });
+  let personasContainer;
+  try {
+    personasContainer = getPersonasContainer();
+  } catch (err) {
+    return NextResponse.json({ message: 'Cosmos DB connection is not configured.' }, { status: 500 });
+  }
   const query = {
     query: 'SELECT * FROM c WHERE c.societyId = @societyId',
     parameters: [{ name: '@societyId', value: societyId }],
@@ -21,6 +27,12 @@ export async function POST(req: NextRequest) {
   const body = await req.json();
   if (!body.societyId || !body.name || !body.roleKeys) {
     return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+  }
+  let personasContainer;
+  try {
+    personasContainer = getPersonasContainer();
+  } catch (err) {
+    return NextResponse.json({ message: 'Cosmos DB connection is not configured.' }, { status: 500 });
   }
   const persona: Persona = {
     id: body.id || uuidv4(),
@@ -40,6 +52,12 @@ export async function PATCH(req: NextRequest) {
   if (!body.id || !body.societyId) {
     return NextResponse.json({ error: 'Missing id or societyId' }, { status: 400 });
   }
+  let personasContainer;
+  try {
+    personasContainer = getPersonasContainer();
+  } catch (err) {
+    return NextResponse.json({ message: 'Cosmos DB connection is not configured.' }, { status: 500 });
+  }
   const { resource: existing } = await personasContainer.item(body.id, body.societyId).read();
   if (!existing) return NextResponse.json({ error: 'Persona not found' }, { status: 404 });
   const updated = { ...existing, ...body };
@@ -51,6 +69,12 @@ export async function PATCH(req: NextRequest) {
 export async function DELETE(req: NextRequest) {
   const { id, societyId } = await req.json();
   if (!id || !societyId) return NextResponse.json({ error: 'Missing id or societyId' }, { status: 400 });
+  let personasContainer;
+  try {
+    personasContainer = getPersonasContainer();
+  } catch (err) {
+    return NextResponse.json({ message: 'Cosmos DB connection is not configured.' }, { status: 500 });
+  }
   await personasContainer.item(id, societyId).delete();
   return NextResponse.json({ success: true });
 }

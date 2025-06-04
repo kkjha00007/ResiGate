@@ -1,6 +1,6 @@
 // src/app/api/settings/society-info/route.ts
 import { NextResponse, type NextRequest } from 'next/server';
-import { societySettingsContainer } from '@/lib/cosmosdb';
+import { getSocietySettingsContainer } from '@/lib/cosmosdb';
 import type { SocietyInfoSettings } from '@/lib/types';
 import { USER_ROLES } from '@/lib/constants';
 
@@ -18,6 +18,12 @@ export async function GET(request: NextRequest) {
   const societyId = request.nextUrl.searchParams.get('societyId');
   if (!societyId) {
     return NextResponse.json({ message: 'Society ID is required.' }, { status: 400 });
+  }
+  let societySettingsContainer;
+  try {
+    societySettingsContainer = getSocietySettingsContainer();
+  } catch (err) {
+    return NextResponse.json({ message: 'Cosmos DB connection is not configured.' }, { status: 500 });
   }
   try {
     const { resource } = await societySettingsContainer.item(societyId, societyId).read<SocietyInfoSettings>();
@@ -64,7 +70,12 @@ export async function PUT(request: NextRequest) {
   if (!isSuperAdmin(request)) {
     return NextResponse.json({ message: 'Unauthorized: Only Super Admins can update society info.' }, { status: 403 });
   }
-
+  let societySettingsContainer;
+  try {
+    societySettingsContainer = getSocietySettingsContainer();
+  } catch (err) {
+    return NextResponse.json({ message: 'Cosmos DB connection is not configured.' }, { status: 500 });
+  }
   try {
     const body = await request.json() as Partial<SocietyInfoSettings>;
     const societyId = body.societyId;

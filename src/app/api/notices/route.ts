@@ -1,6 +1,6 @@
 // src/app/api/notices/route.ts
 import { NextResponse, type NextRequest } from 'next/server';
-import { noticesContainer } from '@/lib/cosmosdb';
+import { getNoticesContainer } from '@/lib/cosmosdb';
 import type { Notice } from '@/lib/types';
 import { v4 as uuidv4 } from 'uuid';
 import { format } from 'date-fns';
@@ -27,12 +27,16 @@ export async function POST(request: NextRequest) {
   } catch {
     return NextResponse.json({ message: 'Invalid or missing JSON body' }, { status: 400 });
   }
-  // Use body for societyId extraction
   const societyId = body.societyId || request.headers.get('x-society-id') || request.nextUrl.searchParams.get('societyId');
   if (!societyId) {
     return NextResponse.json({ message: 'societyId is required' }, { status: 400 });
   }
-
+  let noticesContainer;
+  try {
+    noticesContainer = getNoticesContainer();
+  } catch (err) {
+    return NextResponse.json({ message: 'Cosmos DB connection is not configured.' }, { status: 500 });
+  }
   try {
     const { 
         title, 
@@ -94,6 +98,12 @@ export async function GET(request: NextRequest) {
   const societyId = request.headers.get('x-society-id') || request.nextUrl.searchParams.get('societyId');
   if (!societyId) {
     return NextResponse.json({ message: 'societyId is required' }, { status: 400 });
+  }
+  let noticesContainer;
+  try {
+    noticesContainer = getNoticesContainer();
+  } catch (err) {
+    return NextResponse.json({ message: 'Cosmos DB connection is not configured.' }, { status: 500 });
   }
   try {
     const querySpec = {

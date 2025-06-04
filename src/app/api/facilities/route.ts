@@ -1,6 +1,6 @@
 // src/app/api/facilities/route.ts
 import { NextResponse, type NextRequest } from 'next/server';
-import { facilitiesContainer } from '@/lib/cosmosdb';
+import { getFacilitiesContainer } from '@/lib/cosmosdb';
 import type { Facility, UserRole } from '@/lib/types';
 import { v4 as uuidv4 } from 'uuid';
 import { logAuditAction } from '@/lib/utils';
@@ -31,6 +31,12 @@ export async function GET(request: NextRequest) {
   if (!societyId) {
     return NextResponse.json({ message: 'societyId is required' }, { status: 400 });
   }
+  let facilitiesContainer;
+  try {
+    facilitiesContainer = getFacilitiesContainer();
+  } catch (err) {
+    return NextResponse.json({ message: 'Cosmos DB connection is not configured.' }, { status: 500 });
+  }
   try {
     const querySpec = {
       query: 'SELECT * FROM c WHERE c.societyId = @societyId ORDER BY c.name ASC',
@@ -52,15 +58,16 @@ export async function POST(request: NextRequest) {
   } catch {
     return NextResponse.json({ message: 'Invalid or missing JSON body' }, { status: 400 });
   }
-  // Use body for societyId extraction
   const societyId = body.societyId || request.headers.get('x-society-id') || request.nextUrl.searchParams.get('societyId');
   if (!societyId) {
     return NextResponse.json({ message: 'societyId is required' }, { status: 400 });
   }
-//   if (!isSuperAdmin(request)) {
-//     return NextResponse.json({ message: 'Unauthorized' }, { status: 403 });
-//   }
-
+  let facilitiesContainer;
+  try {
+    facilitiesContainer = getFacilitiesContainer();
+  } catch (err) {
+    return NextResponse.json({ message: 'Cosmos DB connection is not configured.' }, { status: 500 });
+  }
   try {
     const { name, description, capacity, bookingRules } = body;
 

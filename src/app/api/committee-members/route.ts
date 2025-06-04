@@ -1,6 +1,6 @@
 // src/app/api/committee-members/route.ts
 import { NextResponse, type NextRequest } from 'next/server';
-import { committeeMembersContainer } from '@/lib/cosmosdb';
+import { getCommitteeMembersContainer } from '@/lib/cosmosdb';
 import type { CommitteeMember } from '@/lib/types';
 import { v4 as uuidv4 } from 'uuid';
 import { logAuditAction } from '@/lib/utils'; // Import logAuditAction
@@ -37,6 +37,12 @@ export async function GET(request: NextRequest) {
   if (!societyId) {
     return NextResponse.json({ message: 'societyId is required' }, { status: 400 });
   }
+  let committeeMembersContainer;
+  try {
+    committeeMembersContainer = getCommitteeMembersContainer();
+  } catch (err) {
+    return NextResponse.json({ message: 'Cosmos DB connection is not configured.' }, { status: 500 });
+  }
   try {
     const querySpec = {
       query: 'SELECT * FROM c WHERE c.societyId = @societyId ORDER BY c.name ASC',
@@ -58,23 +64,28 @@ export async function POST(request: NextRequest) {
   } catch {
     return NextResponse.json({ message: 'Invalid or missing JSON body' }, { status: 400 });
   }
-  // Use body for societyId extraction
   const societyId = body.societyId || request.headers.get('x-society-id') || request.nextUrl.searchParams.get('societyId');
   if (!societyId) {
     return NextResponse.json({ message: 'societyId is required' }, { status: 400 });
   }
-  // Enforce admin role: only Super Admin or Society Admin can add committee members
-  const userRole = request.headers.get('x-user-role');
-  const userSocietyId = request.headers.get('x-society-id');
-  if (userRole !== 'superadmin' && userRole !== 'societyAdmin') {
-    return NextResponse.json({ message: 'Unauthorized: Only Super Admins or Society Admins can add committee members.' }, { status: 403 });
-  }
-  // Security: Society Admins can only add to their own society
-  if (userRole === 'societyAdmin' && userSocietyId !== societyId) {
-    return NextResponse.json({ message: 'Forbidden: Society Admins can only manage their own society.' }, { status: 403 });
-  }
-
+  let committeeMembersContainer;
   try {
+    committeeMembersContainer = getCommitteeMembersContainer();
+  } catch (err) {
+    return NextResponse.json({ message: 'Cosmos DB connection is not configured.' }, { status: 500 });
+  }
+  try {
+    // Enforce admin role: only Super Admin or Society Admin can add committee members
+    const userRole = request.headers.get('x-user-role');
+    const userSocietyId = request.headers.get('x-society-id');
+    if (userRole !== 'superadmin' && userRole !== 'societyAdmin') {
+      return NextResponse.json({ message: 'Unauthorized: Only Super Admins or Society Admins can add committee members.' }, { status: 403 });
+    }
+    // Security: Society Admins can only add to their own society
+    if (userRole === 'societyAdmin' && userSocietyId !== societyId) {
+      return NextResponse.json({ message: 'Forbidden: Society Admins can only manage their own society.' }, { status: 403 });
+    }
+
     const { name, roleInCommittee, flatNumber } = body;
 
     // Prevent cross-society data creation

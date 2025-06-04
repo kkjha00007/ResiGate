@@ -1,7 +1,7 @@
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
 import type { AuditLogEntry } from "./types";
-import { auditLogsContainer, getUsersContainer } from "./cosmosdb";
+import { getUsersContainer, getAuditLogsContainer } from "./cosmosdb";
 import { v4 as uuidv4 } from "uuid";
 import jwt from "jsonwebtoken";
 
@@ -16,6 +16,7 @@ export async function logAuditAction(entry: Omit<AuditLogEntry, "id" | "timestam
     timestamp: new Date().toISOString(),
   };
   try {
+    const auditLogsContainer = getAuditLogsContainer();
     await auditLogsContainer.items.create(auditEntry);
   } catch (err) {
     // Optionally log to console or external service
