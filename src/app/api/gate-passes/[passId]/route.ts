@@ -1,7 +1,6 @@
-
 // src/app/api/gate-passes/[passId]/route.ts
 import { NextResponse, type NextRequest } from 'next/server';
-import { gatePassesContainer, visitorEntriesContainer } from '@/lib/cosmosdb';
+import { safeGetGatePassesContainer, safeGetVisitorEntriesContainer } from '@/lib/cosmosdb';
 import type { GatePass, VisitorEntry } from '@/lib/types';
 import { GATE_PASS_STATUSES } from '@/lib/types';
 import { v4 as uuidv4 } from 'uuid';
@@ -15,6 +14,11 @@ export async function GET(
     const passId = params.passId;
     if (!passId) {
       return NextResponse.json({ message: 'Pass ID is required' }, { status: 400 });
+    }
+
+    const gatePassesContainer = safeGetGatePassesContainer();
+    if (!gatePassesContainer) {
+      return NextResponse.json({ message: 'GatePasses container not available. Check Cosmos DB configuration.' }, { status: 500 });
     }
 
     const querySpec = {
@@ -45,6 +49,11 @@ export async function DELETE(
       return NextResponse.json({ message: 'Pass ID is required' }, { status: 400 });
     }
 
+    const gatePassesContainer = safeGetGatePassesContainer();
+    if (!gatePassesContainer) {
+      return NextResponse.json({ message: 'GatePasses container not available. Check Cosmos DB configuration.' }, { status: 500 });
+    }
+
     const querySpec = {
       query: "SELECT * FROM c WHERE c.id = @passId",
       parameters: [{ name: "@passId", value: passId }]
@@ -66,7 +75,9 @@ export async function DELETE(
       updatedAt: new Date().toISOString(),
     };
 
-    const { resource: updatedPass } = await gatePassesContainer.item(passId, gatePassToUpdate.residentUserId).replace(updatedPassData);
+    // Use the correct partition key for old and new gate passes
+    const partitionKey = gatePassToUpdate.societyId || gatePassToUpdate.residentUserId || passId;
+    const { resource: updatedPass } = await gatePassesContainer.item(passId, partitionKey).replace(updatedPassData);
     
     if (!updatedPass) {
         return NextResponse.json({ message: 'Failed to cancel gate pass' }, { status: 500 });
@@ -96,6 +107,11 @@ export async function PUT(
       return NextResponse.json({ message: 'Pass ID is required' }, { status: 400 });
     }
     
+    const gatePassesContainer = safeGetGatePassesContainer();
+    if (!gatePassesContainer) {
+      return NextResponse.json({ message: 'GatePasses container not available. Check Cosmos DB configuration.' }, { status: 500 });
+    }
+
     const querySpec = {
       query: "SELECT * FROM c WHERE c.id = @passId",
       parameters: [{ name: "@passId", value: passId }]
@@ -127,6 +143,11 @@ export async function PUT(
     }
 
     // Create a corresponding VisitorEntry
+    const visitorEntriesContainer = safeGetVisitorEntriesContainer();
+    if (!visitorEntriesContainer) {
+      return NextResponse.json({ message: 'VisitorEntries container not available. Check Cosmos DB configuration.' }, { status: 500 });
+    }
+
     const visitorEntry: VisitorEntry = {
         id: uuidv4(),
         visitorName: replacedPass.visitorName,
@@ -139,6 +160,7 @@ export async function PUT(
         notes: `Entry via Gate Pass. Original notes: ${replacedPass.notes || 'N/A'}`,
         tokenCode: replacedPass.tokenCode, // Use the gate pass token code
         gatePassId: replacedPass.id,
+        societyId: replacedPass.societyId || '', // Ensure societyId is present
     };
 
     const { resource: createdEntry } = await visitorEntriesContainer.items.create(visitorEntry);

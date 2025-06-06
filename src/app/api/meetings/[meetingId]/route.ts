@@ -1,7 +1,6 @@
-
 // src/app/api/meetings/[meetingId]/route.ts
 import { NextResponse, type NextRequest } from 'next/server';
-import { meetingsContainer } from '@/lib/cosmosdb';
+import { safeGetMeetingsContainer } from '@/lib/cosmosdb';
 import type { Meeting } from '@/lib/types';
 import { format, parseISO } from 'date-fns';
 
@@ -18,6 +17,11 @@ export async function PUT(
 
     if (!meetingId || !currentMonthYear) {
       return NextResponse.json({ message: 'Meeting ID and monthYear (for partition key) are required' }, { status: 400 });
+    }
+
+    const meetingsContainer = safeGetMeetingsContainer();
+    if (!meetingsContainer) {
+      return NextResponse.json({ message: 'Meetings container not available. Check Cosmos DB configuration.' }, { status: 500 });
     }
 
     const { resource: existingMeeting } = await meetingsContainer.item(meetingId, currentMonthYear).read<Meeting>();
@@ -97,8 +101,40 @@ export async function DELETE(
       return NextResponse.json({ message: 'Meeting ID and monthYear (as query parameter) are required for deletion' }, { status: 400 });
     }
     
-    await meetingsContainer.item(meetingId, monthYear).delete();
-    
+    const meetingsContainer = safeGetMeetingsContainer();
+    if (!meetingsContainer) {
+      return NextResponse.json({ message: 'Meetings container not available. Check Cosmos DB configuration.' }, { status: 500 });
+    }
+
+    let found = false;
+    try {
+      await meetingsContainer.item(meetingId, monthYear).delete();
+      found = true;
+    } catch (deleteError: any) {
+      if (deleteError?.code !== 404) throw deleteError;
+    }
+    if (!found) {
+      // Fallback: query for meeting by id to get actual partition key (legacy data)
+      const query = {
+        query: 'SELECT * FROM c WHERE c.id = @id',
+        parameters: [{ name: '@id', value: meetingId }],
+      };
+      const { resources } = await meetingsContainer.items.query(query).fetchAll();
+      const fallbackMeeting = resources[0] as Meeting | undefined;
+      if (!fallbackMeeting) {
+        return NextResponse.json({ message: 'Meeting not found or already deleted' }, { status: 404 });
+      }
+      try {
+        await meetingsContainer.item(meetingId, fallbackMeeting.monthYear).delete();
+      } catch (deleteError: any) {
+        if (deleteError?.code === 404) {
+          return NextResponse.json({ message: 'Meeting not found or already deleted' }, { status: 404 });
+        }
+        console.error(`Delete Meeting ${meetingId} API error:`, deleteError);
+        const errorMessage = deleteError instanceof Error ? deleteError.message : 'An unknown error occurred';
+        return NextResponse.json({ message: 'Internal server error', error: errorMessage }, { status: 500 });
+      }
+    }
     return NextResponse.json({ message: `Meeting ${meetingId} deleted successfully` }, { status: 200 });
 
   } catch (error) {
@@ -122,6 +158,11 @@ export async function GET(
 
     if (!meetingId || !monthYear) {
       return NextResponse.json({ message: 'Meeting ID and monthYear (as query parameter) are required' }, { status: 400 });
+    }
+
+    const meetingsContainer = safeGetMeetingsContainer();
+    if (!meetingsContainer) {
+      return NextResponse.json({ message: 'Meetings container not available. Check Cosmos DB configuration.' }, { status: 500 });
     }
 
     const { resource: meeting } = await meetingsContainer.item(meetingId, monthYear).read<Meeting>();

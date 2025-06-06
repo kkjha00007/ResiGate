@@ -83,6 +83,7 @@ interface AuthContextType {
   createFacility: (facilityData: Omit<Facility, 'id' | 'createdAt' | 'updatedAt' | 'isActive' | 'societyId'>) => Promise<Facility | null>;
   updateFacility: (facilityId: string, updates: Partial<Omit<Facility, 'id' | 'createdAt' | 'updatedAt' | 'societyId'>>) => Promise<Facility | null>;
   deleteFacility: (facilityId: string) => Promise<boolean>;
+  createSociety: (data: { name: string; city: string }) => Promise<Society | null>;
   sessionExp: number | null;
   sessionTimeLeft: number | null;
 }
@@ -1706,6 +1707,33 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [sessionTimeLeft, user, router]);
 
+  const createSociety = async (data: { name: string; city: string }): Promise<Society | null> => {
+    try {
+      const response = await fetch('/api/societies', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      });
+      const result = await response.json();
+      if (!response.ok) {
+        if (typeof window !== 'undefined') {
+          toast({ title: 'Society Creation Failed', description: result.message || 'Could not create society.', variant: 'destructive' });
+        }
+        return null;
+      }
+      if (typeof window !== 'undefined') {
+        toast({ title: 'Society Created', description: `Society "${result.name}" has been created.` });
+      }
+      // Optionally, refresh societies list here if needed
+      return result as Society;
+    } catch (error: any) {
+      if (typeof window !== 'undefined') {
+        toast({ title: 'Society Creation Error', description: error.message || 'An unexpected error occurred.', variant: 'destructive' });
+      }
+      return null;
+    }
+  };
+
   const contextValue: AuthContextType = {
     user,
     isLoading,
@@ -1781,6 +1809,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     createFacility,
     updateFacility,
     deleteFacility,
+    createSociety,
     sessionExp,
     sessionTimeLeft,
   };

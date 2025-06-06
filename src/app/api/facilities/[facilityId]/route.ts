@@ -1,7 +1,6 @@
-
 // src/app/api/facilities/[facilityId]/route.ts
 import { NextResponse, type NextRequest } from 'next/server';
-import { facilitiesContainer } from '@/lib/cosmosdb';
+import { safeGetFacilitiesContainer } from '@/lib/cosmosdb';
 import type { Facility } from '@/lib/types';
 
 // Helper to check if user is superadmin (replace with your actual auth check)
@@ -16,11 +15,18 @@ export async function GET(
 ) {
   try {
     const facilityId = params.facilityId;
-    if (!facilityId) {
-      return NextResponse.json({ message: 'Facility ID is required' }, { status: 400 });
+    const { searchParams } = new URL(request.url);
+    const societyId = searchParams.get('societyId');
+    if (!facilityId || !societyId) {
+      return NextResponse.json({ message: 'Facility ID and societyId are required' }, { status: 400 });
     }
 
-    const { resource } = await facilitiesContainer.item(facilityId, facilityId).read<Facility>();
+    const facilitiesContainer = safeGetFacilitiesContainer();
+    if (!facilitiesContainer) {
+      return NextResponse.json({ message: 'Facilities container not available. Check Cosmos DB configuration.' }, { status: 500 });
+    }
+
+    const { resource } = await facilitiesContainer.item(facilityId, societyId).read<Facility>();
     if (!resource) {
       return NextResponse.json({ message: 'Facility not found' }, { status: 404 });
     }
@@ -42,13 +48,19 @@ export async function PUT(
 
   try {
     const facilityId = params.facilityId;
+    const { searchParams } = new URL(request.url);
+    const societyId = searchParams.get('societyId');
+    if (!facilityId || !societyId) {
+      return NextResponse.json({ message: 'Facility ID and societyId are required' }, { status: 400 });
+    }
     const updates = await request.json() as Partial<Omit<Facility, 'id' | 'createdAt' | 'updatedAt'>>;
 
-    if (!facilityId) {
-      return NextResponse.json({ message: 'Facility ID is required' }, { status: 400 });
+    const facilitiesContainer = safeGetFacilitiesContainer();
+    if (!facilitiesContainer) {
+      return NextResponse.json({ message: 'Facilities container not available. Check Cosmos DB configuration.' }, { status: 500 });
     }
 
-    const { resource: existingFacility } = await facilitiesContainer.item(facilityId, facilityId).read<Facility>();
+    const { resource: existingFacility } = await facilitiesContainer.item(facilityId, societyId).read<Facility>();
     if (!existingFacility) {
       return NextResponse.json({ message: 'Facility not found' }, { status: 404 });
     }
@@ -60,7 +72,7 @@ export async function PUT(
       updatedAt: new Date().toISOString(),
     };
     
-    const { resource: replacedFacility } = await facilitiesContainer.item(facilityId, facilityId).replace(updatedFacilityData);
+    const { resource: replacedFacility } = await facilitiesContainer.item(facilityId, societyId).replace(updatedFacilityData);
 
     if (!replacedFacility) {
         return NextResponse.json({ message: 'Failed to update facility' }, { status: 500 });
@@ -84,11 +96,18 @@ export async function DELETE(
 
   try {
     const facilityId = params.facilityId;
-    if (!facilityId) {
-      return NextResponse.json({ message: 'Facility ID is required' }, { status: 400 });
+    const { searchParams } = new URL(request.url);
+    const societyId = searchParams.get('societyId');
+    if (!facilityId || !societyId) {
+      return NextResponse.json({ message: 'Facility ID and societyId are required' }, { status: 400 });
     }
     
-    await facilitiesContainer.item(facilityId, facilityId).delete();
+    const facilitiesContainer = safeGetFacilitiesContainer();
+    if (!facilitiesContainer) {
+      return NextResponse.json({ message: 'Facilities container not available. Check Cosmos DB configuration.' }, { status: 500 });
+    }
+
+    await facilitiesContainer.item(facilityId, societyId).delete();
     
     return NextResponse.json({ message: `Facility ${facilityId} deleted successfully` }, { status: 200 });
   } catch (error) {

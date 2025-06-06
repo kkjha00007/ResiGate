@@ -43,10 +43,12 @@ export function AdminApprovalTable() {
 
   const handleApprove = async (userId: string) => {
     await approveResident(userId);
+    await fetchAllUsers(false); // Refetch only pending users
   };
 
   const handleReject = async (userId: string) => {
     await rejectUser(userId);
+    await fetchAllUsers(false); // Refetch only pending users
   };
 
   if (isLoading && !allUsers.length) {

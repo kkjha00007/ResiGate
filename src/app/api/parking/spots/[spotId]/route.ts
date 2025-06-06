@@ -1,7 +1,6 @@
-
 // src/app/api/parking/spots/[spotId]/route.ts
 import { NextResponse, type NextRequest } from 'next/server';
-import { parkingSpotsContainer } from '@/lib/cosmosdb';
+import { safeGetParkingSpotsContainer } from '@/lib/cosmosdb';
 import type { ParkingSpot, ParkingSpotStatus, ParkingSpotType } from '@/lib/types';
 import { PARKING_SPOT_STATUSES } from '@/lib/constants';
 
@@ -19,6 +18,11 @@ export async function GET(
     const spotId = params.spotId;
     if (!spotId) {
       return NextResponse.json({ message: 'Parking Spot ID is required' }, { status: 400 });
+    }
+
+    const parkingSpotsContainer = safeGetParkingSpotsContainer();
+    if (!parkingSpotsContainer) {
+      return NextResponse.json({ message: 'ParkingSpots container not available. Check Cosmos DB configuration.' }, { status: 500 });
     }
 
     const { resource } = await parkingSpotsContainer.item(spotId, spotId).read<ParkingSpot>();
@@ -48,9 +52,29 @@ export async function PUT(
       return NextResponse.json({ message: 'Parking Spot ID is required' }, { status: 400 });
     }
 
-    const { resource: existingSpot } = await parkingSpotsContainer.item(spotId, spotId).read<ParkingSpot>();
+    const parkingSpotsContainer = safeGetParkingSpotsContainer();
+    if (!parkingSpotsContainer) {
+      return NextResponse.json({ message: 'ParkingSpots container not available. Check Cosmos DB configuration.' }, { status: 500 });
+    }
+    let { resource: existingSpot } = await parkingSpotsContainer.item(spotId, spotId).read<ParkingSpot>();
+    let partitionKey = spotId;
+    let spotToUpdate: ParkingSpot | undefined = existingSpot;
     if (!existingSpot) {
-      return NextResponse.json({ message: 'Parking spot not found' }, { status: 404 });
+      // Fallback: query for spot by id to get actual partition key (legacy data)
+      const query = {
+        query: 'SELECT * FROM c WHERE c.id = @id',
+        parameters: [{ name: '@id', value: spotId }],
+      };
+      const { resources } = await parkingSpotsContainer.items.query(query).fetchAll();
+      const fallbackSpot = resources[0] as ParkingSpot | undefined;
+      if (!fallbackSpot) {
+        return NextResponse.json({ message: 'Parking spot not found' }, { status: 404 });
+      }
+      spotToUpdate = fallbackSpot;
+      partitionKey = fallbackSpot.societyId;
+    }
+    if (!spotToUpdate || !spotToUpdate.societyId || !spotToUpdate.spotNumber || !spotToUpdate.type || !spotToUpdate.status) {
+      return NextResponse.json({ message: 'Parking spot data is incomplete or corrupt' }, { status: 500 });
     }
 
     // If unassigning, clear allocation fields
@@ -66,14 +90,16 @@ export async function PUT(
 
 
     const updatedSpotData: ParkingSpot = {
-      ...existingSpot,
+      ...spotToUpdate,
       ...updates,
-      id: existingSpot.id, // Ensure ID is not changed
+      id: spotToUpdate.id,
+      societyId: spotToUpdate.societyId,
+      spotNumber: spotToUpdate.spotNumber,
+      type: spotToUpdate.type,
+      status: spotToUpdate.status,
       updatedAt: new Date().toISOString(),
     };
-    
-    const { resource: replacedSpot } = await parkingSpotsContainer.item(spotId, spotId).replace(updatedSpotData);
-
+    const { resource: replacedSpot } = await parkingSpotsContainer.item(spotId, partitionKey).replace(updatedSpotData);
     if (!replacedSpot) {
         return NextResponse.json({ message: 'Failed to update parking spot' }, { status: 500 });
     }
@@ -99,8 +125,39 @@ export async function DELETE(
       return NextResponse.json({ message: 'Parking Spot ID is required' }, { status: 400 });
     }
     
-    await parkingSpotsContainer.item(spotId, spotId).delete();
-    
+    const parkingSpotsContainer = safeGetParkingSpotsContainer();
+    if (!parkingSpotsContainer) {
+      return NextResponse.json({ message: 'ParkingSpots container not available. Check Cosmos DB configuration.' }, { status: 500 });
+    }
+    let found = false;
+    try {
+      await parkingSpotsContainer.item(spotId, spotId).delete();
+      found = true;
+    } catch (deleteError: any) {
+      if (deleteError?.code !== 404) throw deleteError;
+    }
+    if (!found) {
+      // Fallback: query for spot by id to get actual partition key (legacy data)
+      const query = {
+        query: 'SELECT * FROM c WHERE c.id = @id',
+        parameters: [{ name: '@id', value: spotId }],
+      };
+      const { resources } = await parkingSpotsContainer.items.query(query).fetchAll();
+      const fallbackSpot = resources[0] as ParkingSpot | undefined;
+      if (!fallbackSpot) {
+        return NextResponse.json({ message: 'Parking spot not found or already deleted' }, { status: 404 });
+      }
+      try {
+        await parkingSpotsContainer.item(spotId, fallbackSpot.societyId).delete();
+      } catch (deleteError: any) {
+        if (deleteError?.code === 404) {
+          return NextResponse.json({ message: 'Parking spot not found or already deleted' }, { status: 404 });
+        }
+        console.error(`Delete Parking Spot ${spotId} API error:`, deleteError);
+        const errorMessage = deleteError instanceof Error ? deleteError.message : 'An unknown error occurred';
+        return NextResponse.json({ message: 'Internal server error', error: errorMessage }, { status: 500 });
+      }
+    }
     return NextResponse.json({ message: `Parking spot ${spotId} deleted successfully` }, { status: 200 });
   } catch (error) {
     console.error(`Delete Parking Spot ${params.spotId} API error:`, error);

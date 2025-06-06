@@ -12,49 +12,56 @@ export async function PUT(
   { params }: { params: { noticeId: string } }
 ) {
   try {
-    // TODO: Add robust authentication and authorization (Super Admin only)
     const noticeId = params.noticeId;
-    const { monthYear, ...updates } = await request.json() as Partial<Notice> & { monthYear: string }; // monthYear must be passed by client for partition key
-
+    const { monthYear, ...updates } = await request.json() as Partial<Notice> & { monthYear: string };
     if (!noticeId || !monthYear) {
       return NextResponse.json({ message: 'Notice ID and monthYear (for partition key) are required' }, { status: 400 });
     }
-
     const noticesContainer = safeGetNoticesContainer();
     if (!noticesContainer) {
       return NextResponse.json({ message: 'Notices container not available. Check Cosmos DB configuration.' }, { status: 500 });
     }
-
-    const { resource: existingNotice } = await noticesContainer.item(noticeId, monthYear).read<Notice>();
+    let { resource: existingNotice } = await noticesContainer.item(noticeId, monthYear).read<Notice>();
+    let partitionKey = monthYear;
+    let noticeToUpdate: Notice | undefined = existingNotice;
     if (!existingNotice) {
-      return NextResponse.json({ message: 'Notice not found' }, { status: 404 });
+      // Fallback: query for notice by id to get actual partition key (legacy data)
+      const query = {
+        query: 'SELECT * FROM c WHERE c.id = @id',
+        parameters: [{ name: '@id', value: noticeId }],
+      };
+      const { resources } = await noticesContainer.items.query(query).fetchAll();
+      const fallbackNotice = resources[0] as Notice | undefined;
+      if (!fallbackNotice) {
+        return NextResponse.json({ message: 'Notice not found' }, { status: 404 });
+      }
+      noticeToUpdate = fallbackNotice;
+      partitionKey = fallbackNotice.monthYear;
     }
-    
+    if (!noticeToUpdate || !noticeToUpdate.societyId || !noticeToUpdate.title || !noticeToUpdate.content || !noticeToUpdate.monthYear) {
+      return NextResponse.json({ message: 'Notice data is incomplete or corrupt' }, { status: 500 });
+    }
     const updatedNoticeData: Notice = {
-      ...existingNotice,
+      ...noticeToUpdate,
       ...updates,
+      id: noticeToUpdate.id,
+      societyId: noticeToUpdate.societyId,
+      title: noticeToUpdate.title,
+      content: noticeToUpdate.content,
+      monthYear: noticeToUpdate.monthYear,
+      postedByUserId: noticeToUpdate.postedByUserId,
+      postedByName: noticeToUpdate.postedByName,
+      createdAt: noticeToUpdate.createdAt,
       updatedAt: new Date().toISOString(),
-      id: existingNotice.id, // Ensure ID is not changed
-      monthYear: existingNotice.monthYear, // Ensure partition key is not changed
-      postedByUserId: existingNotice.postedByUserId, // Ensure original poster is not changed
-      postedByName: existingNotice.postedByName,
-      createdAt: existingNotice.createdAt,
     };
-    
-    // Specific check for isActive toggle
     if (updates.hasOwnProperty('isActive') && typeof updates.isActive === 'boolean') {
         updatedNoticeData.isActive = updates.isActive;
     }
-
-
-    const { resource: replacedNotice } = await noticesContainer.item(noticeId, monthYear).replace(updatedNoticeData);
-
+    const { resource: replacedNotice } = await noticesContainer.item(noticeId, partitionKey).replace(updatedNoticeData);
     if (!replacedNotice) {
         return NextResponse.json({ message: 'Failed to update notice' }, { status: 500 });
     }
-
     return NextResponse.json(replacedNotice, { status: 200 });
-
   } catch (error) {
     console.error(`Update Notice ${params.noticeId} API error:`, error);
     const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
@@ -68,45 +75,48 @@ export async function DELETE(
   { params }: { params: { noticeId: string } }
 ) {
   try {
-    // TODO: Add robust authentication and authorization (Super Admin only)
     const noticeId = params.noticeId;
-    // Client must send monthYear in query params or body for partition key
     const monthYear = request.nextUrl.searchParams.get('monthYear');
-
-
     if (!noticeId || !monthYear) {
       return NextResponse.json({ message: 'Notice ID and monthYear (as query parameter) are required for deletion' }, { status: 400 });
     }
-    
     const noticesContainer = safeGetNoticesContainer();
     if (!noticesContainer) {
       return NextResponse.json({ message: 'Notices container not available. Check Cosmos DB configuration.' }, { status: 500 });
     }
-
-    // Optional: Check if notice exists before attempting delete, though delete is idempotent
-    // const { resource: existingNotice } = await noticesContainer.item(noticeId, monthYear).read<Notice>();
-    // if (!existingNotice) {
-    //   return NextResponse.json({ message: 'Notice not found to delete' }, { status: 404 });
-    // }
-
+    let found = false;
     try {
       await noticesContainer.item(noticeId, monthYear).delete();
-      return NextResponse.json({ message: `Notice ${noticeId} deleted successfully` }, { status: 200 });
+      found = true;
     } catch (deleteError: any) {
-      // Handle Cosmos DB not found error gracefully
-      if (deleteError?.code === 404) {
+      if (deleteError?.code !== 404) throw deleteError;
+    }
+    if (!found) {
+      // Fallback: query for notice by id to get actual partition key (legacy data)
+      const query = {
+        query: 'SELECT * FROM c WHERE c.id = @id',
+        parameters: [{ name: '@id', value: noticeId }],
+      };
+      const { resources } = await noticesContainer.items.query(query).fetchAll();
+      const fallbackNotice = resources[0] as Notice | undefined;
+      if (!fallbackNotice) {
         return NextResponse.json({ message: 'Notice not found or already deleted' }, { status: 404 });
       }
-      // Log and return other errors
-      console.error(`Delete Notice ${noticeId} API error:`, deleteError);
-      const errorMessage = deleteError instanceof Error ? deleteError.message : 'An unknown error occurred';
-      return NextResponse.json({ message: 'Internal server error', error: errorMessage }, { status: 500 });
+      try {
+        await noticesContainer.item(noticeId, fallbackNotice.monthYear).delete();
+      } catch (deleteError: any) {
+        if (deleteError?.code === 404) {
+          return NextResponse.json({ message: 'Notice not found or already deleted' }, { status: 404 });
+        }
+        console.error(`Delete Notice ${noticeId} API error:`, deleteError);
+        const errorMessage = deleteError instanceof Error ? deleteError.message : 'An unknown error occurred';
+        return NextResponse.json({ message: 'Internal server error', error: errorMessage }, { status: 500 });
+      }
     }
-
+    return NextResponse.json({ message: `Notice ${noticeId} deleted successfully` }, { status: 200 });
   } catch (error) {
     console.error(`Delete Notice ${params.noticeId} API error:`, error);
     const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
-    // If error is due to not found (e.g., status code 404 from SDK), you might want to reflect that
     if ((error as any)?.code === 404) {
         return NextResponse.json({ message: 'Notice not found or already deleted' }, { status: 404 });
     }

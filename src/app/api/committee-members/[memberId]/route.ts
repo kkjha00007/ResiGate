@@ -1,6 +1,6 @@
 // src/app/api/committee-members/[memberId]/route.ts
 import { NextResponse, type NextRequest } from 'next/server';
-import { committeeMembersContainer } from '@/lib/cosmosdb';
+import { safeGetCommitteeMembersContainer } from '@/lib/cosmosdb';
 import type { CommitteeMember } from '@/lib/types';
 import { logAuditAction } from '@/lib/utils';
 
@@ -21,11 +21,27 @@ export async function GET(
       return NextResponse.json({ message: 'Member ID is required' }, { status: 400 });
     }
 
-    const { resource } = await committeeMembersContainer.item(memberId, memberId).read<CommitteeMember>();
-    if (!resource) {
-      return NextResponse.json({ message: 'Committee member not found' }, { status: 404 });
+    const committeeMembersContainer = safeGetCommitteeMembersContainer();
+    if (!committeeMembersContainer) {
+      return NextResponse.json({ message: 'CommitteeMembers container not available. Check Cosmos DB configuration.' }, { status: 500 });
     }
-    return NextResponse.json(resource, { status: 200 });
+
+    // Try reading with memberId as partition key (new data)
+    let { resource } = await committeeMembersContainer.item(memberId, memberId).read<CommitteeMember>();
+    if (!resource) {
+      // Fallback: query for member by id to get actual partition key (legacy data)
+      const query = {
+        query: 'SELECT * FROM c WHERE c.id = @id',
+        parameters: [{ name: '@id', value: memberId }],
+      };
+      const { resources } = await committeeMembersContainer.items.query(query).fetchAll();
+      const fallbackMember = resources[0] as CommitteeMember | undefined;
+      if (!fallbackMember) {
+        return NextResponse.json({ message: 'Committee member not found' }, { status: 404 });
+      }
+      return NextResponse.json(fallbackMember, { status: 200 });
+    }
+    return NextResponse.json(resource as CommitteeMember, { status: 200 });
   } catch (error) {
     console.error(`Get Committee Member ${params.memberId} API error:`, error);
     return NextResponse.json({ message: 'Internal server error' }, { status: 500 });
@@ -49,20 +65,43 @@ export async function PUT(
       return NextResponse.json({ message: 'Member ID is required' }, { status: 400 });
     }
 
-    const { resource: existingMember } = await committeeMembersContainer.item(memberId, memberId).read<CommitteeMember>();
-    if (!existingMember) {
-      return NextResponse.json({ message: 'Committee member not found' }, { status: 404 });
+    const committeeMembersContainer = safeGetCommitteeMembersContainer();
+    if (!committeeMembersContainer) {
+      return NextResponse.json({ message: 'CommitteeMembers container not available. Check Cosmos DB configuration.' }, { status: 500 });
     }
 
+    // Try reading with memberId as partition key (new data)
+    let { resource: existingMember } = await committeeMembersContainer.item(memberId, memberId).read<CommitteeMember>();
+    let partitionKey = memberId;
+    let memberToUpdate: CommitteeMember | undefined = existingMember;
+    if (!existingMember) {
+      // Fallback: query for member by id to get actual partition key (legacy data)
+      const query = {
+        query: 'SELECT * FROM c WHERE c.id = @id',
+        parameters: [{ name: '@id', value: memberId }],
+      };
+      const { resources } = await committeeMembersContainer.items.query(query).fetchAll();
+      const fallbackMember = resources[0] as CommitteeMember | undefined;
+      if (!fallbackMember) {
+        return NextResponse.json({ message: 'Committee member not found' }, { status: 404 });
+      }
+      memberToUpdate = fallbackMember;
+      partitionKey = fallbackMember.societyId;
+    }
+    if (!memberToUpdate || !memberToUpdate.societyId || !memberToUpdate.name || !memberToUpdate.roleInCommittee || !memberToUpdate.flatNumber) {
+      return NextResponse.json({ message: 'Committee member data is incomplete or corrupt' }, { status: 500 });
+    }
     const updatedMemberData: CommitteeMember = {
-      ...existingMember,
+      ...memberToUpdate,
       ...updates,
-      id: existingMember.id, // Ensure ID is not changed
+      id: memberToUpdate.id, // Ensure ID is not changed
+      societyId: memberToUpdate.societyId,
+      name: memberToUpdate.name,
+      roleInCommittee: memberToUpdate.roleInCommittee,
+      flatNumber: memberToUpdate.flatNumber,
       updatedAt: new Date().toISOString(),
     };
-    
-    const { resource: replacedMember } = await committeeMembersContainer.item(memberId, memberId).replace(updatedMemberData);
-
+    const { resource: replacedMember } = await committeeMembersContainer.item(memberId, partitionKey).replace(updatedMemberData);
     if (!replacedMember) {
         return NextResponse.json({ message: 'Failed to update committee member' }, { status: 500 });
     }
@@ -84,7 +123,7 @@ export async function PUT(
         details: updates
       });
     } catch (e) { console.error('Audit log failed:', e); }
-    return NextResponse.json(replacedMember, { status: 200 });
+    return NextResponse.json(replacedMember as CommitteeMember, { status: 200 });
   } catch (error) {
     console.error(`Update Committee Member ${params.memberId} API error:`, error);
     const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
@@ -106,9 +145,31 @@ export async function DELETE(
     if (!memberId) {
       return NextResponse.json({ message: 'Member ID is required' }, { status: 400 });
     }
-    // Fetch the member before deleting to get the correct societyId
-    const { resource: member } = await committeeMembersContainer.item(memberId, memberId).read<CommitteeMember>();
-    await committeeMembersContainer.item(memberId, memberId).delete();
+
+    const committeeMembersContainer = safeGetCommitteeMembersContainer();
+    if (!committeeMembersContainer) {
+      return NextResponse.json({ message: 'CommitteeMembers container not available. Check Cosmos DB configuration.' }, { status: 500 });
+    }
+
+    // Try reading with memberId as partition key (new data)
+    let { resource: member } = await committeeMembersContainer.item(memberId, memberId).read<CommitteeMember>();
+    let partitionKey = memberId;
+    let memberToDelete: CommitteeMember | undefined = member;
+    if (!member) {
+      // Fallback: query for member by id to get actual partition key (legacy data)
+      const query = {
+        query: 'SELECT * FROM c WHERE c.id = @id',
+        parameters: [{ name: '@id', value: memberId }],
+      };
+      const { resources } = await committeeMembersContainer.items.query(query).fetchAll();
+      const fallbackMember = resources[0] as CommitteeMember | undefined;
+      if (!fallbackMember) {
+        return NextResponse.json({ message: 'Committee member not found or already deleted' }, { status: 404 });
+      }
+      memberToDelete = fallbackMember;
+      partitionKey = fallbackMember.societyId;
+    }
+    await committeeMembersContainer.item(memberId, partitionKey).delete();
     // Audit log
     try {
       const userId = request.headers.get('x-user-id') || 'unknown';
@@ -117,7 +178,7 @@ export async function DELETE(
       const validRoles = ["superadmin", "societyAdmin", "owner", "renter", "guard"];
       const safeUserRole = validRoles.includes(userRole) ? userRole : "superadmin";
       await logAuditAction({
-        societyId: member?.societyId || 'unknown',
+        societyId: memberToDelete?.societyId || 'unknown',
         userId,
         userName,
         userRole: safeUserRole as import('@/lib/types').UserRole,

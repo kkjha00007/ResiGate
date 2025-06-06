@@ -97,14 +97,14 @@ export const getNavItems = (
     { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, iconColor: 'text-sky-500' },
     { href: '/dashboard/my-profile', label: 'My Profile', icon: Settings2, iconColor: 'text-slate-400' },
 
-    // 2. Add Visitor Entry (Owner/Renter, Guard, SocietyAdmin)
-    { href: '/dashboard/add-visitor', label: 'Add Visitor Entry', icon: UserPlus, iconColor: 'text-emerald-500', isUserTypeCheck: (u, iA, iSA, iOR, iG) => iOR() || iG() || iSA() },
+    // 2. Add Visitor Entry (Guard only)
+    { href: '/dashboard/add-visitor', label: 'Add Visitor Entry', icon: UserPlus, iconColor: 'text-emerald-500', isUserTypeCheck: (u, iA, iSA, iOR, iG) => iG() },
 
     // 3. Visitor Log (SuperAdmin, SocietyAdmin, Guard)
     { href: '/dashboard/visitor-log', label: 'Visitor Log', icon: ClipboardList, iconColor: 'text-amber-500', isUserTypeCheck: (u, iA, iSA, iOR, iG) => iA() || iSA() || iG() },
 
-    // 4. Validate Gate Pass (Guard, SocietyAdmin)
-    { href: '/dashboard/gate-pass/validate', label: 'Validate Gate Pass', icon: ShieldCheckIcon, iconColor: 'text-blue-500', isUserTypeCheck: (u, iA, iSA, iOR, iG) => iG() || iSA() },
+    // 4. Validate Gate Pass (Guard only)
+    { href: '/dashboard/gate-pass/validate', label: 'Validate Gate Pass', icon: ShieldCheckIcon, iconColor: 'text-blue-500', isUserTypeCheck: (u, iA, iSA, iOR, iG) => iG() },
 
     // 5. Gate Passes
     { href: '/dashboard/gate-pass/create', label: 'Create Gate Pass', icon: CalendarPlus, iconColor: 'text-violet-500', isUserTypeCheck: (u, iA, iSA, iOR, iG) => iOR() || iSA() || iA() },
@@ -118,7 +118,7 @@ export const getNavItems = (
     { href: '/dashboard/facilities', label: 'Facilities', icon: Sparkles, iconColor: 'text-yellow-400' },
     { href: '/dashboard/neighbours', label: 'Our Neighbours', icon: NeighboursIcon, iconColor: 'text-cyan-600' },
     { href: '/dashboard/vendors/directory', label: 'Vendor Directory', icon: Store, iconColor: 'text-cyan-500' },
-    { href: '/dashboard/vendors/add', label: 'Add Vendor', icon: ConciergeBell, iconColor: 'text-purple-500' },
+    // { href: '/dashboard/vendors/add', label: 'Add Vendor', icon: ConciergeBell, iconColor: 'text-purple-500' }, // HIDDEN: Add Vendor link not needed
     { href: '/dashboard/committee-members', label: 'Committee Members', icon: Users, iconColor: 'text-green-500' },
 
     // 7. Admin/Management (SuperAdmin, SocietyAdmin)

@@ -138,6 +138,87 @@ export function safeGetNoticesContainer() {
     return undefined;
   }
 }
+// Defensive getter for gate passes container
+export function safeGetGatePassesContainer() {
+  try {
+    return getGatePassesContainer();
+  } catch (e) {
+    console.error('CosmosDB: Failed to get GatePasses container:', e);
+    return undefined;
+  }
+}
+// Defensive getter for visitor entries container
+export function safeGetVisitorEntriesContainer() {
+  try {
+    return getVisitorEntriesContainer();
+  } catch (e) {
+    console.error('CosmosDB: Failed to get VisitorEntries container:', e);
+    return undefined;
+  }
+}
+// Defensive getter for vendors container
+export function safeGetVendorsContainer() {
+  try {
+    return getVendorsContainer();
+  } catch (e) {
+    console.error('CosmosDB: Failed to get Vendors container:', e);
+    return undefined;
+  }
+}
+// Defensive getter for committee members container
+export function safeGetCommitteeMembersContainer() {
+  try {
+    return getCommitteeMembersContainer();
+  } catch (e) {
+    console.error('CosmosDB: Failed to get CommitteeMembers container:', e);
+    return undefined;
+  }
+}
+// Defensive getter for meetings container
+export function safeGetMeetingsContainer() {
+  try {
+    return getMeetingsContainer();
+  } catch (e) {
+    console.error('CosmosDB: Failed to get Meetings container:', e);
+    return undefined;
+  }
+}
+// Defensive getter for facilities container
+export function safeGetFacilitiesContainer() {
+  try {
+    return getFacilitiesContainer();
+  } catch (e) {
+    console.error('CosmosDB: Failed to get Facilities container:', e);
+    return undefined;
+  }
+}
+// Defensive getter for parking spots container
+export function safeGetParkingSpotsContainer() {
+  try {
+    return getParkingSpotsContainer();
+  } catch (e) {
+    console.error('CosmosDB: Failed to get ParkingSpots container:', e);
+    return undefined;
+  }
+}
+// Defensive getter for societies container
+export function safeGetSocietiesContainer() {
+  try {
+    return getSocietiesContainer();
+  } catch (e) {
+    console.error('CosmosDB: Failed to get Societies container:', e);
+    return undefined;
+  }
+}
+// Defensive getter for society settings container
+export function safeGetSocietySettingsContainer() {
+  try {
+    return getSocietySettingsContainer();
+  } catch (e) {
+    console.error('CosmosDB: Failed to get SocietySettings container:', e);
+    return undefined;
+  }
+}
 
 // ...existing code for types and other exports...
 export type { User, VisitorEntry, LoginAudit, GatePass, Complaint, Notice, Meeting, Vendor, CommitteeMember, SocietyPaymentDetails, SocietyInfoSettings, ParkingSpot, Facility, Society };

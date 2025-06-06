@@ -1,6 +1,6 @@
 // src/app/api/vendors/admin/[vendorId]/route.ts
 import { NextResponse, type NextRequest } from 'next/server';
-import { vendorsContainer } from '@/lib/cosmosdb';
+import { safeGetVendorsContainer } from '@/lib/cosmosdb';
 import type { Vendor } from '@/lib/types';
 
 // Approve a vendor or update its details (Super Admin only)
@@ -15,6 +15,11 @@ export async function PUT(
 
     if (!vendorId) {
       return NextResponse.json({ message: 'Vendor ID is required' }, { status: 400 });
+    }
+
+    const vendorsContainer = safeGetVendorsContainer();
+    if (!vendorsContainer) {
+      return NextResponse.json({ message: 'Vendors container not available. Check Cosmos DB configuration.' }, { status: 500 });
     }
 
     // Fetch the existing vendor to get its partition key (category)
@@ -85,6 +90,11 @@ export async function DELETE(
 
     if (!vendorId) {
       return NextResponse.json({ message: 'Vendor ID is required' }, { status: 400 });
+    }
+    
+    const vendorsContainer = safeGetVendorsContainer();
+    if (!vendorsContainer) {
+      return NextResponse.json({ message: 'Vendors container not available. Check Cosmos DB configuration.' }, { status: 500 });
     }
     
     const querySpec = {
