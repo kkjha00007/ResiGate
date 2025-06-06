@@ -27,12 +27,97 @@ ResiGate is a **full-stack visitor management system** designed for residential 
 
 ## 2. User Roles & Permissions
 
-| Role         | Description                        | Permissions                                                                 |
-|--------------|------------------------------------|------------------------------------------------------------------------------|
-| **Admin**    | Society administrator              | • Manage residents<br>• View/delete all visitors<br>• Configure system settings |
-| **Resident** | Homeowner or tenant                | • View own visitor history<br>• Approve/deny visitor requests (if implemented) |
-| **Security** | Gate/security personnel            | • Register new visitors<br>• Check in/out visitors<br>• View current day’s visitors |
-| **Guest**    | Unauthenticated user               | • Access public landing page (if any)                                       |
+| Role            | Description                    | Permissions/Access                                                                                   |
+|-----------------|-------------------------------|------------------------------------------------------------------------------------------------------|
+| **SuperAdmin**  | Platform-level admin           | - Manage all societies<br>- Manage all users<br>- View/manage all data across societies              |
+| **SocietyAdmin**| Society administrator          | - Manage residents in their society<br>- View/delete all visitors<br>- Configure society settings<br>- Manage facilities, meetings, notices, vendors, parking, committee members for their society |
+| **Owner/Renter**| Resident (homeowner/tenant)    | - View own visitor history<br>- Create/view gate passes<br>- View/manage own profile<br>- Book facilities<br>- Submit/view complaints<br>- View neighbours, vendors, committee members, notices, meetings, parking, payment details |
+| **Guard**       | Security personnel             | - Register new visitors<br>- Check in/out visitors<br>- View current day’s visitors<br>- Validate gate pass tokens<br>- Add visitor entry (from gate) |
+| **Guest**       | Unauthenticated user           | - Access public landing page (if any)<br>- Public visitor entry (if enabled)                         |
+
+### Detailed Role Capabilities
+
+#### SuperAdmin
+- Full access to all societies and their data
+- Can create, update, and delete societies
+- Can manage all users, including SocietyAdmins
+- Can view and audit all logs and activities
+
+#### SocietyAdmin
+- Full control over their own society
+- Can add, approve, or remove residents
+- Can manage facilities, meetings, notices, vendors, parking, and committee members for their society
+- Can view all visitors and residents in their society
+- Can configure society-specific settings
+
+#### Owner/Renter (Resident)
+- Can view and update their own profile
+- Can create and view their own gate passes
+- Can view their own visitor history
+- Can book facilities and view facility schedules
+- Can submit and view complaints
+- Can view neighbours, vendors, committee members, notices, meetings, parking, and payment details relevant to their society
+
+#### Guard (Security)
+- Can register new visitors at the gate
+- Can check in and check out visitors
+- Can view the current day’s visitors
+- Can validate gate pass tokens
+- Can add visitor entry (from gate)
+
+#### Guest
+- Can access the public landing page (if enabled)
+- Can submit a public visitor entry (if enabled)
+
+---
+
+## 2.1. Feature Overview
+
+### Current Features
+
+| Feature                          | Description                                                                                 |
+|----------------------------------|---------------------------------------------------------------------------------------------|
+| Visitor Registration             | Security can register new visitors at the gate                                              |
+| Visitor Check-In/Check-Out       | Security can check in/out visitors and log timestamps                                       |
+| Resident Notifications           | Residents receive email (and/or push) notifications when a visitor arrives                  |
+| Resident Management              | Admins can add, approve, and remove residents; residents can view/update their profile      |
+| Security Dashboard               | Security can view today's visitors, search/filter, and perform quick actions                |
+| Facility Booking                 | Residents can view and book society facilities                                              |
+| Complaints Management            | Residents can submit/view complaints; admins can view/manage all complaints                 |
+| Committee Member Management      | Admins can manage society committee members                                                 |
+| Vendor Directory                 | Residents can view vendors; admins can manage vendors                                       |
+| Parking Management               | Residents can view their parking; admins can manage all parking spots                       |
+| Gate Pass Generation             | Residents can create gate passes for their visitors                                         |
+| Validate Gate Pass (Guard)       | Guards can validate gate pass tokens at the gate                                            |
+| Role-Based Access Control        | SuperAdmin, SocietyAdmin, Owner/Renter, Guard, Guest roles with specific permissions        |
+| Announcements/Notices/Meetings   | Admins can post notices/meetings; residents can view them                                   |
+| Audit Logs (Admin)               | SuperAdmins can view audit logs                                                             |
+| Society Settings                 | Admins can configure society-specific settings                                              |
+| Public Visitor Entry (optional)  | Public can submit visitor entry if enabled                                                  |
+| Responsive UI                    | Modern, mobile-friendly interface                                                           |
+
+### Upcoming/Planned Features
+
+| Feature                          | Description                                                                                 |
+|----------------------------------|---------------------------------------------------------------------------------------------|
+| Azure Blob Storage Integration   | Store documents, photos, and backups in Azure Blob Storage                                  |
+| Society-wise Blob/DB Containers  | Data isolation and scalability for large deployments                                        |
+| SOS Button                       | Emergency alert for residents                                                               |
+| Multi-Method Login               | Login via mobile number, Gmail, or email                                                    |
+| Email & Phone Notifications      | Integrate with email and phone for notifications                                            |
+| Notification Preferences         | Users can enable/disable notifications per channel                                          |
+| AI Integration                   | Smart suggestions, automated categorization, chatbot, etc.                                  |
+| Feature Request/Bug Report       | In-app feedback and bug reporting                                                           |
+| Bulk User Onboarding             | Tools to add/import existing users                                                          |
+| Enhanced Society Info            | Auto-fill city/state from pin code in society settings                                      |
+| Auto-Hide Expired Items          | Meetings/notices/announcements auto-hide after end datetime                                 |
+| Detailed Role Access Matrix      | Full documentation of what each role can/cannot do                                          |
+| Mobile App/PWA                   | Dedicated mobile app or progressive web app                                                 |
+| Payment Integration              | Online payments, invoices, and reminders                                                    |
+| Facility Booking Calendar        | Calendar view for all facility bookings                                                     |
+| Vendor Ratings/Reviews           | Residents can rate and review vendors                                                       |
+| Data Export/Import               | Export/import data for admin and audit purposes                                             |
+| Localization/Multilanguage       | Support for multiple languages                                                              |
 
 ---
 
@@ -236,3 +321,4 @@ sequenceDiagram
     EmailService-->>Resident: “Your visitor John Doe is waiting”
     API-->>SecurityFrontEnd: { visitorId, message: "Registered" }
     SecurityFrontEnd-->>Visitor: “You are registered. Please wait.”
+```
