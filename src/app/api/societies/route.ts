@@ -1,7 +1,6 @@
-
 // src/app/api/societies/route.ts
 import { NextResponse, type NextRequest } from 'next/server';
-import { societiesContainer, societySettingsContainer } from '@/lib/cosmosdb';
+import { getSocietiesContainer, getSocietySettingsContainer } from '@/lib/cosmosdb';
 import type { Society, SocietyInfoSettings } from '@/lib/types';
 import { v4 as uuidv4 } from 'uuid';
 import { USER_ROLES } from '@/lib/constants'; // For admin check placeholder
@@ -18,6 +17,9 @@ const isSuperAdmin = (request: NextRequest): boolean => {
 
 // Create a new society (Super Admin only)
 export async function POST(request: NextRequest) {
+  const societiesContainer = getSocietiesContainer();
+  const societySettingsContainer = getSocietySettingsContainer();
+
   // if (!isSuperAdmin(request)) {
   //   return NextResponse.json({ message: 'Unauthorized: Only Super Admins can create societies.' }, { status: 403 });
   // }
@@ -91,11 +93,12 @@ export async function POST(request: NextRequest) {
 
 // Get all active societies (for public list, e.g., registration dropdown)
 export async function GET(request: NextRequest) {
+  const societiesContainer = getSocietiesContainer();
   try {
     const querySpec = {
       query: "SELECT c.id, c.name, c.city FROM c WHERE c.isActive = true ORDER BY c.name ASC"
     };
-    const { resources } = await societiesContainer.items.query<Pick<Society, 'id' | 'name' | 'city'>>(querySpec).fetchAll();
+    const { resources } = await societiesContainer.items.query(querySpec).fetchAll();
     return NextResponse.json(resources, { status: 200 });
   } catch (error: any) {
     console.error('Get Active Societies List API error:', error.message || error);

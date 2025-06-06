@@ -325,3 +325,14 @@ export interface ParkingRequest {
   updatedAt: string;
 }
 
+export interface Notification {
+  id: string;
+  userId: string;
+  type: string; // e.g. 'notice', 'approval', 'booking', etc.
+  title: string;
+  message: string;
+  link?: string;
+  createdAt: string;
+  read: boolean;
+}
+

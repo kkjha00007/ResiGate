@@ -1,7 +1,6 @@
-
 // src/app/api/complaints/user/[userId]/route.ts
 import { NextResponse, type NextRequest } from 'next/server';
-import { complaintsContainer } from '@/lib/cosmosdb';
+import { safeGetComplaintsContainer } from '@/lib/cosmosdb';
 import type { Complaint } from '@/lib/types';
 
 // Get complaints for a specific user
@@ -13,6 +12,11 @@ export async function GET(
     const userId = params.userId;
     if (!userId) {
       return NextResponse.json({ message: 'User ID is required' }, { status: 400 });
+    }
+
+    const complaintsContainer = safeGetComplaintsContainer();
+    if (!complaintsContainer) {
+      return NextResponse.json({ message: 'Complaints container not available. Check Cosmos DB configuration.' }, { status: 500 });
     }
 
     const querySpec = {

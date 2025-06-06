@@ -1,7 +1,6 @@
-
 // src/app/api/notices/[noticeId]/route.ts
 import { NextResponse, type NextRequest } from 'next/server';
-import { noticesContainer } from '@/lib/cosmosdb';
+import { safeGetNoticesContainer } from '@/lib/cosmosdb';
 import type { Notice } from '@/lib/types';
 
 // Get a specific notice by ID (might not be needed if client fetches all and filters)
@@ -19,6 +18,11 @@ export async function PUT(
 
     if (!noticeId || !monthYear) {
       return NextResponse.json({ message: 'Notice ID and monthYear (for partition key) are required' }, { status: 400 });
+    }
+
+    const noticesContainer = safeGetNoticesContainer();
+    if (!noticesContainer) {
+      return NextResponse.json({ message: 'Notices container not available. Check Cosmos DB configuration.' }, { status: 500 });
     }
 
     const { resource: existingNotice } = await noticesContainer.item(noticeId, monthYear).read<Notice>();
@@ -74,15 +78,30 @@ export async function DELETE(
       return NextResponse.json({ message: 'Notice ID and monthYear (as query parameter) are required for deletion' }, { status: 400 });
     }
     
+    const noticesContainer = safeGetNoticesContainer();
+    if (!noticesContainer) {
+      return NextResponse.json({ message: 'Notices container not available. Check Cosmos DB configuration.' }, { status: 500 });
+    }
+
     // Optional: Check if notice exists before attempting delete, though delete is idempotent
     // const { resource: existingNotice } = await noticesContainer.item(noticeId, monthYear).read<Notice>();
     // if (!existingNotice) {
     //   return NextResponse.json({ message: 'Notice not found to delete' }, { status: 404 });
     // }
 
-    await noticesContainer.item(noticeId, monthYear).delete();
-    
-    return NextResponse.json({ message: `Notice ${noticeId} deleted successfully` }, { status: 200 });
+    try {
+      await noticesContainer.item(noticeId, monthYear).delete();
+      return NextResponse.json({ message: `Notice ${noticeId} deleted successfully` }, { status: 200 });
+    } catch (deleteError: any) {
+      // Handle Cosmos DB not found error gracefully
+      if (deleteError?.code === 404) {
+        return NextResponse.json({ message: 'Notice not found or already deleted' }, { status: 404 });
+      }
+      // Log and return other errors
+      console.error(`Delete Notice ${noticeId} API error:`, deleteError);
+      const errorMessage = deleteError instanceof Error ? deleteError.message : 'An unknown error occurred';
+      return NextResponse.json({ message: 'Internal server error', error: errorMessage }, { status: 500 });
+    }
 
   } catch (error) {
     console.error(`Delete Notice ${params.noticeId} API error:`, error);

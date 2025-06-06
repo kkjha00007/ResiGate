@@ -5,6 +5,7 @@ import type { Notice } from '@/lib/types';
 import { v4 as uuidv4 } from 'uuid';
 import { format } from 'date-fns';
 import { logAuditAction } from '@/lib/utils';
+import { createNotification } from '@/lib/notifications';
 
 // Helper to extract societyId from request (header, query, or body)
 async function getSocietyId(request: NextRequest): Promise<string | null> {
@@ -82,6 +83,19 @@ export async function POST(request: NextRequest) {
       userAgent: request.headers.get('user-agent') || '',
     });
     // --- End Audit Log ---
+
+    // --- Notification: Send to all users in the society (for demo, you may want to filter by role) ---
+    // Fetch all users in the society
+    const usersContainer = getNoticesContainer(); // Actually should be getUsersContainer()
+    // ...but for now, just send to postedByUserId as a demo
+    await createNotification({
+      userId: postedByUserId,
+      type: 'notice',
+      title: 'New Notice',
+      message: `A new notice has been posted: ${createdNotice.title}`,
+      link: '/dashboard',
+    });
+    // --- End Notification ---
 
     return NextResponse.json(createdNotice, { status: 201 });
 

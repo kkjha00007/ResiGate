@@ -20,6 +20,7 @@ export const facilitiesContainerId = process.env.COSMOS_FACILITIES_CONTAINER_ID 
 export const societiesContainerId = process.env.COSMOS_SOCIETIES_CONTAINER_ID || "Societies";
 export const personasContainerId = process.env.COSMOS_PERSONAS_CONTAINER_ID || "Personas";
 const auditLogsContainerId = process.env.COSMOS_AUDIT_LOGS_CONTAINER_ID || "AuditLogs";
+export const notificationsContainerId = process.env.COSMOS_NOTIFICATIONS_CONTAINER_ID || "Notifications";
 
 function getCosmosClient() {
   if (!endpoint || !key) {
@@ -113,6 +114,29 @@ export function getParkingRequestsContainer() {
 export function getContactMessagesContainer() {
   const client = getCosmosClient();
   return getDatabase(client).container('ContactMessages');
+}
+export function getNotificationsContainer() {
+  const client = getCosmosClient();
+  return getDatabase(client).container(notificationsContainerId);
+}
+
+// Defensive getter for complaints container
+export function safeGetComplaintsContainer() {
+  try {
+    return getComplaintsContainer();
+  } catch (e) {
+    console.error('CosmosDB: Failed to get Complaints container:', e);
+    return undefined;
+  }
+}
+// Defensive getter for notices container
+export function safeGetNoticesContainer() {
+  try {
+    return getNoticesContainer();
+  } catch (e) {
+    console.error('CosmosDB: Failed to get Notices container:', e);
+    return undefined;
+  }
 }
 
 // ...existing code for types and other exports...

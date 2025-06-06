@@ -1,11 +1,12 @@
 // src/app/api/users/route.ts
 import { NextResponse, type NextRequest } from 'next/server';
-import { getUsersContainer, usersContainerReady, societySettingsContainer } from '@/lib/cosmosdb';
+import { getUsersContainer, getSocietySettingsContainer } from '@/lib/cosmosdb';
 import type { User, UserRole, SocietyInfoSettings } from '@/lib/types';
 import { v4 as uuidv4 } from 'uuid';
 import { USER_ROLES, SELECTABLE_USER_ROLES } from '@/lib/constants'; // Ensure USER_ROLES is imported
 import bcrypt from 'bcryptjs';
 import { CosmosClient } from '@azure/cosmos';
+import { createNotification } from '@/lib/notifications';
 
 const SALT_ROUNDS = 10;
 
@@ -113,12 +114,44 @@ export async function POST(request: NextRequest) {
         console.error('User creation in DB returned undefined resource without throwing error.');
         return NextResponse.json({ message: 'Failed to create user record (unexpected DB response).' }, { status: 500 });
       }
+      // --- Notify all superadmins and society admins in this society ---
+      // Find all admins for this society
+      const adminQuery = {
+        query: "SELECT * FROM c WHERE c.societyId = @societyId AND (c.role = @superadmin OR c.role = @societyAdmin)",
+        parameters: [
+          { name: "@societyId", value: societyId },
+          { name: "@superadmin", value: USER_ROLES.SUPERADMIN },
+          { name: "@societyAdmin", value: USER_ROLES.SOCIETY_ADMIN }
+        ]
+      };
+      const { resources: admins } = await usersContainer.items.query<User>(adminQuery, { partitionKey: societyId }).fetchAll();
+      // Optionally, also notify global superadmins (not tied to a society)
+      const globalSuperadminQuery = {
+        query: "SELECT * FROM c WHERE c.role = @superadmin AND (IS_NULL(c.societyId) OR c.societyId = '')",
+        parameters: [
+          { name: "@superadmin", value: USER_ROLES.SUPERADMIN }
+        ]
+      };
+      const { resources: globalSuperadmins } = await usersContainer.items.query<User>(globalSuperadminQuery).fetchAll();
+      const allAdmins = [...admins, ...globalSuperadmins];
+      await Promise.all(
+        allAdmins.map(admin =>
+          createNotification({
+            userId: admin.id,
+            type: 'registration',
+            title: 'New User Registration',
+            message: `${createdUser!.name} has registered and is awaiting approval.`,
+            link: '/dashboard/admin/admin-approvals',
+          })
+        )
+      );
     } catch (dbCreateError: any) {
       console.error('Error creating user in DB:', dbCreateError);
       return NextResponse.json({ message: 'Database error creating user.', error: dbCreateError.message || String(dbCreateError) }, { status: 500 });
     }
     
     // Step 6: Check/Create SocietyInfoSettings for the new societyId (optional, only if not exists)
+    const societySettingsContainer = getSocietySettingsContainer();
     try {
         await societySettingsContainer.item(societyId, societyId).read();
     } catch (error: any) {
