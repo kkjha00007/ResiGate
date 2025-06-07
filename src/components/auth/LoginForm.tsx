@@ -93,15 +93,22 @@ export function LoginForm() {
                 </FormItem>
               )}
             />
-            <Button type="submit" className="w-full" disabled={isLoading}>
-              {isLoading ? (
-                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary-foreground"></div>
-              ) : (
-                <>
-                  <LogIn className="mr-2 h-5 w-5" /> Sign In
-                </>
-              )}
-            </Button>
+            <div className="flex gap-2 mt-2">
+              <Button type="submit" className="w-full" disabled={isLoading}>
+                {isLoading ? (
+                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary-foreground"></div>
+                ) : (
+                  <>
+                    <LogIn className="mr-2 h-5 w-5" /> Sign In
+                  </>
+                )}
+              </Button>
+              <Link href="/forgot-password" className="w-full">
+                <Button type="button" className="w-full bg-secondary text-primary hover:bg-secondary/80" variant="secondary">
+                  Forgot Password?
+                </Button>
+              </Link>
+            </div>
           </form>
         </Form>
         <p className="mt-6 text-center text-sm text-muted-foreground">

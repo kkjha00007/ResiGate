@@ -1,6 +1,6 @@
 // src/app/api/parking/requests/[id]/route.ts
 import { NextRequest, NextResponse } from 'next/server';
-import { parkingRequestsContainer, parkingSpotsContainer } from '@/lib/cosmosdb';
+import { getParkingRequestsContainer, getParkingSpotsContainer } from '@/lib/cosmosdb';
 import type { ParkingRequest, ParkingSpot } from '@/lib/types';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -18,6 +18,8 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
     return NextResponse.json({ message: 'Missing status or societyId' }, { status: 400 });
   }
   try {
+    const parkingRequestsContainer = getParkingRequestsContainer();
+    const parkingSpotsContainer = getParkingSpotsContainer();
     const { resource: req } = await parkingRequestsContainer.item(id, societyId).read<ParkingRequest>();
     if (!req) {
       return NextResponse.json({ message: 'Request not found' }, { status: 404 });

@@ -1,6 +1,6 @@
 // src/app/api/complaints/[id]/reply/route.ts
 import { NextResponse, type NextRequest } from 'next/server';
-import { complaintsContainer } from '@/lib/cosmosdb';
+import { getComplaintsContainer } from '@/lib/cosmosdb';
 import type { Complaint } from '@/lib/types';
 
 // POST: Add a reply to a complaint
@@ -17,6 +17,7 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
     return NextResponse.json({ message: 'Missing reply or societyId' }, { status: 400 });
   }
   try {
+    const complaintsContainer = getComplaintsContainer();
     // Fetch the complaint with correct partition key
     const { resource: complaint } = await complaintsContainer.item(id, societyId).read<Complaint>();
     if (!complaint) {

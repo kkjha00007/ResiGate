@@ -1,6 +1,6 @@
 // src/app/api/complaints/[id]/route.ts
 import { NextResponse, type NextRequest } from 'next/server';
-import { complaintsContainer } from '@/lib/cosmosdb';
+import { getComplaintsContainer } from '@/lib/cosmosdb';
 import type { Complaint } from '@/lib/types';
 
 // PATCH: Update complaint status
@@ -17,6 +17,7 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
     return NextResponse.json({ message: 'Missing status or societyId' }, { status: 400 });
   }
   try {
+    const complaintsContainer = getComplaintsContainer();
     // Fetch the complaint with correct partition key
     const { resource: complaint } = await complaintsContainer.item(id, societyId).read<Complaint>();
     if (!complaint) {

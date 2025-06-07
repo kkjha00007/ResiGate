@@ -12,6 +12,9 @@ export interface User {
   registrationDate: string; // Store as ISO string
   secondaryPhoneNumber1?: string;
   secondaryPhoneNumber2?: string;
+  // Password reset fields
+  passwordResetToken?: string;
+  passwordResetTokenExpiry?: number; // Unix timestamp (ms)
 }
 
 export type UserProfile = Omit<User, 'password'>;

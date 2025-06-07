@@ -7,6 +7,7 @@ import { useToast } from '@/hooks/use-toast';
 import { USER_ROLES, PUBLIC_ENTRY_SOURCE } from './constants';
 import { GATE_PASS_STATUSES } from './types';
 import { format, parseISO } from 'date-fns';
+import { v4 as uuidv4 } from 'uuid';
 
 interface AuthContextType {
   user: UserProfile | null;
@@ -1549,7 +1550,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         toast({ title: 'Parking Spot Update Error', description: error.message || 'An error occurred', variant: 'destructive' });
       }
       return null;
-    }
+                                                 }
   };
 
   const deleteParkingSpot = async (spotId: string): Promise<boolean> => {

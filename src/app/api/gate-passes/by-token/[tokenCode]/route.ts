@@ -1,7 +1,6 @@
-
 // src/app/api/gate-passes/by-token/[tokenCode]/route.ts
 import { NextResponse, type NextRequest } from 'next/server';
-import { gatePassesContainer } from '@/lib/cosmosdb';
+import { getGatePassesContainer } from '@/lib/cosmosdb';
 import type { GatePass } from '@/lib/types';
 
 // Get a specific gate pass by Token Code
@@ -14,7 +13,7 @@ export async function GET(
     if (!tokenCode) {
       return NextResponse.json({ message: 'Token Code is required' }, { status: 400 });
     }
-
+    const gatePassesContainer = getGatePassesContainer();
     const querySpec = {
       query: "SELECT * FROM c WHERE c.tokenCode = @tokenCode",
       parameters: [{ name: "@tokenCode", value: tokenCode }]
