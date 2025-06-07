@@ -17,6 +17,7 @@ import {
   Store,
   Briefcase,
 } from 'lucide-react';
+import { useAuth } from '@/lib/auth-provider';
 
 const gridItems = [
   { href: '/dashboard', label: 'Home', icon: LayoutDashboard, color: 'bg-sky-200 text-sky-700 hover:bg-sky-400 hover:text-white' },
@@ -41,12 +42,25 @@ const gridItems = [
   { href: '/dashboard/admin/audit-logs', label: 'Audit Logs', icon: ShieldCheckIcon, color: 'bg-gray-200 text-gray-700 hover:bg-gray-900 hover:text-white' },
   { href: '/dashboard/admin/manage-personas', label: 'Personas', icon: Building2, color: 'bg-indigo-200 text-indigo-700 hover:bg-indigo-900 hover:text-white' },
   { href: '/dashboard/gate-pass/create', label: 'Create Gate Pass', icon: Ticket, color: 'bg-green-200 text-green-700 hover:bg-green-500 hover:text-white' },
+  { href: '/dashboard/feedback', label: 'Feedback / Bug Report', icon: ClipboardEdit, color: 'bg-blue-200 text-blue-700 hover:bg-blue-500 hover:text-white', showForSuperAdmin: false },
+  { href: '/dashboard/admin/feedback', label: 'Feedback / Bug Reports', icon: ClipboardEdit, color: 'bg-yellow-200 text-yellow-700 hover:bg-yellow-500 hover:text-white', showForSuperAdmin: true },
 ];
 
 export function DashboardGrid() {
+  const { user } = useAuth();
+  // Show feedback card for all users, but route and color differ for SuperAdmin
+  const filteredGridItems = gridItems.filter(item => {
+    if (item.href === '/dashboard/feedback') {
+      return user && user.role !== 'superadmin';
+    }
+    if (item.href === '/dashboard/admin/feedback') {
+      return user && user.role === 'superadmin';
+    }
+    return true;
+  });
   return (
     <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-8 py-10 justify-center">
-      {gridItems.map(({ href, label, icon: Icon, color }) => (
+      {filteredGridItems.map(({ href, label, icon: Icon, color }) => (
         <Link
           key={href}
           href={href}

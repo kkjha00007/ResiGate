@@ -1829,3 +1829,6 @@ export function useAuth() {
   }
   return context;
 }
+
+// Utility for API routes to get the current user (session-based)
+// (Moved to src/lib/api-session-user.ts for server-only usage)

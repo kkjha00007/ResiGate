@@ -239,6 +239,10 @@ export interface SocietyInfoSettings {
   address?: string;
   contactEmail?: string;
   contactPhone?: string;
+  pincode?: string;
+  city?: string;
+  state?: string;
+  country?: string;
   updatedAt?: string;
   importantContacts?: { label: string; value: string }[]; // Added for persistent contacts
 }
@@ -281,7 +285,10 @@ export interface Facility {
 export interface Society {
   id: string; // Primary key, UUID
   name: string;
-  city: string;
+  pincode?: string;
+  city?: string;
+  state?: string;
+  country?: string;
   isActive: boolean; // To deactivate a society if needed
   createdAt: string; // ISO DateTime string
   updatedAt?: string; // ISO DateTime string
@@ -337,5 +344,38 @@ export interface Notification {
   link?: string;
   createdAt: string;
   read: boolean;
+}
+
+export const FEEDBACK_STATUS_VALUES = {
+  OPEN: "open",
+  IN_PROGRESS: "in_progress",
+  UNDER_REVIEW: "under_review",
+  REJECTED: "rejected",
+  RESOLVED: "resolved",
+  CLOSED: "closed",
+} as const;
+export type FeedbackStatus = typeof FEEDBACK_STATUS_VALUES[keyof typeof FEEDBACK_STATUS_VALUES];
+
+export interface FeedbackComment {
+  authorId: string;
+  authorName: string;
+  comment: string;
+  createdAt: string; // ISO DateTime
+}
+
+export interface FeedbackTicket {
+  id: string;
+  societyId?: string; // Optional for global tickets
+  userId: string;
+  userName: string;
+  userEmail: string;
+  flatNumber?: string;
+  type: "bug" | "feature" | "feedback";
+  subject: string;
+  description: string;
+  status: FeedbackStatus;
+  createdAt: string;
+  updatedAt?: string;
+  comments?: FeedbackComment[];
 }
 

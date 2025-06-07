@@ -37,6 +37,10 @@ export async function GET(request: NextRequest) {
         address: '',
         contactEmail: '',
         contactPhone: '',
+        pincode: '',
+        city: '',
+        state: '',
+        country: '',
         importantContacts: [], // Default empty contacts
       };
       return NextResponse.json(defaultSettings, { status: 200 });
@@ -56,6 +60,10 @@ export async function GET(request: NextRequest) {
         address: '',
         contactEmail: '',
         contactPhone: '',
+        pincode: '',
+        city: '',
+        state: '',
+        country: '',
         importantContacts: [],
       };
       return NextResponse.json(defaultSettings, { status: 200 });
@@ -95,6 +103,10 @@ export async function PUT(request: NextRequest) {
       address: body.address ?? existing.address ?? '',
       contactEmail: body.contactEmail ?? existing.contactEmail ?? '',
       contactPhone: body.contactPhone ?? existing.contactPhone ?? '',
+      pincode: body.pincode ?? existing.pincode ?? '',
+      city: body.city ?? existing.city ?? '',
+      state: body.state ?? existing.state ?? '',
+      country: body.country ?? existing.country ?? '',
       importantContacts: body.importantContacts ?? existing.importantContacts ?? [],
       updatedAt: new Date().toISOString(),
     };

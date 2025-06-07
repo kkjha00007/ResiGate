@@ -119,6 +119,10 @@ export function getNotificationsContainer() {
   const client = getCosmosClient();
   return getDatabase(client).container(notificationsContainerId);
 }
+export function getFeedbackTicketsContainer() {
+  const client = getCosmosClient();
+  return getDatabase(client).container("feedbackTickets");
+}
 
 // Defensive getter for complaints container
 export function safeGetComplaintsContainer() {

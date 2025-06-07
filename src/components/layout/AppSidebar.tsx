@@ -134,7 +134,10 @@ export const getNavItems = (
     // 8. SuperAdmin Only
     { href: '/dashboard/admin/manage-societies', label: 'Manage Societies', icon: Briefcase, iconColor: 'text-gray-400', isUserTypeCheck: (u, iA, iSA, iOR, iG) => iA() },
     { href: '/dashboard/admin/audit-logs', label: 'Audit Logs', icon: ShieldAlert, iconColor: 'text-yellow-600', isUserTypeCheck: (u, iA, iSA, iOR, iG) => iA() },
-    { href: '/dashboard/admin/manage-personas', label: 'Manage Personas', icon: Sparkles, iconColor: 'text-indigo-500', isUserTypeCheck: (u, iA, iSA, iOR, iG) => iA() }
+    { href: '/dashboard/admin/manage-personas', label: 'Manage Personas', icon: Sparkles, iconColor: 'text-indigo-500', isUserTypeCheck: (u, iA, iSA, iOR, iG) => iA() },
+    { href: '/dashboard/admin/feedback', label: 'Feedback & Bug Reports', icon: Megaphone, iconColor: 'text-blue-600', isUserTypeCheck: (u, iA, iSA, iOR, iG) => iA() },
+    // Feedback for regular users
+    { href: '/dashboard/feedback', label: 'Feedback / Bug Reports', icon: ClipboardEdit, iconColor: 'text-blue-600', isUserTypeCheck: (u, iA, iSA, iOR, iG) => !iA() },
   ];
   return allItems.filter(item => checkVisibility(user, isAdminFn, isSocietyAdminFn, isOwnerOrRenterFn, isGuardFn, item));
 };

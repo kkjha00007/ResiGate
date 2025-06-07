@@ -1,4 +1,3 @@
-
 // src/components/dashboard/admin/SocietyInfoForm.tsx
 'use client';
 
@@ -21,6 +20,7 @@ import React, { useEffect, useState } from 'react';
 import type { SocietyInfoSettings } from '@/lib/types';
 import { Save, Info, Hash, Mail, Phone, MapPin, Loader2 } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useToast } from '@/hooks/use-toast';
 
 const societyInfoSchema = z.object({
   societyName: z.string().min(3, 'Society Name must be at least 3 characters.').max(100, 'Society Name must not exceed 100 characters.'),
@@ -28,14 +28,20 @@ const societyInfoSchema = z.object({
   address: z.string().max(500, 'Address must not exceed 500 characters.').optional(),
   contactEmail: z.string().email('Invalid email address.').optional().or(z.literal('')),
   contactPhone: z.string().regex(/^$|^\+?[\d\s-]{7,20}$/, 'Invalid phone number format.').optional(),
+  pincode: z.string().min(5, 'Pincode must be at least 5 digits.').max(10, 'Pincode must not exceed 10 digits.'),
+  city: z.string().min(2, 'City is required.'),
+  state: z.string().min(2, 'State is required.'),
 });
 
 type SocietyInfoFormValues = z.infer<typeof societyInfoSchema>;
 
 export function SocietyInfoForm() {
   const { societyInfo, fetchSocietyInfo, updateSocietyInfo, isLoading: authLoading } = useAuth();
+  const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isFetching, setIsFetching] = useState(true);
+  const [isLookingUp, setIsLookingUp] = useState(false);
+  const [isCityStateLocked, setIsCityStateLocked] = useState(false);
 
   const form = useForm<SocietyInfoFormValues>({
     resolver: zodResolver(societyInfoSchema),
@@ -45,6 +51,9 @@ export function SocietyInfoForm() {
       address: '',
       contactEmail: '',
       contactPhone: '',
+      pincode: '',
+      city: '',
+      state: '',
     },
   });
 
@@ -61,6 +70,9 @@ export function SocietyInfoForm() {
         address: societyInfo.address || '',
         contactEmail: societyInfo.contactEmail || '',
         contactPhone: societyInfo.contactPhone || '',
+        pincode: societyInfo.pincode || '',
+        city: societyInfo.city || '',
+        state: societyInfo.state || '',
       });
     }
   }, [societyInfo, form]);
@@ -70,6 +82,39 @@ export function SocietyInfoForm() {
     await updateSocietyInfo(data);
     setIsSubmitting(false);
     // Toast is handled by updateSocietyInfo in AuthProvider
+  };
+
+  const handlePincodeLookup = async () => {
+    const pincode = form.getValues('pincode');
+    if (!pincode || pincode.length < 5) {
+      toast({ title: 'Invalid Pincode', description: 'Please enter a valid pincode before lookup.', variant: 'destructive' });
+      return;
+    }
+    setIsLookingUp(true);
+    try {
+      const res = await fetch(`https://api.postalpincode.in/pincode/${pincode}`);
+      const data = await res.json();
+      if (Array.isArray(data) && data[0]?.Status === 'Success' && data[0]?.PostOffice?.length > 0) {
+        const postOffice = data[0].PostOffice[0];
+        form.setValue('city', postOffice.District || '');
+        form.setValue('state', postOffice.State || '');
+        setIsCityStateLocked(true);
+      } else {
+        toast({ title: 'Lookup Failed', description: 'No results found for this pincode.', variant: 'destructive' });
+        setIsCityStateLocked(false);
+      }
+    } catch (e) {
+      toast({ title: 'Lookup Error', description: 'Failed to fetch city/state from pincode.', variant: 'destructive' });
+      setIsCityStateLocked(false);
+    } finally {
+      setIsLookingUp(false);
+    }
+  };
+
+  const handleResetCityState = () => {
+    form.setValue('city', '');
+    form.setValue('state', '');
+    setIsCityStateLocked(false);
   };
 
   if (authLoading || isFetching) {
@@ -163,6 +208,55 @@ export function SocietyInfoForm() {
                   <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input type="tel" placeholder="e.g., +91-1234567890" {...field} className="pl-10" />
                 </div>
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="pincode"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Pincode *</FormLabel>
+              <FormControl>
+                <div className="relative flex gap-2 items-center">
+                  <Input placeholder="e.g., 411001" {...field} className="pl-10" maxLength={10} />
+                  <Button type="button" variant="outline" size="sm" onClick={handlePincodeLookup} disabled={isLookingUp || isCityStateLocked}>
+                    {isLookingUp ? 'Looking up...' : 'Auto-Fill'}
+                  </Button>
+                  {isCityStateLocked && (
+                    <Button type="button" variant="ghost" size="sm" onClick={handleResetCityState}>
+                      Reset
+                    </Button>
+                  )}
+                </div>
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="city"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>City *</FormLabel>
+              <FormControl>
+                <Input placeholder="e.g., Pune" {...field} disabled={isCityStateLocked} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="state"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>State *</FormLabel>
+              <FormControl>
+                <Input placeholder="e.g., Maharashtra" {...field} disabled={isCityStateLocked} />
               </FormControl>
               <FormMessage />
             </FormItem>
