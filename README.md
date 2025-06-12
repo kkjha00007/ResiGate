@@ -1,3 +1,4 @@
+
 # ResiGate – Visitor Management System for Residential Societies
 
 > **Version**: 1.0  
@@ -68,3 +69,69 @@ ResiGate is a **full-stack visitor management system** built with **Next.js**, d
 
 ## 📁 Folder Structure
 
+```
+/src
+  /app         # Next.js pages and layouts
+  /components  # Reusable components like Header, SideNav
+  /api         # API integration layer
+  /utils       # Utilities and helpers
+  /styles      # CSS/SCSS styling
+```
+
+---
+
+## 📈 Upcoming Features
+
+- Azure Blob Storage integration
+- Emergency SOS button
+- Multi-method login (Gmail, mobile)
+- In-app bug reporting & feedback
+- Mobile App / PWA
+- Payment gateway integration
+- Vendor ratings & Facility booking calendar
+- Localization support (multi-language)
+
+---
+
+## 🧪 How to Run Locally
+
+```bash
+# 1. Clone the repo
+git clone https://github.com/kkjha00007/ResiGate.git
+cd ResiGate
+
+# 2. Install dependencies
+npm install
+
+# 3. Create a `.env.local` file and set required environment variables
+NEXT_PUBLIC_API_BASE_URL=
+JWT_SECRET=
+MONGODB_URI=
+...
+
+# 4. Run the app
+npm run dev
+```
+
+---
+
+## 📜 License
+
+This project is licensed under the MIT License.
+
+---
+
+## 🙌 Contribution Guidelines
+
+We welcome contributions!
+
+- Fork the repository
+- Create a new branch
+- Commit your changes
+- Open a pull request
+
+---
+
+## 📧 Feedback & Contact
+
+Have suggestions or feature requests? Open an issue or reach out to [kkjha00007](https://github.com/kkjha00007).
