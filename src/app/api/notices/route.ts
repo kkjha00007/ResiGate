@@ -4,7 +4,7 @@ import { getNoticesContainer } from '@/lib/cosmosdb';
 import type { Notice } from '@/lib/types';
 import { v4 as uuidv4 } from 'uuid';
 import { format } from 'date-fns';
-import { logAuditAction } from '@/lib/utils';
+import { logAuditAction } from '@/lib/server-utils';
 import { createNotification } from '@/lib/notifications';
 
 // Helper to extract societyId from request (header, query, or body)

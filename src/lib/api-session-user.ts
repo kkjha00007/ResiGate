@@ -1,7 +1,7 @@
 // src/lib/api-session-user.ts
 // Server-only utility for API routes to get the current user (session-based)
 import { cookies } from 'next/headers';
-import { verifyJWT, getUserById } from './utils';
+import { verifyJWT, getUserById } from './server-utils';
 
 export async function getApiSessionUser(req?: any) {
   let token: string | undefined;

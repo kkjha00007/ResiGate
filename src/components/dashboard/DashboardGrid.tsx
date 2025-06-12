@@ -16,6 +16,7 @@ import {
   ClipboardEdit,
   Store,
   Briefcase,
+  Grid,
 } from 'lucide-react';
 import { useAuth } from '@/lib/auth-provider';
 
@@ -23,7 +24,7 @@ const gridItems = [
   { href: '/dashboard', label: 'Home', icon: LayoutDashboard, color: 'bg-sky-200 text-sky-700 hover:bg-sky-400 hover:text-white' },
   { href: '/dashboard/my-profile', label: 'My Profile', icon: Users, color: 'bg-gray-200 text-gray-700 hover:bg-gray-500 hover:text-white' },
   { href: '/dashboard/gate-pass/my-passes', label: 'My Gate Passes', icon: Ticket, color: 'bg-pink-200 text-pink-700 hover:bg-pink-500 hover:text-white' },
-  { href: '/dashboard/admin/complaints', label: 'Complaints', icon: ClipboardList, color: 'bg-red-200 text-red-700 hover:bg-red-500 hover:text-white' },
+  { href: '/dashboard/help', label: 'HelpDesk', icon: ClipboardList, color: 'bg-red-200 text-red-700 hover:bg-red-500 hover:text-white' },
   { href: '/dashboard/neighbours', label: 'Neighbours', icon: UsersRound, color: 'bg-cyan-200 text-cyan-700 hover:bg-cyan-500 hover:text-white' },
   { href: '/dashboard/visitor-log', label: 'Visitor Log', icon: FileText, color: 'bg-amber-200 text-amber-700 hover:bg-amber-500 hover:text-white' },
   { href: '/dashboard/my-parking', label: 'My Parking', icon: ParkingSquare, color: 'bg-indigo-200 text-indigo-700 hover:bg-indigo-500 hover:text-white' },
@@ -44,12 +45,34 @@ const gridItems = [
   { href: '/dashboard/gate-pass/create', label: 'Create Gate Pass', icon: Ticket, color: 'bg-green-200 text-green-700 hover:bg-green-500 hover:text-white' },
   { href: '/dashboard/feedback', label: 'Feedback / Bug Report', icon: ClipboardEdit, color: 'bg-blue-200 text-blue-700 hover:bg-blue-500 hover:text-white', showForSuperAdmin: false },
   { href: '/dashboard/admin/feedback', label: 'Feedback / Bug Reports', icon: ClipboardEdit, color: 'bg-yellow-200 text-yellow-700 hover:bg-yellow-500 hover:text-white', showForSuperAdmin: true },
+  { href: '/dashboard/my-approvals', label: 'My Approvals', icon: Grid, color: 'bg-green-200 text-green-700 hover:bg-green-500 hover:text-white', showForOwnerRenter: true },
 ];
 
 export function DashboardGrid() {
-  const { user } = useAuth();
-  // Show feedback card for all users, but route and color differ for SuperAdmin
-  const filteredGridItems = gridItems.filter(item => {
+  const { user, isAdmin, isSocietyAdmin, isOwnerOrRenter } = useAuth();
+  // Only show admin grid items for SuperAdmin or SocietyAdmin
+  let filteredGridItems = gridItems.filter(item => {
+    if (item.href === '/dashboard') return false; // Remove Home button from grid
+    const isAdminRoute = item.href.startsWith('/dashboard/admin/');
+    // Restrict 'Audit Logs', 'Manage Societies', 'Personas' to SuperAdmin only
+    if (
+      item.href === '/dashboard/admin/audit-logs' ||
+      item.href === '/dashboard/admin/manage-societies' ||
+      item.href === '/dashboard/admin/manage-personas'
+    ) {
+      return isAdmin && isAdmin();
+    }
+    if (isAdminRoute && !(isAdmin && isAdmin() || isSocietyAdmin && isSocietyAdmin())) {
+      return false;
+    }
+    if (item.href === '/dashboard/admin-approvals') {
+      // Only show admin-approvals for admins
+      return isAdmin && isAdmin() || isSocietyAdmin && isSocietyAdmin();
+    }
+    if (item.href === '/dashboard/my-approvals') {
+      // Only show my-approvals for owner/renter
+      return isOwnerOrRenter && isOwnerOrRenter();
+    }
     if (item.href === '/dashboard/feedback') {
       return user && user.role !== 'superadmin';
     }
@@ -58,6 +81,8 @@ export function DashboardGrid() {
     }
     return true;
   });
+  // Sort grid items alphabetically by label for consistency with sidebar
+  filteredGridItems = filteredGridItems.sort((a, b) => a.label.localeCompare(b.label));
   return (
     <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-8 py-10 justify-center">
       {filteredGridItems.map(({ href, label, icon: Icon, color }) => (

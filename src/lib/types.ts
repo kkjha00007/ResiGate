@@ -15,6 +15,7 @@ export interface User {
   // Password reset fields
   passwordResetToken?: string;
   passwordResetTokenExpiry?: number; // Unix timestamp (ms)
+  themePreference?: 'light' | 'dark'; // Add theme preference for user
 }
 
 export type UserProfile = Omit<User, 'password'>;
@@ -40,6 +41,7 @@ export interface VisitorEntry {
   notes?: string;
   tokenCode?: string;
   gatePassId?: string;
+  status?: 'pending' | 'approved' | 'denied'; // Add status for approval workflow
 }
 
 export interface LoginAudit {
@@ -148,6 +150,7 @@ export interface Meeting {
   updatedAt?: string; // ISO DateTime string
   isActive: boolean;
   monthYear: string;
+  status?: 'active' | 'expired'; // Add status for meeting expiry
 }
 
 export const VENDOR_CATEGORIES_LIST = [
@@ -377,5 +380,26 @@ export interface FeedbackTicket {
   createdAt: string;
   updatedAt?: string;
   comments?: FeedbackComment[];
+}
+
+export interface HelpDeskRequest {
+  id: string;
+  userId: string;
+  userName: string;
+  flatNumber: string;
+  category: string;
+  description: string;
+  urgent: boolean;
+  status: 'open' | 'resolved';
+  createdAt: string;
+  updatedAt: string;
+  documentUrl?: string;
+  photoUrl?: string;
+  comments?: Array<{
+    by: string;
+    byRole: string;
+    comment: string;
+    createdAt: string;
+  }>;
 }
 

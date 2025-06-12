@@ -39,6 +39,7 @@ interface EntryConfirmationDetails {
   visitorName: string;
   tokenCode: string;
   entryTimestamp: string;
+  flatNumber: string;
 }
 
 export function PublicVisitorEntryForm() {
@@ -90,7 +91,7 @@ export function PublicVisitorEntryForm() {
         throw new Error(errorData.message || 'Failed to submit visitor entry');
       }
 
-      const createdEntry: { visitorName: string; tokenCode: string; entryTimestamp: string } = await response.json();
+      const createdEntry: { visitorName: string; tokenCode: string; entryTimestamp: string; flatNumber: string } = await response.json();
       setEntryDetails(createdEntry);
       form.reset();
       // toast({ title: 'Entry Submitted', description: `Token: ${createdEntry.tokenCode}` });
@@ -107,35 +108,37 @@ export function PublicVisitorEntryForm() {
     return (
       <Card className="w-full max-w-md shadow-xl text-center">
         <CardHeader>
-          <CheckCircle className="h-16 w-16 text-accent mx-auto mb-4" /> {/* Use accent color */}
+          <CheckCircle className="h-16 w-16 text-accent mx-auto mb-4" />
           <CardTitle className="text-2xl font-bold text-primary">Entry Submitted Successfully!</CardTitle>
           <CardDescription className="text-muted-foreground">
             Thank you, {entryDetails.visitorName}.
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
-          
-          <div className="mt-4 rounded-md border border-accent/30 bg-accent/10 p-3 text-left shadow-sm">
-            <div className="flex items-start">
-              <Info className="h-5 w-5 text-accent mr-2.5 mt-0.5 flex-shrink-0" />
+        <CardContent className="space-y-6">
+          <div className="rounded-md border border-amber-400 bg-amber-50 p-4 shadow-sm">
+            <div className="flex items-center gap-3">
+              <Info className="h-6 w-6 text-amber-600 flex-shrink-0" />
               <div>
-                <h3 className="text-[0.95rem] font-semibold text-accent leading-tight">IMPORTANT: Show to Security</h3>
-                <p className="mt-1 text-xs text-accent/80">
+                <h3 className="text-base font-bold text-amber-700 uppercase tracking-wide">IMPORTANT: Show to Security</h3>
+                <p className="mt-1 text-sm font-semibold text-amber-700">
                   Please show this information to the security guard for verification.
                 </p>
               </div>
             </div>
           </div>
-
           <div>
-            <p className="text-sm font-medium text-muted-foreground">Token Code:</p>
-            <p className="text-2xl font-bold text-accent">{entryDetails.tokenCode}</p>
+            <p className="text-sm font-medium text-muted-foreground">Flat Number:</p>
+            <p className="text-lg font-extrabold text-accent">{entryDetails.flatNumber}</p>
           </div>
           <div>
             <p className="text-sm font-medium text-muted-foreground">Entry Time:</p>
-            <p className="text-lg text-foreground">
-              {format(new Date(entryDetails.entryTimestamp), 'PPpp')}
+            <p className="text-lg text-foreground font-semibold">
+              {format(new Date(entryDetails.entryTimestamp), 'dd - LLLL - yyyy hh:mm:ss a')}
             </p>
+          </div>
+          <div>
+            <p className="text-sm font-medium text-muted-foreground">Token Code:</p>
+            <p className="text-2xl font-bold text-accent">{entryDetails.tokenCode}</p>
           </div>
           <Button 
             onClick={() => setEntryDetails(null)} 

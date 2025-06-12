@@ -1,8 +1,9 @@
 // src/app/api/committee-members/[memberId]/route.ts
 import { NextResponse, type NextRequest } from 'next/server';
-import { safeGetCommitteeMembersContainer } from '@/lib/cosmosdb';
+import { getCommitteeMembersContainer } from '@/lib/cosmosdb';
 import type { CommitteeMember } from '@/lib/types';
-import { logAuditAction } from '@/lib/utils';
+import { v4 as uuidv4 } from 'uuid';
+import { logAuditAction } from '@/lib/server-utils';
 
 // Helper to check if user is superadmin (replace with your actual auth check)
 const isSuperAdmin = (request: NextRequest): boolean => {
@@ -21,7 +22,7 @@ export async function GET(
       return NextResponse.json({ message: 'Member ID is required' }, { status: 400 });
     }
 
-    const committeeMembersContainer = safeGetCommitteeMembersContainer();
+    const committeeMembersContainer = getCommitteeMembersContainer();
     if (!committeeMembersContainer) {
       return NextResponse.json({ message: 'CommitteeMembers container not available. Check Cosmos DB configuration.' }, { status: 500 });
     }
@@ -65,7 +66,7 @@ export async function PUT(
       return NextResponse.json({ message: 'Member ID is required' }, { status: 400 });
     }
 
-    const committeeMembersContainer = safeGetCommitteeMembersContainer();
+    const committeeMembersContainer = getCommitteeMembersContainer();
     if (!committeeMembersContainer) {
       return NextResponse.json({ message: 'CommitteeMembers container not available. Check Cosmos DB configuration.' }, { status: 500 });
     }
@@ -146,7 +147,7 @@ export async function DELETE(
       return NextResponse.json({ message: 'Member ID is required' }, { status: 400 });
     }
 
-    const committeeMembersContainer = safeGetCommitteeMembersContainer();
+    const committeeMembersContainer = getCommitteeMembersContainer();
     if (!committeeMembersContainer) {
       return NextResponse.json({ message: 'CommitteeMembers container not available. Check Cosmos DB configuration.' }, { status: 500 });
     }

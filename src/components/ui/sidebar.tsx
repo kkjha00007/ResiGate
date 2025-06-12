@@ -1,4 +1,3 @@
-
 "use client"
 
 import * as React from "react"
@@ -537,15 +536,15 @@ const sidebarMenuButtonVariants = cva(
 )
 
 const SidebarMenuButton = React.forwardRef<
-  HTMLElement, // Use HTMLElement for the ref type when asChild can render different elements
-  React.ComponentProps<"button"> & { // Still accept button props for base type
+  HTMLElement,
+  React.ComponentProps<"button"> & {
     asChild?: boolean
     isActive?: boolean
     tooltip?: string | React.ComponentProps<typeof TooltipContent>
   } & VariantProps<typeof sidebarMenuButtonVariants>
 >(
-  (
-    {
+  (props, ref: any) => {
+    const {
       asChild = false,
       isActive = false,
       variant = "default",
@@ -554,32 +553,28 @@ const SidebarMenuButton = React.forwardRef<
       className: propsClassName, 
       disabled: propsDisabled, 
       ...otherProps 
-    },
-    ref
-  ) => {
+    } = props;
+
     const Comp = asChild ? Slot : "button"
     const { isMobile, state } = useSidebar()
 
-    // Prepare props for the Comp (Slot or button)
-    // These props will be passed to Slot, which then merges them with its child's (e.g., Link) props.
-    // Or directly applied if Comp is 'button'.
-    const effectiveProps: React.AllHTMLAttributes<HTMLElement> & Record<string, any> = {
-      ...otherProps, // Spread other props like onClick, etc.
-    };
+    // Filter out 'type' from otherProps before creating effectiveProps
+    const { type, ...restProps } = otherProps;
+    const effectiveProps = { ...restProps };
 
-    if (propsDisabled) {
-      if (asChild) {
-        // For Slot (and its non-button children like Link), use aria-disabled
-        effectiveProps['aria-disabled'] = true;
-      } else {
-        // For a direct button, use the disabled attribute
-        effectiveProps.disabled = true;
-      }
-    }
-    
-    const buttonElement = (
+    const buttonElement = asChild ? (
       <Comp
         ref={ref}
+        data-sidebar="menu-button"
+        data-size={size}
+        data-active={isActive}
+        className={cn(sidebarMenuButtonVariants({ variant, size }), propsClassName)}
+        {...effectiveProps}
+      />
+    ) : (
+      <Comp
+        ref={ref}
+        type="button"
         data-sidebar="menu-button"
         data-size={size}
         data-active={isActive}
@@ -779,4 +774,3 @@ export {
   useSidebar,
 }
 
-    

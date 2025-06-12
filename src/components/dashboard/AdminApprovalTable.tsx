@@ -23,14 +23,14 @@ import {
 } from "@/components/ui/alert-dialog";
 
 export function AdminApprovalTable() {
-  const { allUsers, fetchAllUsers, approveResident, rejectUser, isAdmin, isLoading } = useAuth();
+  const { allUsers, fetchAllUsers, approveResident, rejectUser, isAdmin, isSocietyAdmin, isLoading } = useAuth();
   const [pendingUsers, setPendingUsers] = useState<UserProfile[]>([]);
 
   useEffect(() => {
-    if (isAdmin()) {
+    if (isAdmin() || isSocietyAdmin()) {
       fetchAllUsers(false); // Only fetch unapproved users from backend
     }
-  }, [isAdmin, fetchAllUsers]);
+  }, [isAdmin, isSocietyAdmin, fetchAllUsers]);
 
   useEffect(() => {
     setPendingUsers(
@@ -59,7 +59,7 @@ export function AdminApprovalTable() {
     );
   }
 
-  if (!isAdmin()) {
+  if (!isAdmin() && !isSocietyAdmin()) {
      return (
       <Card>
         <CardHeader>

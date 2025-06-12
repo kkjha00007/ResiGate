@@ -3,7 +3,7 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { getCommitteeMembersContainer } from '@/lib/cosmosdb';
 import type { CommitteeMember } from '@/lib/types';
 import { v4 as uuidv4 } from 'uuid';
-import { logAuditAction } from '@/lib/utils'; // Import logAuditAction
+import { logAuditAction } from '@/lib/server-utils'; // Import logAuditAction
 
 // import { getAuth } from '@clerk/nextjs/server'; // Placeholder if using Clerk for auth
 

@@ -1,3 +1,6 @@
+// IMPORTANT: This file must only be imported in API routes or server-side code.
+// NEVER import this file in React components or any client-side code!
+
 import { CosmosClient, ConsistencyLevel } from "@azure/cosmos";
 import type { User, VisitorEntry, LoginAudit, GatePass, Complaint, Notice, Meeting, Vendor, CommitteeMember, SocietyPaymentDetails, ParkingSpot, SocietyInfoSettings, Facility, Society } from './types';
 
@@ -122,6 +125,10 @@ export function getNotificationsContainer() {
 export function getFeedbackTicketsContainer() {
   const client = getCosmosClient();
   return getDatabase(client).container("feedbackTickets");
+}
+export function getHelpDeskRequestsContainer() {
+  const client = getCosmosClient();
+  return getDatabase(client).container('HelpDeskRequests');
 }
 
 // Defensive getter for complaints container

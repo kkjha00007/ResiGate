@@ -32,7 +32,8 @@ import {
   Building,
   Sparkles,
   ShieldAlert,
-  Briefcase, // Added for Manage Societies
+  Briefcase,
+  Grid,
 } from 'lucide-react';
 import {
   Sidebar,
@@ -112,7 +113,7 @@ export const getNavItems = (
 
     // 6. Owner/Renter
     { href: '/dashboard/personal-logs', label: 'My Visitor Logs', icon: FileText, iconColor: 'text-teal-500', isUserTypeCheck: (u, iA, iSA, iOR, iG) => iOR() },
-    { href: '/dashboard/complaints', label: 'My Complaints', icon: Megaphone, iconColor: 'text-orange-500', isUserTypeCheck: (u, iA, iSA, iOR, iG) => iOR() },
+    { href: '/dashboard/help', label: 'HelpDesk', icon: ClipboardList, iconColor: 'text-red-500', isUserTypeCheck: (u, iA, iSA, iOR, iG) => iOR() },
     { href: '/dashboard/my-parking', label: 'My Parking', icon: ParkingCircle, iconColor: 'text-indigo-400', isUserTypeCheck: (u, iA, iSA, iOR, iG) => iOR() },
     { href: '/dashboard/payment-details', label: 'Payment Details', icon: Landmark, iconColor: 'text-fuchsia-500', isUserTypeCheck: (u, iA, iSA, iOR, iG) => iOR() || iA() || iSA() },
     { href: '/dashboard/facilities', label: 'Facilities', icon: Sparkles, iconColor: 'text-yellow-400' },
@@ -123,7 +124,7 @@ export const getNavItems = (
 
     // 7. Admin/Management (SuperAdmin, SocietyAdmin)
     { href: '/dashboard/admin-approvals', label: 'User Account Approvals', icon: UsersRound, iconColor: 'text-pink-500', isUserTypeCheck: (u, iA, iSA, iOR, iG) => iA() || iSA() },
-    { href: '/dashboard/admin/complaints', label: 'Complaints (All)', icon: Megaphone, iconColor: 'text-orange-700', isUserTypeCheck: (u, iA, iSA, iOR, iG) => iA() || iSA() },
+    { href: '/dashboard/admin/help', label: 'HelpDesk (All)', icon: ClipboardList, iconColor: 'text-red-700', isUserTypeCheck: (u, iA, iSA, iOR, iG) => iA() || iSA() },
     { href: '/dashboard/admin/manage-notices', label: 'Manage Notices', icon: ClipboardEdit, iconColor: 'text-indigo-500', isUserTypeCheck: (u, iA, iSA, iOR, iG) => iA() || iSA() },
     { href: '/dashboard/admin/manage-meetings', label: 'Manage Meetings', icon: UsersRound, iconColor: 'text-lime-500', isUserTypeCheck: (u, iA, iSA, iOR, iG) => iA() || iSA() },
     { href: '/dashboard/admin/manage-facilities', label: 'Manage Facilities', icon: Building, iconColor: 'text-teal-600', isUserTypeCheck: (u, iA, iSA, iOR, iG) => iA() || iSA() },
@@ -138,6 +139,7 @@ export const getNavItems = (
     { href: '/dashboard/admin/feedback', label: 'Feedback & Bug Reports', icon: Megaphone, iconColor: 'text-blue-600', isUserTypeCheck: (u, iA, iSA, iOR, iG) => iA() },
     // Feedback for regular users
     { href: '/dashboard/feedback', label: 'Feedback / Bug Reports', icon: ClipboardEdit, iconColor: 'text-blue-600', isUserTypeCheck: (u, iA, iSA, iOR, iG) => !iA() },
+    { href: '/dashboard/my-approvals', label: 'My Approvals', icon: Grid, iconColor: 'text-green-600', isUserTypeCheck: (u, iA, iSA, iOR, iG) => iOR() },
   ];
   return allItems.filter(item => checkVisibility(user, isAdminFn, isSocietyAdminFn, isOwnerOrRenterFn, isGuardFn, item));
 };

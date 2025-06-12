@@ -15,6 +15,7 @@ import { ToastAction } from '@/components/ui/toast';
 import { useMemo, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
+import { ThemeToggle } from '@/components/ui/theme-toggle';
 
 interface AppHeaderProps {
   navItems: NavItem[];
@@ -302,6 +303,8 @@ export function AppHeader({ navItems }: AppHeaderProps) {
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
+
+        <ThemeToggle />
       </div>
     </header>
   );

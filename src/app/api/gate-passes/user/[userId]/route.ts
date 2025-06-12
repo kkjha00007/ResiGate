@@ -2,6 +2,7 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { getGatePassesContainer } from '@/lib/cosmosdb';
 import type { GatePass } from '@/lib/types';
+import { GATE_PASS_STATUSES } from '@/lib/types';
 
 // Get gate passes for a specific user
 export async function GET(
@@ -27,7 +28,19 @@ export async function GET(
 
     const { resources: gatePasses } = await gatePassesContainer.items.query<GatePass>(querySpec).fetchAll();
 
-    return NextResponse.json(gatePasses, { status: 200 });
+    // Mark expired passes (in-memory for response)
+    const now = new Date();
+    const updatedGatePasses = gatePasses.map(pass => {
+      if (
+        pass.status === GATE_PASS_STATUSES.PENDING &&
+        new Date(pass.expectedVisitDate) < now
+      ) {
+        return { ...pass, status: GATE_PASS_STATUSES.EXPIRED };
+      }
+      return pass;
+    });
+
+    return NextResponse.json(updatedGatePasses, { status: 200 });
 
   } catch (error) {
     console.error(`Get Gate Passes for User ${params.userId} API error:`, error);

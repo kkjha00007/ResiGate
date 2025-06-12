@@ -4,7 +4,7 @@ import { getLoginAuditsContainer, getUsersContainer } from '@/lib/cosmosdb';
 import type { User, LoginAudit } from '@/lib/types';
 import bcrypt from 'bcryptjs';
 import { v4 as uuidv4 } from 'uuid';
-import { createJWT } from '@/lib/utils';
+import { createJWT } from '@/lib/server-utils';
 
 export async function POST(request: NextRequest) {
   try {

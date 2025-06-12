@@ -18,7 +18,18 @@ export async function GET(request: NextRequest) {
 
     const { resources: allMeetings } = await meetingsContainer.items.query<Meeting>(querySpec).fetchAll();
 
-    return NextResponse.json(allMeetings, { status: 200 });
+    // Mark expired meetings
+    const now = new Date();
+    const updatedMeetings = allMeetings.map((meeting) => {
+      const meetingDate = new Date(meeting.dateTime);
+      if (meetingDate < now) {
+        return { ...meeting, status: 'expired' };
+      } else {
+        return { ...meeting, status: 'active' };
+      }
+    });
+
+    return NextResponse.json(updatedMeetings, { status: 200 });
 
   } catch (error) {
     console.error('Get All Meetings (Admin) API error:', error);

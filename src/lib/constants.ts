@@ -1,4 +1,3 @@
-
 import type { VendorCategory, CommitteeMemberRole, ParkingSpotType, ParkingSpotStatus, UserRole } from "./types";
 
 export const APP_NAME = "ResiGate";
@@ -61,7 +60,7 @@ export const COMPLAINT_CATEGORIES_LIST = [
   "Other",
 ] as const;
 
-export const VENDOR_CATEGORIES: VendorCategory[] = [
+export const VENDOR_CATEGORIES = [
   "Plumber",
   "Electrician",
   "Carpenter",
@@ -81,9 +80,9 @@ export const VENDOR_CATEGORIES: VendorCategory[] = [
   "Doctor/Clinic",
   "Tiffin Service",
   "Other Services",
-];
+] as const;
 
-export const COMMITTEE_MEMBER_ROLES: CommitteeMemberRole[] = [
+export const COMMITTEE_MEMBER_ROLES = [
   "President",
   "Vice-President",
   "Secretary",
@@ -92,15 +91,29 @@ export const COMMITTEE_MEMBER_ROLES: CommitteeMemberRole[] = [
   "Committee Member",
   "Advisor",
   "Other",
-];
+] as const;
 
 // Parking Management Constants
-export const PARKING_SPOT_TYPES: ParkingSpotType[] = ["car", "bike"];
-export const PARKING_SPOT_STATUSES: ParkingSpotStatus[] = ["available", "allocated"];
+export const PARKING_SPOT_TYPES = ["car", "bike"] as const;
+export const PARKING_SPOT_STATUSES = ["available", "allocated"] as const;
 
 // Reverted Security Log constants
 // export const SECURITY_INCIDENT_SEVERITIES = ["Low", "Medium", "High"] as const;
 // export const SECURITY_INCIDENT_STATUSES = ["New", "Under Review", "Action Taken", "Resolved", "Closed"] as const;
 
+export const HELP_DESK_CATEGORIES = [
+  'Accounts',
+  'Complaint against a Resident',
+  'Caltural/Social activities',
+  'Data Management',
+  'Electrical, Lift',
+  'Gardening',
+  'Gym, sports',
+  'House Keeping',
+  'No Dues Certificate',
+  'Others',
+  'Plumbing',
+  'Security',
+] as const;
 
-    
+

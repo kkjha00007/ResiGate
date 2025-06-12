@@ -1,4 +1,3 @@
-
 // src/app/dashboard/admin/manage-societies/page.tsx
 'use client';
 import { CreateSocietyForm } from '@/components/dashboard/admin/societies/CreateSocietyForm';
@@ -7,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Briefcase } from 'lucide-react';
+import SocietyInvitesTable from '@/components/dashboard/admin/SocietyInvitesTable';
 
 export default function ManageSocietiesPage() {
   const { user, isLoading, isAdmin } = useAuth();
@@ -45,6 +45,7 @@ export default function ManageSocietiesPage() {
       {/* Placeholder for a table to list and manage existing societies in a future batch */}
       {/* <Separator /> */}
       {/* <SocietiesTable /> */}
+      <SocietyInvitesTable />
     </div>
   );
 }

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { verifyJWT } from '@/lib/utils';
-import { getUserById } from '@/lib/utils';
+import { verifyJWT } from '@/lib/server-utils';
+import { getUserById } from '@/lib/server-utils';
 
 export async function GET(req: NextRequest) {
   // Use the built-in cookies API for App Router

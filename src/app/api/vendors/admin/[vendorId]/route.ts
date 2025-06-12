@@ -109,6 +109,13 @@ export async function DELETE(
     const vendorToDelete = existingVendors[0];
     const vendorSocietyIdForPartitionKey = vendorToDelete.societyId;
 
+    // Only SuperAdmin can reject any vendor, SocietyAdmin can only reject for their own society
+    const societyId = request.headers.get('x-society-id') || request.nextUrl.searchParams.get('societyId');
+    const userRole = request.headers.get('x-user-role');
+    if (userRole !== 'superadmin' && (!societyId || vendorToDelete.societyId !== societyId)) {
+      return NextResponse.json({ message: 'Forbidden: You can only reject vendors for your own society.' }, { status: 403 });
+    }
+
     await vendorsContainer.item(vendorId, vendorSocietyIdForPartitionKey).delete();
     
     return NextResponse.json({ message: `Vendor submission ${vendorId} rejected and deleted successfully` }, { status: 200 });

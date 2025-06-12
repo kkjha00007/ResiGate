@@ -75,7 +75,7 @@ export async function POST(request: NextRequest) {
         enteredBy, // Should come from authenticated user context if by guard/admin
     } = body as Omit<VisitorEntry, 'id' | 'entryTimestamp' | 'tokenCode'> & { tenantId: string };
 
-    if (!visitorName || !mobileNumber || !flatNumber || !purposeOfVisit) {
+    if (!visitorName || !flatNumber || !purposeOfVisit) {
       return NextResponse.json({ message: 'Missing required fields for visitor entry' }, { status: 400 });
     }
 
@@ -92,6 +92,7 @@ export async function POST(request: NextRequest) {
       entryTimestamp: new Date().toISOString(), // Set server-side timestamp
       tokenCode: "SYSTEM", // Default token for entries made by system/guard
       enteredBy: enteredBy || "SYSTEM_USER", // Guard's ID or a system user
+      status: 'pending', // Add status for approval workflow
     };
 
     const { resource: createdEntry } = await visitorEntriesContainer.items.create(newEntry);
@@ -99,7 +100,14 @@ export async function POST(request: NextRequest) {
     if (!createdEntry) {
       return NextResponse.json({ message: 'Failed to add visitor entry' }, { status: 500 });
     }
-    return NextResponse.json(createdEntry, { status: 201 });
+    return NextResponse.json({
+      id: createdEntry.id,
+      visitorName: createdEntry.visitorName,
+      flatNumber: createdEntry.flatNumber,
+      tokenCode: createdEntry.tokenCode,
+      entryTimestamp: createdEntry.entryTimestamp,
+      status: createdEntry.status,
+    }, { status: 201 });
   } catch (error: any) {
     console.error('Add Visitor Entry API error:', error);
     const errorMessage = error.body?.message || error.message || 'An unknown error occurred during visitor entry creation.';

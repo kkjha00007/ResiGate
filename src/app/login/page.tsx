@@ -2,8 +2,9 @@
 
 import { LoginForm } from '@/components/auth/LoginForm';
 import Link from 'next/link';
-import { ShieldCheck, Heart } from 'lucide-react';
+import { ShieldCheck, Heart, Download } from 'lucide-react';
 import React from 'react';
+import InstallPWAButton from '@/components/ui/InstallPWAButton';
 
 const navLinks = [
 	{ label: 'About', href: '/about', icon: ShieldCheck },
@@ -143,31 +144,43 @@ function SocietySearchBox() {
 
 export default function LoginPage() {
 	return (
-		<main className="min-h-screen flex flex-col items-center justify-center bg-blue-50">
-			<div className="flex flex-col items-center mt-12 mb-6">
-				<div className="flex flex-col items-center">
-					<svg xmlns="http://www.w3.org/2000/svg" width="80" height="80" fill="none" viewBox="0 0 24 24" className="mb-2 text-blue-400"><path fill="currentColor" d="M12 2c-4.97 0-9 4.03-9 9 0 4.97 4.03 9 9 9s9-4.03 9-9c0-4.97-4.03-9-9-9Zm0 16.2c-4 0-7.2-3.2-7.2-7.2 0-4 3.2-7.2 7.2-7.2 4 0 7.2 3.2 7.2 7.2 0 4-3.2 7.2-7.2 7.2Zm0-13.2c-3.31 0-6 2.69-6 6 0 3.31 2.69 6 6 6s6-2.69 6-6c0-3.31-2.69-6-6-6Zm0 10.2c-2.32 0-4.2-1.88-4.2-4.2 0-2.32 1.88-4.2 4.2-4.2 2.32 0 4.2 1.88 4.2 4.2 0 2.32-1.88 4.2-4.2 4.2Z"/></svg>
-					<h1 className="text-5xl font-extrabold text-blue-500 mb-2">ResiGate</h1>
-				</div>
-				<div className="flex gap-4 mt-4">
-					<a href="/about" className="flex items-center gap-2 px-6 py-2 rounded-md border border-blue-200 bg-white text-blue-500 font-medium hover:bg-blue-100 transition"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24"><path fill="currentColor" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2Zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8Zm-1-13h2v2h-2zm2 4h-2v6h2z"/></svg>About</a>
-					<a href="/contact" className="flex items-center gap-2 px-6 py-2 rounded-md border border-blue-200 bg-white text-blue-500 font-medium hover:bg-blue-100 transition"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24"><path fill="currentColor" d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4Zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4Z"/></svg>Contact</a>
-				</div>
-				<div className="w-full flex justify-center mt-6">
-					{/* Society SearchBox (copied from landing page) */}
-					<SocietySearchBox />
-				</div>
+		<div className="flex flex-col min-h-screen items-center bg-gradient-to-br from-background via-secondary/10 to-background py-12 px-4 sm:px-6 lg:px-8">
+			<header className="text-center mb-8 md:mb-12">
+				<ShieldCheck className="h-20 w-20 text-primary mx-auto mb-6" />
+				<h1 className="text-5xl font-bold tracking-tight text-primary sm:text-6xl">
+					ResiGate
+				</h1>
+			</header>
+			<nav className="mb-10 md:mb-12">
+				<ul className="flex flex-wrap justify-center gap-3 sm:gap-4">
+					{navLinks.map((item) => (
+						<li key={item.label}>
+							<a
+								href={item.href}
+								className="flex items-center gap-2 px-6 py-2 rounded-md border border-primary/50 bg-white text-primary font-medium hover:bg-emerald-600 hover:text-white hover:border-emerald-700 focus:ring-primary/50 transition"
+							>
+								<item.icon className="mr-2 h-4 w-4" />
+								{item.label}
+							</a>
+						</li>
+					))}
+				</ul>
+			</nav>
+			<div className="w-full flex justify-center mt-6">
+				<SocietySearchBox />
 			</div>
-			<div className="w-full flex flex-col items-center">
-				{/* Login Form (as before) */}
-				<div className="w-full max-w-md bg-white rounded-lg shadow-md p-8 mb-8">
-					<LoginForm />
+			<main className="w-full max-w-md flex-grow flex flex-col items-center justify-center">
+				{/* Remove all extra wrappers and padding for the login form to match landing page */}
+				<LoginForm />
+			</main>
+			<footer className="mt-16 md:mt-24 text-center text-muted-foreground">
+				<p>ResiGate © 2025 . All rights reserved.</p>
+				<div className="flex items-center justify-center text-sm mt-2">
+					Made with{' '}
+					<Heart className="h-4 w-4 text-red-500 fill-red-500 mx-1.5" /> in India
 				</div>
-			</div>
-			<footer className="mt-auto mb-4 text-center text-gray-500 text-sm">
-				ResiGate © 2025 . All rights reserved.<br />
-				<span className="flex items-center justify-center gap-1 mt-1">Made with <span className="text-red-500">♥</span> in India</span>
 			</footer>
-		</main>
+			<InstallPWAButton />
+		</div>
 	);
 }

@@ -21,6 +21,7 @@ export const MOCK_USERS_LEGACY: User[] = [
     role: USER_ROLES.SUPERADMIN,
     isApproved: true,
     registrationDate: new Date('2023-01-01T10:00:00Z').toISOString(),
+    societyId: 'society-demo-001', // <-- Added for type compatibility
   },
   // Add other mock users if needed for a seeding script
 ];
@@ -28,6 +29,7 @@ export const MOCK_USERS_LEGACY: User[] = [
 export const MOCK_VISITOR_ENTRIES_LEGACY: VisitorEntry[] = [
   {
     id: 'visitor-001',
+    societyId: 'society-demo-001', // <-- Added for type compatibility
     visitorName: 'Charlie Brown',
     mobileNumber: '9876543210',
     purposeOfVisit: 'Delivery',

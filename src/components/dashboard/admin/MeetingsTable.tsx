@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useEffect, useState } from 'react';
@@ -44,7 +43,7 @@ type EditMeetingFormValues = z.infer<typeof editMeetingSchema>;
 
 
 export function MeetingsTable() {
-  const { allMeetingsForAdmin, fetchAllMeetingsForAdmin, updateMeeting, deleteMeeting, isLoading: authLoading } = useAuth();
+  const { allMeetingsForAdmin, fetchAllMeetingsForAdmin, updateMeeting, deleteMeeting, isLoading: authLoading, user } = useAuth();
   const [isProcessing, setIsProcessing] = useState<string | null>(null); 
   const [editingMeeting, setEditingMeeting] = useState<Meeting | null>(null);
 
@@ -92,6 +91,9 @@ export function MeetingsTable() {
   const handleEditSubmit = async (values: EditMeetingFormValues) => {
     if (!editingMeeting) return;
 
+    // Always use the original monthYear from the meeting being edited.
+    // If the meeting date changes, the backend will move the meeting to a new partition.
+    // After editing, the meetings list is refreshed to ensure correct monthYear for future edits.
     const [hours, minutes] = values.meetingTime.split(':').map(Number);
     const combinedDateTime = set(values.meetingDate, { hours, minutes });
 
@@ -99,7 +101,6 @@ export function MeetingsTable() {
         form.setError("meetingTime", { type: "manual", message: "Invalid combined date/time."});
         return;
     }
-
     setIsProcessing(editingMeeting.id);
     await updateMeeting(editingMeeting.id, editingMeeting.monthYear, { 
       title: values.title, 
@@ -108,9 +109,20 @@ export function MeetingsTable() {
       locationOrLink: values.locationOrLink,
     });
     setIsProcessing(null);
-    setEditingMeeting(null); 
+    setEditingMeeting(null); // Prevents reopening edit dialog with stale monthYear
+    // Meetings list will be refreshed after updateMeeting
   };
 
+
+  // Show all meetings to SuperAdmin/SocietyAdmin, filter for others
+  const now = new Date();
+  const isAdminUser = user?.role === 'superadmin' || user?.role === 'societyAdmin';
+  const visibleMeetings = isAdminUser
+    ? allMeetingsForAdmin
+    : allMeetingsForAdmin.filter(meeting => meeting.isActive && meeting.status === 'active');
+
+  // For "Upcoming Meetings" (active only, not expired)
+  const upcomingMeetings = visibleMeetings.filter(meeting => meeting.status === 'active');
 
   if (authLoading && allMeetingsForAdmin.length === 0) {
     return (
@@ -133,7 +145,7 @@ export function MeetingsTable() {
         </div>
       </CardHeader>
       <CardContent>
-        {allMeetingsForAdmin.length === 0 ? (
+        {upcomingMeetings.length === 0 ? (
           <div className="text-center py-10">
              <UsersRound className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
             <p className="text-muted-foreground">No meetings have been scheduled yet.</p>
@@ -152,15 +164,24 @@ export function MeetingsTable() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {allMeetingsForAdmin.map((meeting) => (
+                {upcomingMeetings.map((meeting) => (
                   <TableRow key={meeting.id}>
                     <TableCell className="font-medium">{meeting.title}</TableCell>
                     <TableCell>{format(parseISO(meeting.dateTime), 'PPpp')}</TableCell>
                     <TableCell className="truncate max-w-xs">{meeting.locationOrLink}</TableCell>
                     <TableCell>{meeting.postedByName}</TableCell>
                     <TableCell>
-                      <Badge variant={meeting.isActive ? 'default' : 'outline'} className={meeting.isActive ? 'bg-green-500 hover:bg-green-600' : 'bg-gray-400 hover:bg-gray-500'}>
-                        {meeting.isActive ? 'Active' : 'Inactive'}
+                      <Badge
+                        variant={meeting.status === 'active' ? (meeting.isActive ? 'default' : 'outline') : 'outline'}
+                        className={
+                          meeting.status === 'expired'
+                            ? 'bg-gray-400 hover:bg-gray-500'
+                            : meeting.isActive
+                            ? 'bg-green-500 hover:bg-green-600'
+                            : 'bg-gray-400 hover:bg-gray-500'
+                        }
+                      >
+                        {meeting.status === 'expired' ? 'Expired' : meeting.isActive ? 'Active' : 'Inactive'}
                       </Badge>
                     </TableCell>
                     <TableCell className="text-right space-x-2">

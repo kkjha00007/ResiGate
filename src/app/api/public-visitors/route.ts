@@ -20,7 +20,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ message: 'Cosmos DB connection is not configured.' }, { status: 500 });
   }
   try {
-    if (!entryData.visitorName || !entryData.mobileNumber || !entryData.flatNumber || !entryData.purposeOfVisit) {
+    if (!entryData.visitorName || !entryData.flatNumber || !entryData.purposeOfVisit) {
       return NextResponse.json({ message: 'Missing required fields for public visitor entry' }, { status: 400 });
     }
 
@@ -36,6 +36,7 @@ export async function POST(request: NextRequest) {
       enteredBy: PUBLIC_ENTRY_SOURCE,
       tokenCode: tokenCode,
       ip,
+      status: 'pending', // Add status for approval workflow
     };
 
     const { resource: createdEntry } = await visitorEntriesContainer.items.create(newEntry);
@@ -49,7 +50,10 @@ export async function POST(request: NextRequest) {
         { 
             visitorName: createdEntry.visitorName,
             tokenCode: createdEntry.tokenCode,
-            entryTimestamp: createdEntry.entryTimestamp 
+            entryTimestamp: createdEntry.entryTimestamp,
+            flatNumber: createdEntry.flatNumber, // Add flatNumber to response
+            id: createdEntry.id, // Return id for polling
+            status: createdEntry.status,
         }, 
         { status: 201 }
     );
@@ -58,5 +62,28 @@ export async function POST(request: NextRequest) {
     console.error('Add Public Visitor Entry API error:', error);
     const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
     return NextResponse.json({ message: 'Internal server error', error: errorMessage }, { status: 500 });
+  }
+}
+
+// Add a GET endpoint to fetch a visitor entry by id for polling
+export async function GET(request: NextRequest) {
+  const id = request.nextUrl.searchParams.get('id');
+  if (!id) {
+    return NextResponse.json({ message: 'Missing visitor entry id' }, { status: 400 });
+  }
+  let visitorEntriesContainer;
+  try {
+    visitorEntriesContainer = getVisitorEntriesContainer();
+  } catch (err) {
+    return NextResponse.json({ message: 'Cosmos DB connection is not configured.' }, { status: 500 });
+  }
+  try {
+    const { resource: entry } = await visitorEntriesContainer.item(id, undefined).read();
+    if (!entry) {
+      return NextResponse.json({ message: 'Visitor entry not found' }, { status: 404 });
+    }
+    return NextResponse.json({ status: entry.status });
+  } catch (error) {
+    return NextResponse.json({ message: 'Failed to fetch visitor entry status' }, { status: 500 });
   }
 }

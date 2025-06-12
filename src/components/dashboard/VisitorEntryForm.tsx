@@ -35,7 +35,7 @@ const visitorEntrySchema = z.object({
   flatNumber: z.string().min(1, { message: 'Flat number is required.' }),
   purposeOfVisit: z.enum(VISIT_PURPOSES, { required_error: 'Purpose of visit is required.' }),
   vehicleNumber: z.string().optional(),
-  visitorPhoto: z.instanceof(FileList).optional(), 
+  visitorPhoto: z.any().optional(), // Fix: avoid FileList reference on server
   notes: z.string().optional(),
 });
 

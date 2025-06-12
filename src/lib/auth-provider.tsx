@@ -87,6 +87,16 @@ interface AuthContextType {
   createSociety: (data: { name: string; city: string }) => Promise<Society | null>;
   sessionExp: number | null;
   sessionTimeLeft: number | null;
+  fetchThemePreference: () => Promise<'light' | 'dark'>;
+  updateThemePreference: (theme: 'light' | 'dark') => Promise<void>;
+  submitHelpDeskRequest: (requestData: {
+    subject: string;
+    category: string;
+    description: string;
+    urgent?: boolean;
+    document?: File | null;
+    photo?: File | null;
+  }) => Promise<any>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -187,7 +197,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         const errorData = await response.json().catch(() => ({ message: 'Failed to fetch upcoming meetings.' }));
         throw new Error(errorData.message || 'Server error while fetching upcoming meetings.');
       }
-      const meetingsData: Meeting[] = await response.json();
+      let meetingsData: Meeting[] = await response.json();
+      // Hide expired meetings for regular users
+      if (!isAdmin() && !isSocietyAdmin()) {
+        const now = new Date();
+        meetingsData = meetingsData.filter(m => m.status !== 'expired' && new Date(m.dateTime) > now);
+      }
       setUpcomingMeetingsState(meetingsData);
     } catch (error: any) {
       if (typeof window !== 'undefined') {
@@ -195,7 +210,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
       setUpcomingMeetingsState([]);
     }
-  }, [user?.societyId, toast]);
+  }, [user?.societyId, toast, isAdmin, isSocietyAdmin]);
 
   const fetchApprovedVendors = useCallback(async () => {
     if (!user?.societyId) {
@@ -414,7 +429,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       return;
     }
     try {
-      const response = await fetch(`/api/vendors/admin/pending?societyId=${user.societyId}`);
+      const response = await fetch(`/api/vendors/admin/pending?societyId=${user.societyId}`, {
+        headers: {
+          'X-Society-ID': user.societyId,
+          'X-User-Role': user.role,
+        },
+      });
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ message: 'Failed to fetch pending vendors.' }));
         throw new Error(errorData.message || 'Server error fetching pending vendors.');
@@ -491,6 +511,37 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setFacilitiesState([]);
     }
   }, [user?.societyId, toast]);
+
+  // Theme preference logic
+  const fetchThemePreference = async () => {
+    if (!user?.id || !user?.societyId) return 'light';
+    try {
+      const response = await fetch('/api/users/theme-preference', {
+        headers: {
+          'X-User-Id': user.id,
+          'X-Society-ID': user.societyId,
+        },
+      });
+      if (!response.ok) return 'light';
+      const data = await response.json();
+      return data.themePreference || 'light';
+    } catch {
+      return 'light';
+    }
+  };
+
+  const updateThemePreference = async (theme: 'light' | 'dark') => {
+    if (!user?.id || !user?.societyId) return;
+    await fetch('/api/users/theme-preference', {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-User-Id': user.id,
+        'X-Society-ID': user.societyId,
+      },
+      body: JSON.stringify({ themePreference: theme }),
+    });
+  };
 
   const initialDataFetch = useCallback(async (currentUser: UserProfile | null) => {
     if (!currentUser) {
@@ -1286,13 +1337,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
       return false;
     }
+    // Only SuperAdmin can reject any vendor, SocietyAdmin can only reject for their own society
     try {
       const response = await fetch(`/api/vendors/admin/${vendorId}?societyId=${user.societyId}`, {
         method: 'DELETE',
-        headers: { 'X-Society-ID': user.societyId }
+        headers: {
+          'X-Society-ID': user.societyId,
+          'X-User-Role': user.role,
+        },
       });
+      const data = await response.json();
       if (!response.ok) {
-        const data = await response.json().catch(() => ({ message: 'Failed to reject vendor.' }));
         if (typeof window !== 'undefined') {
           toast({ title: 'Vendor Rejection Failed', description: data.message || 'Could not reject vendor submission.', variant: 'destructive' });
         }
@@ -1545,7 +1600,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       await fetchAllParkingSpots();
       await fetchMyParkingSpots();
       return data as ParkingSpot;
-    } catch (error: any) {
+       } catch (error: any) {
       if (typeof window !== 'undefined') {
         toast({ title: 'Parking Spot Update Error', description: error.message || 'An error occurred', variant: 'destructive' });
       }
@@ -1685,6 +1740,52 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  // --- NEW: HelpDesk Submission ---
+  const submitHelpDeskRequest = async (requestData: {
+    subject: string;
+    category: string;
+    description: string;
+    urgent?: boolean;
+    document?: File | null;
+    photo?: File | null;
+  }): Promise<any> => {
+    if (!user || !user.flatNumber || !user.societyId) {
+      if (typeof window !== 'undefined') {
+        toast({ title: 'Error', description: 'User context (flat, society) missing.', variant: 'destructive' });
+      }
+      return null;
+    }
+    const formData = new FormData();
+    formData.append('subject', requestData.subject);
+    formData.append('category', requestData.category);
+    formData.append('description', requestData.description);
+    formData.append('urgent', requestData.urgent ? 'true' : 'false');
+    if (requestData.document) formData.append('document', requestData.document);
+    if (requestData.photo) formData.append('photo', requestData.photo);
+    try {
+      const response = await fetch('/api/helpdesk', {
+        method: 'POST',
+        body: formData,
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        if (typeof window !== 'undefined') {
+          toast({ title: 'HelpDesk Submission Failed', description: data.message || 'Could not submit request.', variant: 'destructive' });
+        }
+        return null;
+      }
+      if (typeof window !== 'undefined') {
+        toast({ title: 'Request Submitted', description: 'Your HelpDesk request has been successfully submitted.' });
+      }
+      return data;
+    } catch (error: any) {
+      if (typeof window !== 'undefined') {
+        toast({ title: 'HelpDesk Submission Error', description: error.message || 'An unexpected error occurred.', variant: 'destructive' });
+      }
+      return null;
+    }
+  };
+
   // Update sessionTimeLeft every second based on sessionExp
   useEffect(() => {
     if (!sessionExp) {
@@ -1813,6 +1914,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     createSociety,
     sessionExp,
     sessionTimeLeft,
+    fetchThemePreference,
+    updateThemePreference,
+    submitHelpDeskRequest,
   };
 
   return (

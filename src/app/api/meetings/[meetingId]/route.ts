@@ -15,8 +15,16 @@ export async function PUT(
     // monthYear is critical for partition key when fetching/replacing
     const { monthYear: currentMonthYear, ...updates } = await request.json() as Partial<Meeting> & { monthYear: string };
 
-    if (!meetingId || !currentMonthYear) {
-      return NextResponse.json({ message: 'Meeting ID and monthYear (for partition key) are required' }, { status: 400 });
+    // Get societyId from request (header, query, or body)
+    let currentSocietyId = request.headers.get('x-society-id') || request.nextUrl.searchParams.get('societyId');
+    if (!currentSocietyId) {
+      try {
+        const body = await request.json();
+        currentSocietyId = body.societyId;
+      } catch {}
+    }
+    if (!meetingId || !currentSocietyId) {
+      return NextResponse.json({ message: 'Meeting ID and societyId (partition key) are required' }, { status: 400 });
     }
 
     const meetingsContainer = safeGetMeetingsContainer();
@@ -24,61 +32,53 @@ export async function PUT(
       return NextResponse.json({ message: 'Meetings container not available. Check Cosmos DB configuration.' }, { status: 500 });
     }
 
-    const { resource: existingMeeting } = await meetingsContainer.item(meetingId, currentMonthYear).read<Meeting>();
+    // Try to find the meeting in the given society partition
+    let { resource: existingMeeting } = await meetingsContainer.item(meetingId, currentSocietyId).read<Meeting>();
+    let meetingToUpdate = existingMeeting as Meeting | undefined;
+    let actualSocietyId = currentSocietyId;
     if (!existingMeeting) {
-      return NextResponse.json({ message: 'Meeting not found' }, { status: 404 });
+      // Fallback: query for meeting by id to get actual partition key (legacy data or moved partition)
+      const query = {
+        query: 'SELECT * FROM c WHERE c.id = @id',
+        parameters: [{ name: '@id', value: meetingId }],
+      };
+      const { resources } = await meetingsContainer.items.query(query).fetchAll();
+      const fallbackMeeting = resources[0] as Meeting | undefined;
+      if (!fallbackMeeting || !fallbackMeeting.societyId) {
+        return NextResponse.json({ message: 'Meeting not found or missing required fields' }, { status: 404 });
+      }
+      meetingToUpdate = { ...fallbackMeeting };
+      actualSocietyId = fallbackMeeting.societyId;
     }
-    
-    let newMonthYear = existingMeeting.monthYear;
+    if (!meetingToUpdate) {
+      return NextResponse.json({ message: 'Meeting not found after fallback' }, { status: 404 });
+    }
+    let newDateTime = meetingToUpdate.dateTime;
     if (updates.dateTime) {
         const newMeetingDateTime = parseISO(updates.dateTime);
         if (isNaN(newMeetingDateTime.getTime())) {
             return NextResponse.json({ message: 'Invalid new dateTime format provided.' }, { status: 400 });
         }
-        newMonthYear = format(newMeetingDateTime, 'yyyy-MM');
+        newDateTime = newMeetingDateTime.toISOString();
     }
-    
-    // If monthYear partition key changes due to dateTime update, we need to delete old item and create new.
-    // Cosmos DB does not allow direct update of partition key value.
-    if (newMonthYear !== existingMeeting.monthYear) {
-        const newMeetingDataForCreate: Meeting = {
-            ...existingMeeting,
-            ...updates,
-            id: existingMeeting.id, // Keep the same ID
-            monthYear: newMonthYear,
-            updatedAt: new Date().toISOString(),
-        };
-        // Delete the old item
-        await meetingsContainer.item(meetingId, existingMeeting.monthYear).delete();
-        // Create the new item in the new partition
-        const { resource: createdMeetingInNewPartition } = await meetingsContainer.items.create(newMeetingDataForCreate);
-        if (!createdMeetingInNewPartition) {
-            // Attempt to roll back or log critical error
-            console.error(`Critical: Failed to re-create meeting ${meetingId} in new partition ${newMonthYear} after deleting from ${existingMeeting.monthYear}`);
-            return NextResponse.json({ message: 'Failed to update meeting due to partition key change complication.' }, { status: 500 });
-        }
-        return NextResponse.json(createdMeetingInNewPartition, { status: 200 });
-
-    } else {
-        // Standard update if partition key does not change
-        const updatedMeetingData: Meeting = {
-          ...existingMeeting,
-          ...updates,
-          updatedAt: new Date().toISOString(),
-          id: existingMeeting.id, 
-          monthYear: existingMeeting.monthYear,
-          postedByUserId: existingMeeting.postedByUserId,
-          postedByName: existingMeeting.postedByName,
-          createdAt: existingMeeting.createdAt,
-        };
-        
-        const { resource: replacedMeeting } = await meetingsContainer.item(meetingId, existingMeeting.monthYear).replace(updatedMeetingData);
-
-        if (!replacedMeeting) {
-            return NextResponse.json({ message: 'Failed to update meeting' }, { status: 500 });
-        }
-        return NextResponse.json(replacedMeeting, { status: 200 });
+    // No partition key change logic needed, since partition key is always societyId
+    const updatedMeetingData: Meeting = {
+      ...meetingToUpdate,
+      ...updates,
+      dateTime: newDateTime,
+      updatedAt: new Date().toISOString(),
+      id: meetingToUpdate.id, 
+      societyId: actualSocietyId,
+      postedByUserId: meetingToUpdate.postedByUserId,
+      postedByName: meetingToUpdate.postedByName,
+      createdAt: meetingToUpdate.createdAt,
+      monthYear: meetingToUpdate.monthYear,
+    };
+    const { resource: replacedMeeting } = await meetingsContainer.item(meetingId, actualSocietyId).replace(updatedMeetingData);
+    if (!replacedMeeting) {
+        return NextResponse.json({ message: 'Failed to update meeting' }, { status: 500 });
     }
+    return NextResponse.json(replacedMeeting, { status: 200 });
 
   } catch (error) {
     console.error(`Update Meeting ${params.meetingId} API error:`, error);
@@ -101,14 +101,24 @@ export async function DELETE(
       return NextResponse.json({ message: 'Meeting ID and monthYear (as query parameter) are required for deletion' }, { status: 400 });
     }
     
+    // Get societyId from request (header, query, or body)
+    let currentSocietyId = request.headers.get('x-society-id') || request.nextUrl.searchParams.get('societyId');
+    if (!currentSocietyId) {
+      try {
+        const body = await request.json();
+        currentSocietyId = body.societyId;
+      } catch {}
+    }
+    if (!meetingId || !currentSocietyId) {
+      return NextResponse.json({ message: 'Meeting ID and societyId (partition key) are required for deletion' }, { status: 400 });
+    }
     const meetingsContainer = safeGetMeetingsContainer();
     if (!meetingsContainer) {
       return NextResponse.json({ message: 'Meetings container not available. Check Cosmos DB configuration.' }, { status: 500 });
     }
-
     let found = false;
     try {
-      await meetingsContainer.item(meetingId, monthYear).delete();
+      await meetingsContainer.item(meetingId, currentSocietyId).delete();
       found = true;
     } catch (deleteError: any) {
       if (deleteError?.code !== 404) throw deleteError;
@@ -121,11 +131,11 @@ export async function DELETE(
       };
       const { resources } = await meetingsContainer.items.query(query).fetchAll();
       const fallbackMeeting = resources[0] as Meeting | undefined;
-      if (!fallbackMeeting) {
+      if (!fallbackMeeting || !fallbackMeeting.societyId) {
         return NextResponse.json({ message: 'Meeting not found or already deleted' }, { status: 404 });
       }
       try {
-        await meetingsContainer.item(meetingId, fallbackMeeting.monthYear).delete();
+        await meetingsContainer.item(meetingId, fallbackMeeting.societyId).delete();
       } catch (deleteError: any) {
         if (deleteError?.code === 404) {
           return NextResponse.json({ message: 'Meeting not found or already deleted' }, { status: 404 });

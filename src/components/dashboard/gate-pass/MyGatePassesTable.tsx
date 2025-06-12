@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useEffect, useState, useMemo } from 'react';
@@ -231,11 +230,19 @@ export function MyGatePassesTable() {
            <Pagination className="mt-6">
             <PaginationContent>
               <PaginationItem>
-                <PaginationPrevious href="#" onClick={(e) => {e.preventDefault(); if(currentPage > 1) handlePageChange(currentPage - 1)}} disabled={currentPage === 1} />
+                <PaginationPrevious 
+                  href="#" 
+                  onClick={(e) => {e.preventDefault(); if(currentPage > 1) handlePageChange(currentPage - 1)}} 
+                  className={currentPage === 1 ? 'pointer-events-none opacity-50' : ''} 
+                />
               </PaginationItem>
               {renderPaginationItems()}
               <PaginationItem>
-                <PaginationNext href="#" onClick={(e) => {e.preventDefault(); if(currentPage < totalPages) handlePageChange(currentPage + 1)}} disabled={currentPage === totalPages} />
+                <PaginationNext 
+                  href="#" 
+                  onClick={(e) => {e.preventDefault(); if(currentPage < totalPages) handlePageChange(currentPage + 1)}} 
+                  className={currentPage === totalPages ? 'pointer-events-none opacity-50' : ''} 
+                />
               </PaginationItem>
             </PaginationContent>
           </Pagination>

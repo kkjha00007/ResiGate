@@ -3,7 +3,7 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { getFacilitiesContainer } from '@/lib/cosmosdb';
 import type { Facility, UserRole } from '@/lib/types';
 import { v4 as uuidv4 } from 'uuid';
-import { logAuditAction } from '@/lib/utils';
+import { logAuditAction } from '@/lib/server-utils';
 
 // Helper to check if user is superadmin (replace with your actual auth check)
 const isSuperAdmin = (request: NextRequest): boolean => {

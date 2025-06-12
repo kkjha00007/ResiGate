@@ -12,12 +12,25 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ message: 'Cosmos DB connection is not configured.' }, { status: 500 });
   }
   try {
-    const querySpec = {
-      query: "SELECT * FROM c WHERE c.isApproved = false ORDER BY c.submittedAt ASC"
-    };
+    // Only allow societyId-specific pending vendors for SocietyAdmin, all for SuperAdmin
+    const societyId = request.headers.get('x-society-id') || request.nextUrl.searchParams.get('societyId');
+    const userRole = request.headers.get('x-user-role'); // Should be set by auth middleware or client
+
+    let querySpec;
+    if (userRole === 'superadmin') {
+      querySpec = {
+        query: "SELECT * FROM c WHERE c.isApproved = false ORDER BY c.submittedAt ASC"
+      };
+    } else if (societyId) {
+      querySpec = {
+        query: "SELECT * FROM c WHERE c.isApproved = false AND c.societyId = @societyId ORDER BY c.submittedAt ASC",
+        parameters: [{ name: '@societyId', value: societyId }]
+      };
+    } else {
+      return NextResponse.json([], { status: 200 }); // No society context, return empty
+    }
 
     const { resources: pendingVendors } = await vendorsContainer.items.query<Vendor>(querySpec).fetchAll();
-
     return NextResponse.json(pendingVendors, { status: 200 });
 
   } catch (error) {

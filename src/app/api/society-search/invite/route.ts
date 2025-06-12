@@ -27,6 +27,7 @@ export async function POST(request: NextRequest) {
       contactPhone: phone || '',
       ip,
       createdAt: new Date().toISOString(),
+      status: 'pending', // Add status field, default to 'pending'
     };
     await container.items.create(doc);
     return NextResponse.json({ success: true });
