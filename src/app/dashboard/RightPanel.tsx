@@ -6,6 +6,7 @@ import { PencilIcon } from '@/components/ui/PencilIcon';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import SOSButton from '@/components/ui/SOSButton';
 
 export function RightPanel() {
   const { activeNotices, upcomingMeetings, user, isLoading: authLoading, isAdmin, isSocietyAdmin, societyInfo, updateSocietyInfo, fetchSocietyInfo } = useAuth();
@@ -144,6 +145,7 @@ export function RightPanel() {
           </DialogContent>
         </Dialog>
       </section>
+      <SOSButton />
     </aside>
   );
 }

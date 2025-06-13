@@ -403,3 +403,20 @@ export interface HelpDeskRequest {
   }>;
 }
 
+export interface SOSAlert {
+  id: string;
+  societyId: string;
+  userId: string;
+  userName: string;
+  flatNumber: string;
+  message: string;
+  createdAt: string;
+  status: 'active' | 'acknowledged' | 'resolved';
+  comments?: Array<{
+    by: string;
+    byRole: string;
+    comment: string;
+    createdAt: string;
+  }>;
+}
+

@@ -32,6 +32,7 @@ export async function POST(request: NextRequest) {
     documentUrl: docUrl,
     photoUrl: photoUrl,
     comments: [],
+    societyId: user.societyId,
   };
   const container = getHelpDeskRequestsContainer();
   await container.items.create(helpdeskRequest);

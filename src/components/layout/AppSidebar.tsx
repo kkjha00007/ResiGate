@@ -124,7 +124,7 @@ export const getNavItems = (
 
     // 7. Admin/Management (SuperAdmin, SocietyAdmin)
     { href: '/dashboard/admin-approvals', label: 'User Account Approvals', icon: UsersRound, iconColor: 'text-pink-500', isUserTypeCheck: (u, iA, iSA, iOR, iG) => iA() || iSA() },
-    { href: '/dashboard/admin/help', label: 'HelpDesk (All)', icon: ClipboardList, iconColor: 'text-red-700', isUserTypeCheck: (u, iA, iSA, iOR, iG) => iA() || iSA() },
+    { href: '/dashboard/admin/help', label: 'Manage HelpDesk', icon: ClipboardList, iconColor: 'text-red-700', isUserTypeCheck: (u, iA, iSA, iOR, iG) => iA() || iSA() },
     { href: '/dashboard/admin/manage-notices', label: 'Manage Notices', icon: ClipboardEdit, iconColor: 'text-indigo-500', isUserTypeCheck: (u, iA, iSA, iOR, iG) => iA() || iSA() },
     { href: '/dashboard/admin/manage-meetings', label: 'Manage Meetings', icon: UsersRound, iconColor: 'text-lime-500', isUserTypeCheck: (u, iA, iSA, iOR, iG) => iA() || iSA() },
     { href: '/dashboard/admin/manage-facilities', label: 'Manage Facilities', icon: Building, iconColor: 'text-teal-600', isUserTypeCheck: (u, iA, iSA, iOR, iG) => iA() || iSA() },
@@ -140,6 +140,7 @@ export const getNavItems = (
     // Feedback for regular users
     { href: '/dashboard/feedback', label: 'Feedback / Bug Reports', icon: ClipboardEdit, iconColor: 'text-blue-600', isUserTypeCheck: (u, iA, iSA, iOR, iG) => !iA() },
     { href: '/dashboard/my-approvals', label: 'My Approvals', icon: Grid, iconColor: 'text-green-600', isUserTypeCheck: (u, iA, iSA, iOR, iG) => iOR() },
+    { href: '/dashboard/admin/sos-alerts', label: 'SOS Alerts', icon: Grid, iconColor: 'text-red-600', isUserTypeCheck: (u, iA, iSA, iOR, iG) => iA() || iSA() },
   ];
   return allItems.filter(item => checkVisibility(user, isAdminFn, isSocietyAdminFn, isOwnerOrRenterFn, isGuardFn, item));
 };

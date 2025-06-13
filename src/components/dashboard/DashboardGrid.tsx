@@ -46,6 +46,8 @@ const gridItems = [
   { href: '/dashboard/feedback', label: 'Feedback / Bug Report', icon: ClipboardEdit, color: 'bg-blue-200 text-blue-700 hover:bg-blue-500 hover:text-white', showForSuperAdmin: false },
   { href: '/dashboard/admin/feedback', label: 'Feedback / Bug Reports', icon: ClipboardEdit, color: 'bg-yellow-200 text-yellow-700 hover:bg-yellow-500 hover:text-white', showForSuperAdmin: true },
   { href: '/dashboard/my-approvals', label: 'My Approvals', icon: Grid, color: 'bg-green-200 text-green-700 hover:bg-green-500 hover:text-white', showForOwnerRenter: true },
+  { href: '/dashboard/admin/sos-alerts', label: 'SOS Alerts', icon: Grid, color: 'bg-red-200 text-red-700 hover:bg-red-500 hover:text-white', showForAdmin: true },
+  { href: '/dashboard/admin/help', label: 'Manage HelpDesk', icon: ClipboardList, color: 'bg-blue-200 text-blue-700 hover:bg-blue-500 hover:text-white', showForAdmin: true },
 ];
 
 export function DashboardGrid() {
@@ -78,6 +80,9 @@ export function DashboardGrid() {
     }
     if (item.href === '/dashboard/admin/feedback') {
       return user && user.role === 'superadmin';
+    }
+    if (item.href === '/dashboard/admin/sos-alerts') {
+      return (isAdmin && isAdmin()) || (isSocietyAdmin && isSocietyAdmin());
     }
     return true;
   });

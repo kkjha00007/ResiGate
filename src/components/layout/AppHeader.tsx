@@ -6,7 +6,7 @@ import { useAuth } from '@/lib/auth-provider';
 import { APP_NAME } from '@/lib/constants';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { LogOut, Menu, ShieldCheck, UserCircle, Building2, Briefcase, Shield, Clock, Bell, Info, CheckCircle, AlertTriangle } from 'lucide-react'; // Added Briefcase, Shield, Clock, and notification icons
+import { LogOut, Menu, ShieldCheck, UserCircle, Building2, Briefcase, Shield, Clock, Bell, Info, CheckCircle, AlertTriangle, Grid } from 'lucide-react'; // Added Briefcase, Shield, Clock, and notification icons
 import Link from 'next/link';
 import type { NavItem } from './AppSidebar';
 import { cn } from '@/lib/utils';

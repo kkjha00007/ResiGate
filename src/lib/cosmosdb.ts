@@ -130,6 +130,10 @@ export function getHelpDeskRequestsContainer() {
   const client = getCosmosClient();
   return getDatabase(client).container('HelpDeskRequests');
 }
+export function getSOSAlertsContainer() {
+  const client = getCosmosClient();
+  return getDatabase(client).container('SOSAlerts');
+}
 
 // Defensive getter for complaints container
 export function safeGetComplaintsContainer() {
