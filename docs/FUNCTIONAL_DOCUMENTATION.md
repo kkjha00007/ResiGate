@@ -185,6 +185,50 @@ ResiGate is a **full-stack visitor management system** designed for residential 
 
 ---
 
+### 3.4. HelpDesk & SOS Features (2025 Update)
+
+### HelpDesk (Unified Resident Support)
+
+- **Residents** can raise HelpDesk requests (formerly "Complaints") for issues like maintenance, security, etc.
+- **Admins** (SuperAdmin/SocietyAdmin) can view, filter, comment, and resolve all HelpDesk requests for their society.
+- **Features:**
+  - Modern UI for raising and tracking requests (with support for long descriptions, attachments, and comments)
+  - Real-time status updates and notifications
+  - Admins can add comments, resolve, or delete tickets
+  - All actions are partitioned by `societyId` for data isolation
+  - Comments are immediately reflected in the UI after admin action
+  - Access control: Only admins and ticket owners can view/manage tickets
+
+#### HelpDesk Workflow
+1. Resident submits a HelpDesk request (optionally with attachments)
+2. Admins see all requests for their society in `/dashboard/admin/help`
+3. Admins can:
+   - Add comments (visible to all involved)
+   - Mark as resolved
+   - Delete inappropriate/invalid tickets
+4. Residents and admins receive notifications for status changes and comments
+
+### SOS Alerts (Panic Button)
+
+- **Residents** can trigger an SOS alert in emergencies
+- **Admins** receive real-time notifications and can view/manage all active SOS alerts
+- **Features:**
+  - Dedicated UI for admins to view, acknowledge, resolve, and comment on SOS alerts
+  - Robust handling of long messages and comments
+  - Real-time notification framework for urgent alerts
+  - All actions are partitioned by `societyId`
+  - Admin actions (acknowledge/resolve/comment) are persisted and reflected instantly in the UI
+
+#### SOS Workflow
+1. Resident triggers SOS (with optional message)
+2. All admins for the society are notified instantly
+3. Admins can:
+   - Acknowledge or resolve the alert
+   - Add comments for audit and communication
+4. All actions are visible in the admin dashboard `/dashboard/admin/sos-alerts`
+
+---
+
 ## 4. UI/UX Components
 
 ### 4.1. Pages & Major Components (Next.js)

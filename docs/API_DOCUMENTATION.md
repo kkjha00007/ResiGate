@@ -123,19 +123,54 @@ ResiGate API Documentation
 *   { "success": true}
     
 ---
-4\. Complaints
---------------
+4\. HelpDesk
+-----------
 
-### 4.1. Add Reply to Complaint
+### 4.1. Create HelpDesk Request
 
-*   **Endpoint**: POST /complaints/{id}/reply
-    
-*   **Description**: Add a reply to a complaint.
-    
-*   { "reply": "Thank you for your feedback.", "societyId": "society-id"}
-    
-*   { "success": true }
-    
+*   **Endpoint**: POST /helpdesk
+*   **Description**: Resident creates a new HelpDesk request (ticket).
+*   **Request Body (form-data)**:
+    *   category: string
+    *   description: string
+    *   urgent: 'true' | 'false'
+    *   document: file (optional)
+    *   photo: file (optional)
+*   **Response**: { "success": true }
+
+### 4.2. List My HelpDesk Requests
+
+*   **Endpoint**: GET /helpdesk
+*   **Description**: Resident fetches their own HelpDesk requests (optionally filter by status).
+*   **Query Params**: status (optional: 'open' | 'resolved')
+*   **Response**: Array of HelpDeskRequest objects
+
+### 4.3. Get HelpDesk Request (Admin/Owner)
+
+*   **Endpoint**: GET /helpdesk/{id}
+*   **Description**: Fetch a single HelpDesk request by ID (admin or owner only).
+*   **Response**: HelpDeskRequest object
+
+### 4.4. Update HelpDesk Request (Edit/Resolve)
+
+*   **Endpoint**: PUT /helpdesk/{id}
+*   **Description**: Edit (owner) or resolve (admin) a HelpDesk request.
+*   **Request Body**: { description?, category?, urgent?, status? }
+*   **Response**: Updated HelpDeskRequest object
+
+### 4.5. Delete HelpDesk Request
+
+*   **Endpoint**: DELETE /helpdesk/{id}
+*   **Description**: Delete a HelpDesk request (owner or admin).
+*   **Response**: { "success": true }
+
+### 4.6. Add Comment to HelpDesk Request (Admin)
+
+*   **Endpoint**: POST /helpdesk/{id}/comment
+*   **Description**: Add a comment to a HelpDesk request (admin only).
+*   **Request Body**: { comment: string }
+*   **Response**: Updated HelpDeskRequest object (with new comment)
+
 ---
 5\. Facilities
 --------------
