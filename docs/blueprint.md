@@ -17,3 +17,10 @@
 - Clean and modern sans-serif font.
 - Use flat design icons related to home security.
 - Clean and organized layout with clear visual hierarchy.
+
+### Notifications
+- Add PATCH /api/notifications/mark-all-read endpoint to mark all notifications as read for a user.
+- Frontend uses this endpoint for the 'Mark all as read' feature, ensuring notifications do not reappear after refresh.
+
+### Dashboard
+- Upcoming Meetings section now strictly filters out expired meetings for all users.

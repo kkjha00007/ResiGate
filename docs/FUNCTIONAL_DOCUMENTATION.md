@@ -366,3 +366,13 @@ sequenceDiagram
     API-->>SecurityFrontEnd: { visitorId, message: "Registered" }
     SecurityFrontEnd-->>Visitor: “You are registered. Please wait.”
 ```
+
+---
+
+## Notification System
+- Users can mark all notifications as read with a single action.
+- The system uses a backend PATCH endpoint to persist the read state, so notifications do not reappear after refresh.
+- If the backend endpoint is unavailable, the frontend marks each notification as read individually as a fallback.
+
+## Dashboard: Upcoming Meetings
+- The dashboard now displays only future meetings for all users, ensuring expired meetings are never shown.

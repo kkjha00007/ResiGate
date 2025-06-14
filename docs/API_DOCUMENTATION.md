@@ -251,6 +251,35 @@ ResiGate API Documentation
 *   { "message": "Security incident reporting is currently disabled." }
     
 
+---
+9\. Notifications API
+---------------------
+
+### PATCH /api/notifications/mark-all-read
+- **Description:** Marks all notifications as read for the current user.
+- **Method:** PATCH
+- **Request Body:** _none_
+- **Headers:**
+  - `Authorization` (if required)
+- **Response:**
+  - 200 OK: `{ success: true }`
+  - 401/403: Unauthorized/Forbidden
+
+#### Example
+```http
+PATCH /api/notifications/mark-all-read
+```
+
+### Notification Read Logic
+- The frontend now uses this endpoint to mark all notifications as read in a single request, ensuring notifications do not reappear after a refresh.
+- If the endpoint is not available, the frontend falls back to marking each notification as read individually.
+
+---
+10\. Meetings API
+----------------
+
+- The dashboard's "Upcoming Meetings" now only shows meetings with a start time in the future for all users. Expired meetings are always excluded.
+
 **Note:**
 
 *   Some endpoints may require authentication via session cookie or JWT in headers.
