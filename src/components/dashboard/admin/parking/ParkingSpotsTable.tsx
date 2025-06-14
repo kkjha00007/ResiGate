@@ -45,6 +45,18 @@ export function ParkingSpotsTable() {
     setIsFormOpen(true);
   };
 
+  const handleDeallocate = async (spot: ParkingSpot) => {
+    setIsProcessing(spot.id);
+    await updateParkingSpot(spot.id, {
+      status: 'available',
+      allocatedToUserId: undefined,
+      allocatedToFlatNumber: undefined,
+      vehicleNumber: undefined,
+    });
+    setIsProcessing(null);
+    await fetchAllParkingSpots(); // Ensure UI is updated after deallocation
+  };
+
   const getSpotStatusVariant = (status: ParkingSpotStatus) => {
     return status === 'allocated' ? 'default' : 'secondary';
   };
@@ -108,6 +120,7 @@ export function ParkingSpotsTable() {
                     <TableHead>Status</TableHead>
                     <TableHead>Allocated To</TableHead>
                     <TableHead>Vehicle No.</TableHead>
+                    <TableHead>Allocation Until</TableHead>
                     <TableHead>Notes</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
@@ -132,6 +145,7 @@ export function ParkingSpotsTable() {
                         ) : <Badge variant="outline">Available</Badge>}
                       </TableCell>
                       <TableCell>{spot.vehicleNumber || 'N/A'}</TableCell>
+                      <TableCell>{spot.freezeUntil ? new Date(spot.freezeUntil).toLocaleDateString() : <span className="text-muted-foreground text-xs">None</span>}</TableCell>
                       <TableCell className="truncate max-w-[150px] text-xs">{spot.notes || 'N/A'}</TableCell>
                       <TableCell className="text-right space-x-2">
                         <Button
@@ -147,17 +161,7 @@ export function ParkingSpotsTable() {
                           <Button
                             variant="destructive"
                             size="sm"
-                            onClick={async () => {
-                              setIsProcessing(spot.id);
-                              await updateParkingSpot(spot.id, {
-                                status: 'available',
-                                allocatedToUserId: undefined,
-                                allocatedToFlatNumber: undefined,
-                                vehicleNumber: undefined,
-                              });
-                              setIsProcessing(null);
-                              fetchAllParkingSpots();
-                            }}
+                            onClick={() => handleDeallocate(spot)}
                             disabled={isProcessing === spot.id}
                             className="ml-2"
                           >

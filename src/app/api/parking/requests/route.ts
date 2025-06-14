@@ -1,6 +1,7 @@
 // src/app/api/parking/requests/route.ts
 import { NextRequest, NextResponse } from 'next/server';
-import { getParkingRequestsContainer } from '@/lib/cosmosdb';
+import { getParkingRequestsContainer, getUsersContainer } from '@/lib/cosmosdb';
+import { USER_ROLES } from '@/lib/constants';
 import type { ParkingRequest } from '@/lib/types';
 
 // POST: Create a new parking request
@@ -14,6 +15,13 @@ export async function POST(request: NextRequest) {
   const { userId, userName, flatNumber, societyId, type, vehicleNumber, notes } = body;
   if (!userId || !societyId || !type || !vehicleNumber) {
     return NextResponse.json({ message: 'Missing required fields' }, { status: 400 });
+  }
+  // ENFORCE: Only Owners, Society Admins, or Superadmins with a flat can submit parking allocation requests
+  const usersContainer = getUsersContainer();
+  const { resource: user } = await usersContainer.item(userId, societyId).read();
+  const allowedRoles = [USER_ROLES.OWNER, USER_ROLES.SOCIETY_ADMIN, USER_ROLES.SUPERADMIN];
+  if (!user || !allowedRoles.includes(user.role) || !user.flatNumber) {
+    return NextResponse.json({ message: 'Only Owners or Admins with a flat can submit parking allocation requests.' }, { status: 400 });
   }
   const newRequest: ParkingRequest = {
     id: crypto.randomUUID(),
@@ -37,6 +45,21 @@ export async function POST(request: NextRequest) {
   }
   try {
     await parkingRequestsContainer.items.create(newRequest);
+    // Add vehicle to Owner's profile if not already present
+    if (user) {
+      const vehicleToAdd = {
+        number: vehicleNumber,
+        type,
+        notes,
+        addedAt: new Date().toISOString(),
+      };
+      let vehicles = Array.isArray(user.vehicles) ? user.vehicles : [];
+      // Only add if not already present
+      if (!(vehicles as any[]).some((v: any) => (v as { number: string }).number === vehicleNumber)) {
+        vehicles.push(vehicleToAdd);
+        await usersContainer.item(userId, societyId).replace({ ...user, vehicles });
+      }
+    }
     return NextResponse.json({ success: true, request: newRequest });
   } catch (error) {
     return NextResponse.json({ message: 'Failed to create request' }, { status: 500 });

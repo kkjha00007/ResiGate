@@ -198,11 +198,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         throw new Error(errorData.message || 'Server error while fetching upcoming meetings.');
       }
       let meetingsData: Meeting[] = await response.json();
-      // Hide expired meetings for regular users
-      if (!isAdmin() && !isSocietyAdmin()) {
-        const now = new Date();
-        meetingsData = meetingsData.filter(m => m.status !== 'expired' && new Date(m.dateTime) > now);
-      }
+      // Always hide expired meetings for dashboard upcoming meetings
+      const now = new Date();
+      meetingsData = meetingsData.filter(m => new Date(m.dateTime) > now);
       setUpcomingMeetingsState(meetingsData);
     } catch (error: any) {
       if (typeof window !== 'undefined') {
@@ -404,11 +402,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, [user?.societyId, isAdmin, isSocietyAdmin, toast]);
 
   const fetchAllMeetingsForAdmin = useCallback(async () => {
-    if (!user?.societyId || (!isAdmin() && !isSocietyAdmin())) {
-        setAllMeetingsForAdminState([]); return;
+    if (!user || (!isAdmin() && !isSocietyAdmin() && user.role !== USER_ROLES.SUPERADMIN)) {
+      setAllMeetingsForAdminState([]); return;
     }
     try {
-      const response = await fetch(`/api/meetings/admin/all?societyId=${user.societyId}`);
+      let url = '';
+      if (user.role === USER_ROLES.SUPERADMIN) {
+        url = '/api/meetings/admin/all'; // No societyId filter for superadmin
+      } else {
+        url = `/api/meetings/admin/all?societyId=${user.societyId}`;
+      }
+      const response = await fetch(url);
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ message: 'Failed to fetch meetings for admin.' }));
         throw new Error(errorData.message || 'Server error fetching admin meetings.');
@@ -421,7 +425,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
       setAllMeetingsForAdminState([]);
     }
-  }, [user?.societyId, isAdmin, isSocietyAdmin, toast]);
+  }, [user, isAdmin, isSocietyAdmin, toast]);
 
   const fetchPendingVendors = useCallback(async () => {
     if (!user?.societyId || (!isAdmin() && !isSocietyAdmin())) {
@@ -1836,6 +1840,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  // --- Fixes for context value and missing references ---
+  // All state and functions are already defined above, just ensure all are included in contextValue
   const contextValue: AuthContextType = {
     user,
     isLoading,

@@ -1,4 +1,3 @@
-
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -53,7 +52,12 @@ export function CreateParkingSpotForm() {
       type: data.type as ParkingSpotType,
     });
     if (result) {
-      form.reset();
+      form.reset({
+        spotNumber: '',
+        type: undefined,
+        location: '',
+        notes: '',
+      });
     }
     setIsSubmitting(false);
   };

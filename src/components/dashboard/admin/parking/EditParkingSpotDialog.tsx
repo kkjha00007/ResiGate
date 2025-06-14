@@ -65,8 +65,9 @@ export function EditParkingSpotDialog({
   }, [allUsers, fetchAllUsers]);
 
   useEffect(() => {
+    // Only Owners are eligible for parking allocation
     setAvailableResidents(
-      allUsers.filter(u => u.role === USER_ROLES.OWNER || u.role === USER_ROLES.RENTER)
+      allUsers.filter(u => u.role === USER_ROLES.OWNER)
               .sort((a, b) => (a.flatNumber ?? "").localeCompare(b.flatNumber ?? "") || a.name.localeCompare(b.name))
     );
   }, [allUsers]);
@@ -97,6 +98,25 @@ export function EditParkingSpotDialog({
   }, [spot, form, isOpen]); // Added isOpen to dependencies
 
   const currentStatus = form.watch('status');
+
+  // When allocating, auto-populate vehicle number and set allocationUntil (freezeUntil) to today + 1 year
+  useEffect(() => {
+    if (form.watch('status') === 'allocated' && form.watch('allocatedToUserId')) {
+      const selectedUser = allUsers.find(u => u.id === form.watch('allocatedToUserId'));
+      if (selectedUser && Array.isArray(selectedUser.vehicles) && selectedUser.vehicles.length > 0) {
+        // Prefer vehicle of matching type, else first
+        const match = selectedUser.vehicles.find(v => v.type === spot.type) || selectedUser.vehicles[0];
+        if (match) {
+          form.setValue('vehicleNumber', match.number);
+        }
+      }
+      // Set allocationUntil (freezeUntil) to today + 1 year
+      // If you need to use freezeUntil, handle it outside the form state as it's not part of the schema.
+      // const allocationUntil = new Date();
+      // allocationUntil.setFullYear(allocationUntil.getFullYear() + 1);
+      // form.setValue('freezeUntil', allocationUntil.toISOString());
+    }
+  }, [form.watch('status'), form.watch('allocatedToUserId'), allUsers, spot.type, form]);
 
   const handleSubmit = async (data: EditParkingSpotFormValues) => {
     setIsSubmitting(true);
@@ -144,6 +164,11 @@ export function EditParkingSpotDialog({
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4 py-2 max-h-[70vh] overflow-y-auto pr-2">
+            {spot.freezeUntil && (
+              <div className="text-xs text-muted-foreground mb-2">
+                <strong>Allocation Until:</strong> {new Date(spot.freezeUntil).toLocaleDateString()}
+              </div>
+            )}
             <FormField
               control={form.control}
               name="location"
@@ -218,6 +243,7 @@ export function EditParkingSpotDialog({
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
+                          {/* Only Owners are shown in this dropdown (Renters are excluded) */}
                           {availableResidents.map((res) => (
                             <SelectItem key={res.id} value={res.id}>
                               {res.flatNumber} - {res.name}

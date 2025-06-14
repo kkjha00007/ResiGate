@@ -121,7 +121,7 @@ export function MeetingsTable() {
     ? allMeetingsForAdmin
     : allMeetingsForAdmin.filter(meeting => meeting.isActive && meeting.status === 'active');
 
-  // For "Upcoming Meetings" (active only, not expired)
+  // For "Upcoming Meetings" (active only, not expired) - only used for non-admins
   const upcomingMeetings = visibleMeetings.filter(meeting => meeting.status === 'active');
 
   if (authLoading && allMeetingsForAdmin.length === 0) {
@@ -132,6 +132,9 @@ export function MeetingsTable() {
       </div>
     );
   }
+
+  // For admins, show all meetings; for others, show only upcoming
+  const meetingsToShow = isAdminUser ? visibleMeetings : upcomingMeetings;
 
   return (
     <Card className="shadow-lg">
@@ -145,10 +148,14 @@ export function MeetingsTable() {
         </div>
       </CardHeader>
       <CardContent>
-        {upcomingMeetings.length === 0 ? (
+        {meetingsToShow.length === 0 ? (
           <div className="text-center py-10">
              <UsersRound className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-            <p className="text-muted-foreground">No meetings have been scheduled yet.</p>
+            <p className="text-muted-foreground">
+              {isAdminUser
+                ? 'No meetings have been scheduled yet or all meetings are expired/canceled.'
+                : 'No upcoming meetings have been scheduled yet.'}
+            </p>
           </div>
         ) : (
           <div className="overflow-x-auto rounded-md border">
@@ -164,7 +171,7 @@ export function MeetingsTable() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {upcomingMeetings.map((meeting) => (
+                {meetingsToShow.map((meeting) => (
                   <TableRow key={meeting.id}>
                     <TableCell className="font-medium">{meeting.title}</TableCell>
                     <TableCell>{format(parseISO(meeting.dateTime), 'PPpp')}</TableCell>

@@ -44,10 +44,7 @@ export function MyParkingSpotsDisplay() {
         <div className="text-center py-10 text-muted-foreground">
           <ParkingCircleOff className="h-16 w-16 mx-auto mb-4 opacity-50" />
           <p className="text-lg">No parking spot has been assigned to you at the moment.</p>
-          <p className="text-sm mt-1">If you need a parking spot, you can request allocation below.</p>
-        </div>
-        <div className="max-w-xl mx-auto">
-          <ParkingRequestForm />
+          <p className="text-sm mt-1">If you need a parking spot, you can request allocation from the dashboard.</p>
         </div>
         <MyParkingRequestsList />
       </div>

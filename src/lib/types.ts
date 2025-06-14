@@ -1,5 +1,12 @@
 export type UserRole = "superadmin" | "societyAdmin" | "owner" | "renter" | "guard";
 
+export interface Vehicle {
+  number: string;
+  type: 'car' | 'bike';
+  notes?: string;
+  addedAt?: string; // ISO DateTime string
+}
+
 export interface User {
   id: string;
   societyId: string; // Now required for all users
@@ -16,6 +23,7 @@ export interface User {
   passwordResetToken?: string;
   passwordResetTokenExpiry?: number; // Unix timestamp (ms)
   themePreference?: 'light' | 'dark'; // Add theme preference for user
+  vehicles?: Vehicle[];
 }
 
 export type UserProfile = Omit<User, 'password'>;
@@ -270,6 +278,8 @@ export interface ParkingSpot {
   notes?: string;
   createdAt: string; // ISO DateTime string
   updatedAt?: string; // ISO DateTime string
+  freezeUntil?: string | null; // ISO DateTime string, for rotational allocation freeze
+  lastAllocatedAt?: string | null; // ISO DateTime string, for audit/history
 }
 
 export interface Facility {

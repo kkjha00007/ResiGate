@@ -1,8 +1,8 @@
 // src/app/api/parking/spots/[spotId]/route.ts
 import { NextResponse, type NextRequest } from 'next/server';
-import { safeGetParkingSpotsContainer } from '@/lib/cosmosdb';
+import { safeGetParkingSpotsContainer, getUsersContainer } from '@/lib/cosmosdb';
 import type { ParkingSpot, ParkingSpotStatus, ParkingSpotType } from '@/lib/types';
-import { PARKING_SPOT_STATUSES } from '@/lib/constants';
+import { PARKING_SPOT_STATUSES, USER_ROLES } from '@/lib/constants';
 
 // TODO: Implement proper admin authentication check for all methods
 
@@ -85,6 +85,14 @@ export async function PUT(
     } else if (updates.status === PARKING_SPOT_STATUSES[1] /* allocated */) {
         if (!updates.allocatedToFlatNumber) { // Basic validation
             return NextResponse.json({ message: 'allocatedToFlatNumber is required when status is allocated' }, { status: 400 });
+        }
+        // ENFORCE: Only Owners can be allocated a spot
+        if (updates.allocatedToUserId) {
+            const usersContainer = getUsersContainer();
+            const { resource: user } = await usersContainer.item(updates.allocatedToUserId, spotToUpdate.societyId).read();
+            if (!user || user.role !== USER_ROLES.OWNER) {
+                return NextResponse.json({ message: 'Only Owners can be allocated a parking spot.' }, { status: 400 });
+            }
         }
     }
 

@@ -1,8 +1,9 @@
 // src/app/api/parking/requests/[id]/route.ts
 import { NextRequest, NextResponse } from 'next/server';
-import { getParkingRequestsContainer, getParkingSpotsContainer } from '@/lib/cosmosdb';
+import { getParkingRequestsContainer, getParkingSpotsContainer, getUsersContainer } from '@/lib/cosmosdb';
 import type { ParkingRequest, ParkingSpot } from '@/lib/types';
 import { v4 as uuidv4 } from 'uuid';
+import { USER_ROLES } from '@/lib/constants';
 
 // PATCH: Admin update status/comment for a parking request
 export async function PATCH(request: NextRequest, { params }: { params: { id: string } }) {
@@ -30,6 +31,12 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
 
     // If approved, assign a parking spot
     if (status === 'approved') {
+      // ENFORCE: Only Owners can be assigned a spot
+      const usersContainer = getUsersContainer();
+      const { resource: user } = await usersContainer.item(req.userId, req.societyId).read();
+      if (!user || user.role !== USER_ROLES.OWNER) {
+        return NextResponse.json({ message: 'Only Owners can be allocated a parking spot.' }, { status: 400 });
+      }
       // Find available spot of requested type
       const querySpec = {
         query: 'SELECT * FROM c WHERE c.societyId = @societyId AND c.status = @status AND c.type = @type',
