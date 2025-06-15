@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getApiSessionUser } from '@/lib/api-session-user';
 import { getHelpDeskRequestsContainer } from '@/lib/cosmosdb';
 
-// POST: Add a comment to a HelpDesk request (admin only for now)
+// POST: Add a comment to a HelpDesk request (admin or societyAdmin)
 export async function POST(request: NextRequest, { params }: { params: { id: string } }) {
   const user = await getApiSessionUser();
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -15,16 +15,17 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
   }).fetchAll();
   const resource = resources[0];
   if (!resource) return NextResponse.json({ error: 'Not found' }, { status: 404 });
-  // Only admin can comment for now
+  // Only admin or societyAdmin can comment
   if (user.role !== 'superadmin' && user.role !== 'societyAdmin') {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
   const body = await request.json();
-  if (!body.comment) return NextResponse.json({ error: 'Missing comment' }, { status: 400 });
+  const text = body.text || body.comment;
+  if (!text) return NextResponse.json({ error: 'Missing comment' }, { status: 400 });
   const comment = {
-    by: user.name,
-    byRole: user.role,
-    comment: body.comment,
+    text,
+    authorId: user.id,
+    authorName: user.name,
     createdAt: new Date().toISOString(),
   };
   resource.comments = Array.isArray(resource.comments) ? resource.comments : [];

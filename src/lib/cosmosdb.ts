@@ -24,6 +24,10 @@ export const societiesContainerId = process.env.COSMOS_SOCIETIES_CONTAINER_ID ||
 export const personasContainerId = process.env.COSMOS_PERSONAS_CONTAINER_ID || "Personas";
 const auditLogsContainerId = process.env.COSMOS_AUDIT_LOGS_CONTAINER_ID || "AuditLogs";
 export const notificationsContainerId = process.env.COSMOS_NOTIFICATIONS_CONTAINER_ID || "Notifications";
+export const maintenanceBillsContainerId = process.env.COSMOS_MAINTENANCE_BILLS_CONTAINER_ID || "MaintenanceBills";
+export const paymentsContainerId = process.env.COSMOS_PAYMENTS_CONTAINER_ID || "Payments";
+export const societyExpensesContainerId = process.env.COSMOS_SOCIETY_EXPENSES_CONTAINER_ID || "SocietyExpenses";
+export const billEmailLogsContainerId = process.env.COSMOS_BILL_EMAIL_LOGS_CONTAINER_ID || "BillEmailLogs";
 
 function getCosmosClient() {
   if (!endpoint || !key) {
@@ -133,6 +137,22 @@ export function getHelpDeskRequestsContainer() {
 export function getSOSAlertsContainer() {
   const client = getCosmosClient();
   return getDatabase(client).container('SOSAlerts');
+}
+export function getMaintenanceBillsContainer() {
+  const client = getCosmosClient();
+  return getDatabase(client).container(maintenanceBillsContainerId);
+}
+export function getPaymentsContainer() {
+  const client = getCosmosClient();
+  return getDatabase(client).container(paymentsContainerId);
+}
+export function getSocietyExpensesContainer() {
+  const client = getCosmosClient();
+  return getDatabase(client).container(societyExpensesContainerId);
+}
+export function getBillEmailLogsContainer() {
+  const client = getCosmosClient();
+  return getDatabase(client).container(billEmailLogsContainerId);
 }
 
 // Defensive getter for complaints container

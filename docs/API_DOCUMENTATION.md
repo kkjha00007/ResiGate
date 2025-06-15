@@ -285,3 +285,129 @@ PATCH /api/notifications/mark-all-read
 *   Some endpoints may require authentication via session cookie or JWT in headers.
     
 *   More endpoints may exist. For complete coverage, see the [full list in the code search](https://github.com/kkjha00007/ResiGate/search?q=/api/v1).
+
+---
+
+## 11. Maintenance Billing & Accounting API (2025)
+
+### 11.1. Billing Config (Admin)
+- **GET** `/billing/config?societyId=...` — Get current billing config for a society
+- **POST** `/billing/config` — Create/update billing config (see fields below)
+  - **Body:**
+    ```json
+    {
+      "societyId": "society-id",
+      "categories": [ ... ],
+      "flatTypes": [ ... ],
+      "effectiveFrom": "YYYY-MM-DD",
+      "interestRules": { ... },
+      "penaltyRules": { ... },
+      ...
+    }
+    ```
+  - **interestRules**: `{ enabled, daysAfterDue, rateType, amount, compounding, maxAmount, perCategory, description }`
+  - **penaltyRules**: `{ latePayment: { enabled, daysAfterDue, rateType, amount, maxAmount, description } }`
+
+### 11.2. Bill Generation
+- **POST** `/billing/bills` — Generate bills (single/multi-period)
+  - **Body:**
+    ```json
+    {
+      "action": "generate",
+      "societyId": "society-id",
+      "periods": ["2025-06", "2025-07"],
+      "dueDate": "2025-06-30",
+      "flats": [ { "flatNumber": "A-101", ... } ],
+      ...
+    }
+    ```
+  - **Response:** Array of `MaintenanceBill` objects, each with:
+    - `amount`, `breakdown`, `discountAmount`, `penaltyAmount`, `interestAmount`, `waiverAmount`, `adHocCharges`, `auditTrail`, etc.
+    - `interestAmount` and `interestReason` are auto-calculated for overdue bills as per config.
+
+### 11.3. Payments
+- **POST** `/billing/payments` — Record a payment
+- **GET** `/billing/payments?societyId=...` — List payments (with filters)
+
+### 11.4. Expenses
+- **POST** `/billing/expenses` — Record an expense
+- **GET** `/billing/expenses?societyId=...` — List expenses (with filters)
+
+### 11.5. Bill Reminders
+- **POST** `/billing/bills/reminders` — Trigger reminders for unpaid/overdue bills (admin or resident)
+- **POST** `/billing/bills/reminders/schedule` — Set user-level reminder schedule (resident)
+- **GET** `/billing/bills/reminders/schedule?societyId=...&userId=...` — Get reminder schedule
+
+### 11.6. Disputes
+- **POST** `/billing/bills/[billId]/dispute` — Resident raises a dispute/query on a bill
+- **GET** `/billing/bills/disputes?societyId=...` — Admin views all disputes
+- **POST** `/helpdesk/[id]/comment` — Admin adds comment to dispute
+- **PUT** `/helpdesk/[id]` — Admin resolves dispute
+
+### 11.7. Audit Trail
+- All bill/config changes are logged in `auditTrail` arrays (see response objects)
+- **GET** `/billing/bills?societyId=...` — Returns bills with full audit trail
+
+### 11.8. ERP/Accounting Export
+- **GET** `/billing/bills/export?format=csv|pdf` — Export all bills
+- **GET** `/billing/payments/export?format=csv|pdf` — Export all payments
+- **GET** `/billing/expenses/export?format=csv|pdf` — Export all expenses
+
+### 11.9. Advanced Reporting
+- **GET** `/billing/reports?societyId=...&period=...&userId=...` — Get live analytics (income, expenses, dues, payment status, etc.)
+
+### 11.10. Notification & Reminder APIs
+- **POST** `/notifications` — Send notification (in-app/email/real-time)
+- **PATCH** `/notifications/mark-all-read` — Mark all notifications as read
+
+---
+
+## Key Data Models (2025)
+
+### MaintenanceBill
+```json
+{
+  "id": "...",
+  "societyId": "...",
+  "flatNumber": "A-101",
+  "userId": "...",
+  "period": "2025-06",
+  "amount": 2500,
+  "dueDate": "2025-06-30",
+  "status": "unpaid",
+  "breakdown": { "maintenance": 2000, "sinkingFund": 500 },
+  "discountAmount": 0,
+  "penaltyAmount": 0,
+  "interestAmount": 50, // NEW: interest on overdue
+  "waiverAmount": 0,
+  "adHocCharges": [],
+  "auditTrail": [ ... ],
+  ...
+}
+```
+
+### SocietyBillingConfig
+```json
+{
+  "id": "...",
+  "societyId": "...",
+  "categories": [ ... ],
+  "flatTypes": [ ... ],
+  "effectiveFrom": "2025-06-01",
+  "interestRules": {
+    "enabled": true,
+    "daysAfterDue": 5,
+    "rateType": "percent",
+    "amount": 2,
+    "compounding": "monthly",
+    "maxAmount": 500,
+    "perCategory": false,
+    "description": "2% per month after 5 days grace"
+  },
+  ...
+}
+```
+
+---
+
+## See also: Functional Documentation for workflows and UI details.

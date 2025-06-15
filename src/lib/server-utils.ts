@@ -2,6 +2,8 @@ import type { AuditLogEntry } from "./types";
 import { getUsersContainer, getAuditLogsContainer } from "./cosmosdb";
 import { v4 as uuidv4 } from "uuid";
 import jwt from "jsonwebtoken";
+import nodemailer from "nodemailer";
+import bcrypt from "bcryptjs";
 
 export async function logAuditAction(entry: Omit<AuditLogEntry, "id" | "timestamp">) {
   const auditEntry: AuditLogEntry = {
@@ -19,21 +21,6 @@ export async function logAuditAction(entry: Omit<AuditLogEntry, "id" | "timestam
 }
 
 const JWT_SECRET = process.env.JWT_SECRET || "dev-secret";
-
-export async function getUserByEmailAndPassword(email: string, password: string) {
-  const usersContainer = await getUsersContainer();
-  // Replace with secure password hash check in production
-  const query = {
-    query: "SELECT * FROM c WHERE c.email = @email",
-    parameters: [{ name: "@email", value: email }],
-  };
-  const { resources } = await usersContainer.items.query(query).fetchAll();
-  const user = resources[0];
-  if (!user) return null;
-  // In production, compare hashed password
-  if (user.password !== password) return null;
-  return user;
-}
 
 export async function createJWT(user: any) {
   // Only include safe fields in payload
@@ -60,4 +47,65 @@ export async function getUserById(userId: string, societyId: string) {
   } catch {
     return null;
   }
+}
+
+// Singleton nodemailer transporter
+let transporter: nodemailer.Transporter | null = null;
+function getTransporter() {
+  if (!transporter) {
+    transporter = nodemailer.createTransport({
+      host: process.env.SMTP_HOST,
+      port: Number(process.env.SMTP_PORT) || 587,
+      secure: false,
+      auth: {
+        user: process.env.SMTP_USER,
+        pass: process.env.SMTP_PASS,
+      },
+    });
+  }
+  return transporter;
+}
+
+export async function sendEmail({ to, subject, text, html }: { to: string; subject: string; text: string; html?: string }) {
+  try {
+    const transporter = getTransporter();
+    await transporter.sendMail({
+      from: process.env.SMTP_FROM || 'no-reply@resigate.com',
+      to,
+      subject,
+      text,
+      html,
+    });
+  } catch (err) {
+    // Mask sensitive info in logs
+    const safeErr = err instanceof Error ? err.message : String(err);
+    console.error("Failed to send email to", to, ":", safeErr);
+    throw err;
+  }
+}
+
+export async function hashPassword(password: string) {
+  return bcrypt.hash(password, 10);
+}
+
+export async function verifyPassword(password: string, hash: string) {
+  return bcrypt.compare(password, hash);
+}
+
+export async function getUserByEmailAndPassword(email: string, password: string) {
+  const usersContainer = await getUsersContainer();
+  const query = {
+    query: "SELECT * FROM c WHERE c.email = @email",
+    parameters: [{ name: "@email", value: email }],
+  };
+  const { resources } = await usersContainer.items.query(query).fetchAll();
+  const user = resources[0];
+  if (!user) return null;
+  // Use bcrypt for password check if hash exists, fallback to plain for legacy
+  if (user.passwordHash) {
+    if (!(await verifyPassword(password, user.passwordHash))) return null;
+  } else {
+    if (user.password !== password) return null;
+  }
+  return user;
 }

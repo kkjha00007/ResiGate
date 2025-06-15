@@ -24,6 +24,8 @@ export interface User {
   passwordResetTokenExpiry?: number; // Unix timestamp (ms)
   themePreference?: 'light' | 'dark'; // Add theme preference for user
   vehicles?: Vehicle[];
+  flatType?: string; // e.g., '1BHK', '2BHK', etc.
+  creditBalance?: number; // NEW: advance/credit balance for auto-adjustment
 }
 
 export type UserProfile = Omit<User, 'password'>;
@@ -428,5 +430,161 @@ export interface SOSAlert {
     comment: string;
     createdAt: string;
   }>;
+}
+
+// --- Maintenance Billing & Accounting ---
+
+export type BillStatus = 'unpaid' | 'paid' | 'overdue' | 'partially_paid' | 'cancelled';
+export type BillApprovalStatus = 'draft' | 'pending_approval' | 'approved' | 'rejected' | 'published';
+
+// --- Audit Trail Entry for Bill/Config Changes ---
+export interface AuditTrailEntry {
+  id: string; // UUID for the audit entry
+  changedBy: string; // userId
+  changedByName?: string;
+  changedByRole?: UserRole;
+  changedAt: string; // ISO DateTime
+  changeType: 'created' | 'updated' | 'deleted';
+  field?: string; // Optional: field that changed (for single-field edits)
+  before?: any; // Previous value or object snapshot
+  after?: any; // New value or object snapshot
+  notes?: string;
+}
+
+export interface MaintenanceBill {
+  id: string;
+  societyId: string;
+  flatNumber: string;
+  userId: string; // Owner/renter user id
+  period: string; // e.g., '2025-06' (YYYY-MM)
+  amount: number;
+  dueDate: string; // ISO Date string
+  status: BillStatus;
+  approvalStatus?: BillApprovalStatus; // draft, pending_approval, approved, rejected, published
+  generatedAt: string; // ISO DateTime
+  paidAmount?: number;
+  paidAt?: string; // ISO DateTime
+  paymentIds?: string[]; // List of payment records
+  notes?: string;
+  breakdown?: Record<string, number>; // category key -> amount
+  discountAmount?: number; // total discount applied (manual or auto)
+  discountReason?: string; // e.g., 'Senior citizen waiver', 'Early payment'
+  penaltyAmount?: number; // total penalty applied (manual or auto)
+  penaltyReason?: string; // e.g., 'Late payment', 'Manual penalty'
+  waiverAmount?: number; // total waiver applied (manual)
+  waiverReason?: string; // e.g., 'Committee approved waiver'
+  adHocCharges?: Array<{
+    label: string;
+    amount: number;
+    description?: string;
+    categoryKey?: string; // Optional: link to a category
+    isOneTime?: boolean;
+  }>;
+  approvalHistory?: Array<{
+    status: BillApprovalStatus;
+    changedBy: string; // userId
+    changedByName?: string;
+    changedAt: string; // ISO DateTime
+    notes?: string;
+  }>;
+  auditTrail?: AuditTrailEntry[]; // Full audit trail of all changes
+  interestAmount?: number; // total interest applied (auto)
+  interestReason?: string; // e.g., 'Overdue interest'
+}
+
+export interface Payment {
+  id: string;
+  societyId: string;
+  billId?: string; // Optional: payment may be for a bill
+  flatNumber: string;
+  userId: string;
+  amount: number;
+  paymentDate: string; // ISO DateTime
+  mode: 'cash' | 'bank_transfer' | 'upi' | 'cheque' | 'other';
+  referenceNumber?: string;
+  notes?: string;
+  recordedByUserId?: string; // Admin who recorded
+}
+
+// --- Bill Email Log ---
+export interface BillEmailLog {
+  id: string;
+  billId: string;
+  societyId: string;
+  flatNumber: string;
+  userId: string;
+  email?: string;
+  sentAt: string; // ISO DateTime
+  status: 'sent' | 'failed' | 'no_email';
+  errorMessage?: string; // e.g., 'Email not configured', SMTP error, etc.
+}
+
+export interface SocietyExpense {
+  id: string;
+  societyId: string;
+  category: string;
+  amount: number;
+  expenseDate: string; // ISO DateTime
+  description?: string;
+  invoiceUrl?: string;
+  createdByUserId: string;
+  createdAt: string; // ISO DateTime
+}
+
+// --- Society Billing Template/Config ---
+export interface SocietyBillingConfig {
+  id: string; // societyId
+  societyId: string;
+  categories: Array<{
+    key: string; // e.g., 'maintenance', 'sinkingFund', 'water', etc.
+    label: string; // e.g., 'Maintenance', 'Sinking Fund', 'Water Charges'
+    perFlatType: { [flatType: string]: number }; // e.g., { '1BHK': 1500, '2BHK': 2000 }
+    isMandatory?: boolean;
+    description?: string;
+    chargeType?: 'recurring' | 'one-time'; // NEW: recurring or one-time
+  }>;
+  flatTypes: string[]; // e.g., ['1RK', '1BHK', '2BHK', '3BHK']
+  effectiveFrom: string; // ISO date
+  updatedAt: string; // ISO date
+  penaltyRules?: {
+    latePayment?: {
+      enabled: boolean;
+      daysAfterDue: number; // grace period
+      rateType: 'fixed' | 'percent';
+      amount: number; // fixed amount or percent per month
+      maxAmount?: number;
+      description?: string;
+    }
+  };
+  discountRules?: Array<{
+    key: string; // e.g., 'earlyPayment', 'seniorCitizen'
+    label: string;
+    type: 'auto' | 'manual';
+    amount: number;
+    rateType: 'fixed' | 'percent';
+    description?: string;
+    criteria?: any; // e.g., { beforeDays: 5 } for early payment
+  }>;
+  interestRules?: {
+    enabled: boolean;
+    daysAfterDue: number; // grace period before interest
+    rateType: 'fixed' | 'percent'; // percent per month or fixed per month
+    amount: number; // percent or fixed per month
+    compounding?: 'monthly' | 'daily' | 'none'; // default: monthly
+    maxAmount?: number; // optional cap
+    perCategory?: boolean; // if true, interest applies per category
+    description?: string;
+  };
+  auditTrail?: AuditTrailEntry[]; // Full audit trail of all changes
+}
+
+export interface BillReminderSchedule {
+  userId: string;
+  societyId: string;
+  dayOfMonth: number; // 1-31
+  hour: number; // 0-23
+  minute: number; // 0-59
+  enabled: boolean;
+  lastTriggered?: string; // ISO date
 }
 

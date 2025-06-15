@@ -48,6 +48,8 @@ const gridItems = [
   { href: '/dashboard/my-approvals', label: 'My Approvals', icon: Grid, color: 'bg-green-200 text-green-700 hover:bg-green-500 hover:text-white', showForOwnerRenter: true },
   { href: '/dashboard/admin/sos-alerts', label: 'SOS Alerts', icon: Grid, color: 'bg-red-200 text-red-700 hover:bg-red-500 hover:text-white', showForAdmin: true },
   { href: '/dashboard/admin/help', label: 'Manage HelpDesk', icon: ClipboardList, color: 'bg-blue-200 text-blue-700 hover:bg-blue-500 hover:text-white', showForAdmin: true },
+  { href: '/dashboard/my-bills', label: 'My Bills', icon: FileText, color: 'bg-fuchsia-100 text-fuchsia-700 hover:bg-fuchsia-400 hover:text-white', showForOwnerRenter: true },
+  { href: '/dashboard/admin/manage-billing', label: 'Manage Billing', icon: ClipboardList, color: 'bg-green-100 text-green-700 hover:bg-green-400 hover:text-white', showForAdmin: true },
 ];
 
 export function DashboardGrid() {

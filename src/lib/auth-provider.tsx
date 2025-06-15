@@ -1925,6 +1925,25 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     submitHelpDeskRequest,
   };
 
+  // Fetch user profile (with creditBalance)
+  const fetchUserProfile = useCallback(async () => {
+    setIsLoadingUser(true);
+    try {
+      const res = await fetch('/api/users/me');
+      if (!res.ok) throw new Error('Failed to fetch user profile');
+      const data = await res.json();
+      setUser(data);
+    } catch (err) {
+      setUser(null);
+    } finally {
+      setIsLoadingUser(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchUserProfile();
+  }, [fetchUserProfile]);
+
   return (
     <AuthContext.Provider value={contextValue}>
       {children}

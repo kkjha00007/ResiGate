@@ -1,24 +1,23 @@
+# ResiGate – Society Management System for Residential Communities
 
-# ResiGate – Visitor Management System for Residential Societies
+> **Version**: 2.0  
+> **Last Updated**: June 15, 2025
 
-> **Version**: 1.0  
-> **Last Updated**: June 3, 2025
-
-ResiGate is a **full-stack visitor management system** built with **Next.js**, designed to simplify and secure visitor entries for residential societies. With role-based access, real-time notifications, and a responsive UI, ResiGate empowers administrators, residents, and security guards to manage visitor data efficiently.
+ResiGate is a **comprehensive society management system** built with **Next.js**, designed for modern residential communities. It covers everything from visitor management to robust maintenance billing/accounting, resident/admin self-service, notifications, reminders, dispute management, ERP export, and advanced analytics. With role-based access, real-time notifications, and a responsive UI, ResiGate empowers administrators, residents, and security guards to manage all aspects of society life efficiently.
 
 ---
 
 ## 🚀 Key Features
 
-- **Visitor Registration & Check-In/Out**
-- **Instant Notifications to Residents**
-- **Resident Profile & Visitor History**
-- **Security Dashboard with Real-Time View**
-- **Facility Booking & Complaint Management**
-- **Committee, Vendor & Parking Management**
-- **Role-Based Access Control**
-- **Gate Pass Generation & Validation**
-- **Admin Configurable Society Settings**
+- **Visitor Management**: Registration, check-in/out, notifications, security dashboard
+- **Resident & Society Management**: Resident profiles, admin controls, committee, vendors, parking, meetings, notices
+- **Maintenance Billing & Accounting**: Automated, configurable billing, payments, expenses, audit trails, ERP export, and advanced reporting
+- **Notifications & Reminders**: In-app, email, and real-time notifications for bills, payments, reminders, disputes, and more
+- **Resident Self-Service**: Residents can view/download bills/receipts, raise disputes, set reminders, and track payments
+- **Admin Management**: Full admin UI for billing, payments, expenses, disputes, reporting, and configuration
+- **Interest on Overdue**: Configurable per society/category, auto-calculated and shown on bills
+- **ERP/Accounting Export**: CSV/PDF export for all major data
+- **Advanced Analytics**: Live dashboards for income, expenses, dues, and more
 
 ---
 
@@ -26,32 +25,48 @@ ResiGate is a **full-stack visitor management system** built with **Next.js**, d
 
 | Role          | Key Capabilities |
 |---------------|------------------|
-| **SuperAdmin** | Manage all societies, users, and audit logs |
-| **SocietyAdmin** | Manage residents, facilities, vendors, and settings in their society |
-| **Resident (Owner/Renter)** | View visitors, create gate passes, book facilities, raise complaints |
-| **Guard** | Register, check in/out visitors, validate gate passes |
-| **Guest** | Public visitor entry (optional) |
+| **SuperAdmin** | Manage all societies, users, billing, audit logs, and settings |
+| **SocietyAdmin** | Manage residents, billing, payments, expenses, disputes, reminders, config, and reporting |
+| **Resident (Owner/Renter)** | View/download bills/receipts, raise disputes, set reminders, view payment/expense reports |
+| **Guard** | Register, check in/out visitors, validate gate passes, view dashboard |
+| **Guest** | Public landing, public visitor entry (optional) |
 
 ---
 
 ## 🔄 Workflows
 
-### ✅ Visitor Registration
-1. Security enters visitor details.
-2. Host gets notified via email/push.
-3. Visitor is checked in/out by the guard.
+### ✅ Maintenance Billing & Accounting
+- Admin configures billing template (categories, rates, interest, penalty, discounts, waivers, etc.)
+- Admin generates bills (single or multi-period) for all or selected flats
+- System applies correct config, calculates category-wise charges, discounts, waivers, penalties, interest (on overdue), and ad-hoc charges
+- Residents receive notifications and can view/download bills, see breakdowns, and pay
+- Advance/Credit: Advance payments are tracked and auto-applied to future bills
+- Interest: Overdue bills accrue interest as per config (fixed/percent, compounding, grace, max, per-category)
+- Audit Trail: All bill/config changes are logged and viewable by admins
+- ERP Export: Admins can export all billing/accounting data for external accounting/ERP
 
-### 🧑‍💼 Resident Management
-- Admins add/approve residents.
-- Residents view/edit profiles and access their own visit history.
+### ✅ Resident Self-Service
+- View/download all bills and receipts (CSV/PDF)
+- See current advance/credit balance
+- Raise disputes/queries on bills (integrated with HelpDesk)
+- Set or trigger reminders for unpaid/overdue bills (manual or scheduled)
+- Get notified of new bills, payments, reminders, and dispute updates
 
----
+### ✅ Admin Dispute Management
+- View all bill disputes/queries
+- Add comments, resolve, or escalate
+- All actions are logged in the audit trail
 
-## 📊 Admin & Security Dashboards
+### ✅ Notification & Reminder System
+- In-app, email, and real-time (WebSocket) notifications for all billing/accounting events
+- Residents can set their own reminder schedule (day/hour/minute) for unpaid/overdue bills
+- Admins can trigger reminders for all or selected users
+- All reminders are logged and can be viewed in the UI
 
-- View daily visitor list.
-- Search/filter visitors.
-- Perform quick check-in/out actions.
+### ✅ Advanced Reporting & Analytics
+- Visual dashboards for income, expenses, outstanding dues, payment status
+- Live data with filters (period, user, category)
+- Exportable as CSV/PDF
 
 ---
 
@@ -59,59 +74,15 @@ ResiGate is a **full-stack visitor management system** built with **Next.js**, d
 
 - **Frontend**: Next.js
 - **Backend**: Node.js APIs
-- **Database**: MongoDB (Atlas/local)
-- **Auth**: JWT (access & refresh tokens)
-- **Notifications**: Email via SendGrid/NodeMailer, FCM for push
-- **Storage**: Optional support for AWS S3 / Firebase
-- **State Management**: React Context or Redux
+- **Database**: CosmosDB
+- **Notifications**: NodeMailer (email), WebSocket (real-time)
+- **Authentication**: JWT, bcrypt
+- **Reporting/Export**: Chart.js, jsPDF, CSV
+- **Scheduling**: node-cron (in-process reminders)
 
 ---
 
-## 📁 Folder Structure
-
-```
-/src
-  /app         # Next.js pages and layouts
-  /components  # Reusable components like Header, SideNav
-  /api         # API integration layer
-  /utils       # Utilities and helpers
-  /styles      # CSS/SCSS styling
-```
-
----
-
-## 📈 Upcoming Features
-
-- Azure Blob Storage integration
-- Emergency SOS button
-- Multi-method login (Gmail, mobile)
-- In-app bug reporting & feedback
-- Mobile App / PWA
-- Payment gateway integration
-- Vendor ratings & Facility booking calendar
-- Localization support (multi-language)
-
----
-
-## 🧪 How to Run Locally
-
-```bash
-# 1. Clone the repo
-git clone https://github.com/kkjha00007/ResiGate.git
-cd ResiGate
-
-# 2. Install dependencies
-npm install
-
-# 3. Create a `.env.local` file and set required environment variables
-NEXT_PUBLIC_API_BASE_URL=
-JWT_SECRET=
-MONGODB_URI=
-...
-
-# 4. Run the app
-npm run dev
-```
+## For full details, see the documentation in `/docs`.
 
 ---
 
