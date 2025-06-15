@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useEffect, useState, useMemo } from 'react';
@@ -9,6 +8,10 @@ import { Input } from '@/components/ui/input';
 import { Home, Search, Users2, UserCircle } from 'lucide-react';
 import Image from 'next/image';
 import { Skeleton } from '@/components/ui/skeleton';
+
+// Add DiceBear avatar base URL for micah (modern, memoji-style)
+const getDiceBearMicahAvatar = (seed: string) =>
+  `https://api.dicebear.com/7.x/micah/svg?seed=${encodeURIComponent(seed)}&backgroundType=gradientLinear&backgroundColor=ffb703,219ebc,8ecae6,ffbe0b,fb8500,e63946&radius=50`;
 
 export function NeighboursDisplay() {
   const { approvedResidents, fetchApprovedResidents, isLoading: authIsLoading } = useAuth();
@@ -83,13 +86,14 @@ export function NeighboursDisplay() {
             <Card key={resident.id} className="shadow-md hover:shadow-lg transition-shadow duration-300 flex flex-col">
               <CardContent className="flex flex-col items-center justify-center p-6 space-y-2 text-center">
                 <div className="relative h-24 w-24 mb-3">
-                  <Image
-                    src={`https://placehold.co/200x200.png?text=${getInitials(resident.name)}`}
+                  <img
+                    src={getDiceBearMicahAvatar(resident.id || resident.name)}
                     alt={resident.name}
                     width={96}
                     height={96}
-                    className="rounded-full object-cover border-2 border-primary/20"
+                    className="rounded-full object-cover border-2 border-primary/20 bg-white h-24 w-24"
                     data-ai-hint="person avatar"
+                    loading="lazy"
                   />
                 </div>
                 <h3 className="text-lg font-semibold text-primary">{resident.name}</h3>

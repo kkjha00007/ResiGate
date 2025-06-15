@@ -256,6 +256,8 @@ ResiGate is a **full-stack visitor management system** designed for residential 
    - Public form for visitor registration  
    - Sends email/push to host resident.
 
+- **Our Neighbours**: Shows a directory of all approved residents. If a resident has not uploaded a profile photo, a unique, colorful memoji-style avatar is generated for them using DiceBear's 'micah' avatar API. This ensures every resident has a friendly, visually distinct avatar.
+
 ---
 
 ### 4.2. Reusable Components
@@ -265,6 +267,7 @@ ResiGate is a **full-stack visitor management system** designed for residential 
 - **`<VisitorTable />`**: Visitor data table with pagination  
 - **`<ResidentFormModal />`**: Modal to add/edit residents  
 - **`<NotificationToast />`**: Inline success/error messages
+- **Avatar Display**: For any user or resident without a profile photo, the app uses DiceBear's 'micah' avatar generator to assign a unique, consistent avatar based on their ID or name. This provides a modern, app-like look and ensures no two residents have the same default avatar.
 
 ---
 
