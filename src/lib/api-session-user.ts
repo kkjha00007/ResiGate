@@ -5,11 +5,23 @@ import { verifyJWT, getUserById } from './server-utils';
 
 export async function getApiSessionUser(req?: any) {
   let token: string | undefined;
-  if (req && typeof req.cookies?.get === 'function') {
-    // App Router API route: req.cookies.get('session')?.value
+  // 1. Check Authorization header (for mobile/JWT clients)
+  if (req && typeof req.headers?.get === 'function') {
+    const authHeader = req.headers.get('authorization');
+    if (authHeader?.startsWith('Bearer ')) {
+      token = authHeader.slice(7);
+    }
+  } else if (typeof req?.headers === 'object' && req.headers?.authorization) {
+    // Node.js/Express style headers
+    const authHeader = req.headers.authorization;
+    if (authHeader?.startsWith('Bearer ')) {
+      token = authHeader.slice(7);
+    }
+  }
+  // 2. Fallback to session cookie (for web)
+  if (!token && req && typeof req.cookies?.get === 'function') {
     token = req.cookies.get('session')?.value;
-  } else {
-    // Fallback: use next/headers cookies() (for edge/server components)
+  } else if (!token) {
     const cookiesObj = await cookies();
     token = cookiesObj.get('session')?.value;
   }

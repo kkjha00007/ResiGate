@@ -61,7 +61,8 @@ export async function POST(request: NextRequest) {
 
     // --- Set JWT session cookie ---
     const token = await createJWT(userProfile);
-    const response = NextResponse.json(userProfile, { status: 200 });
+    // --- Return JWT in response for mobile clients ---
+    const response = NextResponse.json({ ...userProfile, token }, { status: 200 });
 
     const hostname = request.headers.get('host') || '';
     const isLocalhost = /localhost|127\.0\.0\.1/i.test(hostname);
