@@ -106,9 +106,21 @@ export async function GET(request: NextRequest) {
     throw new Error('Societies container not available. Check Cosmos DB configuration.');
   }
   try {
-    const querySpec = {
-      query: "SELECT c.id, c.name, c.city FROM c WHERE c.isActive = true ORDER BY c.name ASC"
-    };
+    const { searchParams } = new URL(request.url);
+    const name = searchParams.get('name');
+    const pincode = searchParams.get('pincode');
+    let query = "SELECT c.id, c.name, c.city, c.pincode FROM c WHERE c.isActive = true";
+    const parameters: any[] = [];
+    if (name) {
+      query += " AND CONTAINS(LOWER(c.name), @name)";
+      parameters.push({ name: "@name", value: name.toLowerCase() });
+    }
+    if (pincode) {
+      query += " AND c.pincode = @pincode";
+      parameters.push({ name: "@pincode", value: pincode });
+    }
+    query += " ORDER BY c.name ASC";
+    const querySpec = parameters.length > 0 ? { query, parameters } : { query };
     const { resources } = await societiesContainer.items.query(querySpec).fetchAll();
     return NextResponse.json(resources, { status: 200 });
   } catch (error: any) {
