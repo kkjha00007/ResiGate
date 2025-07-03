@@ -147,6 +147,31 @@ ResiGate is a **comprehensive society management system** for residential commun
 
 ---
 
+
 ## Notification & Meetings Enhancements
 - Users can mark all notifications as read with a single action (PATCH endpoint)
 - Dashboard only shows future meetings for all users
+
+---
+
+## 9. Additional/Planned Features & Implementation Status
+
+The following features and UI components are present in the codebase but may be partially implemented, experimental, or planned for future releases. Their status is as follows:
+
+- **Bill Email Logs**
+  - Admin UI for viewing bill email logs (filter by billId, userId, status, etc.)
+  - _Status: To be implemented_
+
+- **Bill Emailing**
+  - UI/UX for emailing a bill to a resident
+  - _Status: To be implemented_
+
+- **Bill/Report Download**
+  - UI/UX for downloading bills and admin financial reports (PDF/CSV)
+  - _Status: To be implemented_
+
+---
+
+**Note:**
+- Some features may be stubs or under development. For the most current and complete list, refer to the codebase or contact the technical team.
+- See also: API Documentation for endpoint details.

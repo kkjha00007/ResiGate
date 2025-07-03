@@ -410,4 +410,32 @@ PATCH /api/notifications/mark-all-read
 
 ---
 
-## See also: Functional Documentation for workflows and UI details.
+
+---
+
+## 12. Additional/Planned Endpoints & Implementation Status
+
+The following endpoints exist in the codebase but may be partially implemented, experimental, or planned for future releases. Their status is as follows:
+
+- **/billing/bills/email-log**
+  - **GET**: List bill email logs (admin view, filter by billId, userId, status, etc.)
+  - **POST**: Create a new bill email log entry (called after sending email)
+  - _Status: To be implemented_
+
+- **/billing/bills/email**
+  - **POST**: Email a bill to a resident
+  - _Status: To be implemented_
+
+- **/billing/bills/download**
+  - **GET**: Download bills for a period (current, 3, 6, 12 months)
+  - _Status: To be implemented_
+
+- **/billing/reports/download**
+  - **GET**: Download admin financial reports (bills, payments, expenses)
+  - _Status: To be implemented_
+
+---
+
+**Note:**
+- Some endpoints may be stubs or under development. For the most current and complete list, refer to the codebase or contact the technical team.
+- See also: Functional Documentation for workflows and UI details.
