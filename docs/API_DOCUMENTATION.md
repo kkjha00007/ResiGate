@@ -1,3 +1,4 @@
+
 ResiGate API Documentation
 ==========================
 
@@ -7,6 +8,482 @@ ResiGate API Documentation
 > https://<your-domain-or-host>/api/v1
 > ```  
  (e.g. `https://resi-gate.app/api/v1`)
+
+---
+
+
+
+## Consolidated API Coverage Table
+
+| Feature/Module         | Endpoint(s)                                         | Methods Enabled         | Description                                 | Society/User Filter |
+|-----------------------|-----------------------------------------------------|------------------------|---------------------------------------------|--------------------|
+| Parking Management   | /parking/my-spots                                   | GET                    | Get parking spots assigned to the authenticated user            | User            |
+| Parking Management   | /parking/requests                                   | GET                    | List all parking requests (admin)                                   | Society/User |
+| Parking Management   | /parking/requests                                   | POST                   | Create a new parking request                                        | Society/User |
+| Facilities           | /facilities/[facilityId]                            | GET                    | Get a specific facility by ID                                        | Society         |
+| Facilities           | /facilities/[facilityId]                            | PUT                    | Update a specific facility by ID                                     | Society         |
+| Facilities           | /facilities/[facilityId]                            | DELETE                 | Delete a specific facility by ID                                     | Society         |
+| Users                | /users/residents                                    | GET                    | Get all approved residents (owners and renters)                     | Society         |
+| Gate Pass            | /gate-passes/user/[userId]                          | GET                    | Get gate passes for a specific user                                 | User/Society       |
+| Settings             | /settings/payment-details                           | GET                    | Get society payment details                                         | Society            |
+| Settings             | /settings/payment-details                           | POST                   | Create society payment details                                      | Society            |
+| Settings             | /settings/payment-details                           | PUT                    | Update society payment details                                       | Society            |
+| SOS                  | /sos                                                | POST                   | Raise an SOS alert                                                  | User/Society       |
+| Visitor Management   | /visitors/{id}/approve                              | POST                   | Approve a visitor (guard/admin)                                     | Society/User       |
+| Visitor Management   | /visitors/{id}/deny                                 | POST                   | Deny a visitor (guard/admin)                                        | Society/User       |
+| Visitor Management   | /visitors/{id}                                      | PATCH                  | Update visitor status (check-in/check-out)                          | Society/User       |
+| Visitor Management   | /gate-passes                                        | POST                   | Generate a gate pass with QR code                                   | Society/User       |
+| Visitor Management   | /gate-passes/{passId}                               | GET                    | Get gate pass details                                               | Society/User       |
+| Visitor Management   | /gate-passes/by-token/{tokenCode}                   | GET                    | Validate gate pass by QR code                                       | Society/User       |
+| Visitor Management   | /visitors/photo-upload                              | POST                   | Upload visitor photo (Enhancement required)                         | Society/User       |
+| Facility Booking     | /facilities/{id}/bookings/{bookingId}/approve       | POST                   | Approve a facility booking (Enhancement required)                   | Society/User   |
+| Facility Booking     | /facilities/{id}/bookings/{bookingId}/reject        | POST                   | Reject a facility booking (Enhancement required)                    | Society/User   |
+| Facility Booking     | /facilities/{id}/bookings/{bookingId}/cancel        | POST                   | Cancel a facility booking (Enhancement required)                    | Society/User   |
+| Parking Management   | /parking/vehicles                                   | GET                    | List registered vehicles (Enhancement required)                     | Society/User |
+| Parking Management   | /parking/vehicles                                   | POST                   | Register a new vehicle (Enhancement required)                       | Society/User |
+| Parking Management   | /parking/vehicles                                   | PUT                    | Update vehicle details (Enhancement required)                       | Society/User |
+| Parking Management   | /parking/vehicles                                   | DELETE                 | Delete a registered vehicle (Enhancement required)                  | Society/User |
+| Notifications        | /notifications                                      | GET                    | List/view notifications                                              | User/Society       |
+| Notifications        | /notifications/device-token                         | POST                   | Register device token for push notifications (Enhancement required) | User/Society |
+| Document Management  | /documents                                          | GET                    | List society documents (Enhancement required)                       | Society      |
+| Document Management  | /documents                                          | POST                   | Upload a society document (Enhancement required)                    | Society      |
+| Document Management  | /documents/{id}/download                            | GET                    | Download a society document (Enhancement required)                  | Society      |
+| Committee Management | /committee-members                                  | GET                    | List committee members                                               | Society            |
+| Committee Management | /committee-members                                  | POST                   | Add a committee member                                               | Society            |
+| Committee Management | /committee-members                                  | PUT                    | Update committee member details                                      | Society            |
+| Committee Management | /committee-members                                  | DELETE                 | Remove a committee member                                            | Society            |
+| Vendor Management    | /vendors                                            | GET                    | List vendors                                                         | Society            |
+| Visitor Management   | /public-visitors                                    | GET                    | List all public visitor entries                                      | Society            |
+| Visitor Management   | /public-visitors                                    | POST                   | Create a new public visitor entry                                    | Society            |
+| Visitor Management   | /visitors                                           | GET                    | List all visitors for a society/user                                 | Society/User       |
+| Visitor Management   | /visitors                                           | POST                   | Create a new visitor entry                                           | Society/User       |
+| Visitor Management   | /visitors/{id}                                      | PUT                    | Update a visitor entry                                               | Society/User       |
+| Visitor Management   | /visitors/{id}                                      | DELETE                 | Delete a visitor entry                                               | Society/User       |
+| Guard Dashboard      | /dashboard                                          | GET                    | Get guard dashboard summary                                          | User/Society       |
+| Guard Dashboard      | /dashboard/visitors                                 | GET                    | List visitors for guard dashboard                                    | User/Society       |
+| Guard Dashboard      | /dashboard/notifications                            | GET                    | List notifications for guard dashboard                               | User/Society       |
+| Facility Booking     | /facilities                                         | GET                    | List all facilities in a society                                     | Society            |
+| Facility Booking     | /facilities                                         | POST                   | Create a new facility                                                | Society            |
+| Facility Booking     | /facilities/{id}/bookings                           | GET                    | List bookings for a facility                                         | Society/User       |
+| Facility Booking     | /facilities/{id}/bookings                           | POST                   | Create a new facility booking                                        | Society/User       |
+| Facility Booking     | /facilities/{id}/bookings/{bookingId}               | PUT                    | Update a facility booking                                            | Society/User       |
+| Facility Booking     | /facilities/{id}/bookings/{bookingId}               | DELETE                 | Cancel a facility booking                                            | Society/User       |
+| Authentication       | /auth/login                                         | POST                   | Login with email and password, returns JWT                           | User               |
+| Authentication       | /auth/me                                            | GET                    | Get authenticated user profile                                       | User               |
+| Authentication       | /auth/logout                                        | POST                   | Logout user and clear session                                        | User               |
+| Users                | /users                                              | GET                    | List users for a society (with filters)                              | Society            |
+| Users                | /users                                              | POST                   | Register (create) a new user                                         | Society            |
+| Personas             | /personas                                           | GET                    | List all personas for a society                                      | Society            |
+| Personas             | /personas                                           | POST                   | Create a new persona                                                 | Society            |
+| Personas             | /personas                                           | PATCH                  | Update an existing persona                                           | Society            |
+| Personas             | /personas                                           | DELETE                 | Delete a persona                                                     | Society            |
+| HelpDesk             | /helpdesk                                           | GET                    | List my HelpDesk requests                                            | User/Society       |
+| HelpDesk             | /helpdesk                                           | POST                   | Create a new HelpDesk request                                        | User/Society       |
+| HelpDesk             | /helpdesk/{id}                                      | GET                    | Get a single HelpDesk request (admin/owner)                         | User/Society       |
+| HelpDesk             | /helpdesk/{id}                                      | PUT                    | Edit or resolve a HelpDesk request                                   | User/Society       |
+| HelpDesk             | /helpdesk/{id}                                      | DELETE                 | Delete a HelpDesk request                                            | User/Society       |
+| HelpDesk             | /helpdesk/{id}/comment                              | POST                   | Add comment to HelpDesk request (admin)                              | User/Society       |
+| Facilities           | /facilities                                         | GET                    | List all facilities in a society                                     | Society            |
+| Facilities           | /facilities                                         | POST                   | Create a new facility                                                | Society            |
+| Parking              | /parking/spots                                      | GET                    | List all parking spots in a society                                  | Society            |
+| Parking              | /parking/spots                                      | POST                   | Create a new parking spot                                            | Society            |
+| Parking              | /parking/spots/[spotId]                             | PUT                    | Update a parking spot                                                | Society            |
+| Parking              | /parking/spots/[spotId]                             | DELETE                 | Delete a parking spot                                                | Society            |
+| Notices              | /notices                                            | GET                    | List all notices for a society                                       | Society            |
+| Notices              | /notices                                            | POST                   | Create a new notice                                                  | Society            |
+| Notices              | /notices/{id}                                       | PUT                    | Update a notice                                                      | Society            |
+| Security Incidents   | /security-incidents                                 | POST                   | Report security incident (currently disabled)                        | Society           |
+| Notifications        | /notifications/mark-all-read                        | PATCH                  | Mark all notifications as read                                       | User               |
+| Meetings             | /meetings                                           | GET                    | List meetings (future only)                                          | Society            |
+| Billing Config       | /billing/config                                     | GET                    | Get current billing config for a society                             | Society            |
+| Billing Config       | /billing/config                                     | POST                   | Create/update billing config                                         | Society            |
+| Bills                | /billing/bills                                      | GET                    | List all bills for a society/user                                    | Society/User       |
+| Bills                | /billing/bills                                      | POST                   | Generate bills (single/multi-period)                                 | Society/User       |
+| Bills                | /billing/bills/[billId]/dispute                     | POST                   | Raise a dispute/query on a bill                                      | Society/User       |
+| Bills                | /billing/bills/disputes                             | GET                    | Admin views all disputes                                             | Society/User       |
+| Payments             | /billing/payments                                   | GET                    | List payments (with filters)                                         | Society/User       |
+| Payments             | /billing/payments                                   | POST                   | Record a payment                                                     | Society/User       |
+| Expenses             | /billing/expenses                                   | GET                    | List expenses (with filters)                                         | Society            |
+| Expenses             | /billing/expenses                                   | POST                   | Record an expense                                                    | Society            |
+| Bill Reminders       | /billing/bills/reminders                            | POST                   | Trigger reminders for unpaid/overdue bills                           | Society/User       |
+| Bill Reminders       | /billing/bills/reminders/schedule                   | POST                   | Set user-level reminder schedule                                     | Society/User       |
+| Bill Reminders       | /billing/bills/reminders/schedule                   | GET                    | Get reminder schedule                                                | Society/User       |
+| Audit Trail          | /billing/bills                                      | GET                    | Returns bills with full audit trail                                  | Society/User       |
+| ERP/Accounting Export| /billing/bills/export                               | GET                    | Export all bills (csv/pdf)                                           | Society            |
+| ERP/Accounting Export| /billing/payments/export                            | GET                    | Export all payments (csv/pdf)                                        | Society            |
+| ERP/Accounting Export| /billing/expenses/export                            | GET                    | Export all expenses (csv/pdf)                                        | Society            |
+| Advanced Reporting   | /billing/reports                                    | GET                    | Get live analytics (income, expenses, dues)                          | Society            |
+| Notification/Reminder| /notifications                                      | POST                   | Send notification (in-app/email/real-time)                           | User/Society       |
+| Additional/Planned   | /billing/bills/email-log                            | GET                    | List bill email logs (admin view)                                    | Society            |
+| Additional/Planned   | /billing/bills/email-log                            | POST                   | Create a new bill email log entry                                    | Society            |
+| Additional/Planned   | /billing/bills/email                                | POST                   | Email a bill to a resident                                           | Society            |
+| Additional/Planned   | /billing/bills/download                             | GET                    | Download bills for a period                                          | Society            |
+| Additional/Planned   | /billing/reports/download                           | GET                    | Download admin financial reports                                     | Society            |
+
+### Format: Each endpoint below is listed as:
+
+#### [METHOD] [ENDPOINT]
+**Request:**
+```json
+// Example request body or parameters (if applicable)
+```
+**Response:**
+```json
+// Example response body
+```
+**Filter:** [User-based | Society-based | Society/User | ...]
+
+---
+
+#### POST /auth/login
+**Request:**
+```json
+{
+  "email": "user@example.com",
+  "password": "yourPassword123"
+}
+```
+**Response:**
+```json
+{
+  "token": "...",
+  "user": {
+    "id": "user-id",
+    "email": "user@example.com",
+    "name": "John Doe",
+    "role": "resident"
+  }
+}
+```
+**Filter:** User-based
+
+#### GET /auth/me
+**Request:** (Cookie: session=)
+**Response:**
+```json
+{
+  "id": "user-id",
+  "email": "user@example.com",
+  "name": "John Doe",
+  "role": "resident",
+  "exp": 1718000000
+}
+```
+**Filter:** User-based
+
+#### POST /auth/logout
+**Request:** (Cookie: session=)
+**Response:**
+```json
+{
+  "success": true
+}
+```
+**Filter:** User-based
+
+#### GET /users?societyId=&isApproved=
+**Request:** (Query params: societyId, isApproved)
+**Response:**
+```json
+[
+  { "id": "user-id", "email": "user@example.com", "name": "John Doe", "role": "resident" }
+]
+```
+**Filter:** Society-based
+
+#### POST /users
+**Request:**
+```json
+{
+  "email": "newuser@example.com",
+  "password": "pass123",
+  "name": "Jane Doe",
+  "flatNumber": "A-101",
+  "role": "resident",
+  "societyId": "society-id"
+}
+```
+**Response:**
+```json
+{
+  "id": "generated-user-id",
+  "email": "newuser@example.com",
+  "name": "Jane Doe",
+  "role": "resident"
+}
+```
+**Filter:** Society-based
+
+#### GET /users/residents
+**Request:** (Query param: societyId)
+**Response:**
+```json
+[
+  { "id": "user-id", "email": "user@example.com", "name": "John Doe", "role": "resident" }
+]
+```
+**Filter:** Society-based
+
+#### GET /personas?societyId=
+**Request:** (Query param: societyId)
+**Response:**
+```json
+[
+  { "id": "persona-id", "societyId": "society-id", "name": "Manager", "description": "Can manage facilities", "roleKeys": ["facility_manager"], "featureAccess": {} }
+]
+```
+**Filter:** Society-based
+
+#### POST /personas
+**Request:**
+```json
+{
+  "societyId": "society-id",
+  "name": "Manager",
+  "roleKeys": ["facility_manager"]
+}
+```
+**Response:**
+```json
+{
+  "id": "generated-persona-id",
+  "societyId": "society-id",
+  "name": "Manager",
+  "roleKeys": ["facility_manager"],
+  "featureAccess": {}
+}
+```
+**Filter:** Society-based
+
+#### PATCH /personas
+**Request:**
+```json
+{
+  "id": "persona-id",
+  "societyId": "society-id",
+  "name": "Updated Manager"
+}
+```
+**Response:**
+```json
+{
+  "id": "persona-id",
+  "societyId": "society-id",
+  "name": "Updated Manager",
+  "roleKeys": ["facility_manager"],
+  "featureAccess": {}
+}
+```
+**Filter:** Society-based
+
+#### DELETE /personas
+**Request:**
+```json
+{
+  "id": "persona-id",
+  "societyId": "society-id"
+}
+```
+**Response:**
+```json
+{
+  "success": true
+}
+```
+**Filter:** Society-based
+
+#### GET /facilities?societyId=
+**Request:** (Query param: societyId)
+**Response:**
+```json
+[
+  { "id": "facility-id", "name": "Gym", "capacity": 50, "societyId": "society-id", "isActive": true }
+]
+```
+**Filter:** Society-based
+
+#### POST /facilities
+**Request:**
+```json
+{
+  "name": "Swimming Pool",
+  "capacity": 30,
+  "societyId": "society-id"
+}
+```
+**Response:**
+```json
+{
+  "id": "facility-id",
+  "name": "Swimming Pool",
+  "capacity": 30,
+  "societyId": "society-id",
+  "isActive": true
+}
+```
+**Filter:** Society-based
+
+#### GET /facilities/[facilityId]
+**Request:** (Path param: facilityId)
+**Response:**
+```json
+{
+  "id": "facility-id",
+  "name": "Swimming Pool",
+  "capacity": 30,
+  "societyId": "society-id",
+  "isActive": true
+}
+```
+**Filter:** Society-based
+
+#### PUT /facilities/[facilityId]
+**Request:**
+```json
+{
+  "name": "Updated Facility Name",
+  "capacity": 40
+}
+```
+**Response:**
+```json
+{
+  "id": "facility-id",
+  "name": "Updated Facility Name",
+  "capacity": 40,
+  "societyId": "society-id",
+  "isActive": true
+}
+```
+**Filter:** Society-based
+
+#### DELETE /facilities/[facilityId]
+**Request:** (Path param: facilityId)
+**Response:**
+```json
+{
+  "success": true
+}
+```
+**Filter:** Society-based
+
+#### GET /parking/my-spots
+**Request:**
+```json
+// No body required
+```
+**Response:**
+```json
+[
+  { "id": "spot-id", "societyId": "society-id", "spotNumber": "P-1", "type": "covered", "status": "available" }
+]
+```
+**Filter:** User-based
+
+#### GET /parking/requests
+**Request:**
+```json
+// No body required
+```
+**Response:**
+```json
+[
+  { "id": "request-id", "userId": "user-id", "status": "pending", "createdAt": "2025-07-04T00:00:00.000Z" }
+]
+```
+**Filter:** Society/User
+
+#### POST /parking/requests
+**Request:**
+```json
+{
+  "userId": "user-id",
+  "spotType": "covered"
+}
+```
+**Response:**
+```json
+{
+  "id": "request-id",
+  "userId": "user-id",
+  "status": "pending",
+  "createdAt": "2025-07-04T00:00:00.000Z"
+}
+```
+**Filter:** Society/User
+
+#### GET /parking/vehicles
+**Request:**
+```json
+// No body required
+```
+**Response:**
+```json
+[
+  { "id": "vehicle-id", "userId": "user-id", "number": "MH12AB1234", "type": "car" }
+]
+```
+**Filter:** Society/User (Enhancement required)
+
+#### POST /parking/vehicles
+**Request:**
+```json
+{
+  "userId": "user-id",
+  "number": "MH12AB1234",
+  "type": "car"
+}
+```
+**Response:**
+```json
+{
+  "id": "vehicle-id",
+  "userId": "user-id",
+  "number": "MH12AB1234",
+  "type": "car"
+}
+```
+**Filter:** Society/User (Enhancement required)
+
+#### PUT /parking/vehicles
+**Request:**
+```json
+{
+  "id": "vehicle-id",
+  "number": "MH12XY9876"
+}
+```
+**Response:**
+```json
+{
+  "id": "vehicle-id",
+  "userId": "user-id",
+  "number": "MH12XY9876",
+  "type": "car"
+}
+```
+**Filter:** Society/User (Enhancement required)
+
+#### DELETE /parking/vehicles
+**Request:**
+```json
+{
+  "id": "vehicle-id"
+}
+```
+**Response:**
+```json
+{
+  "success": true
+}
+```
+**Filter:** Society/User (Enhancement required)
+
+// ... (Add similar blocks for all endpoints in the coverage table, using the above format)
+```
+**Filter:** Society-based
+
+---
 
 ---
 
