@@ -20,7 +20,7 @@ async function getSOSAlerts(societyId: string): Promise<SOSAlert[]> {
 export default async function AdminSOSAlertsPage() {
   const user = await getApiSessionUser();
   if (!user || (user.role !== 'societyAdmin' && user.role !== 'superadmin')) {
-    return <div>Access denied. Your role: {user?.role}</div>;
+    return <div>Access denied. Your role: {user?.primaryRole}</div>;
   }
   let alerts: SOSAlert[] = [];
   let error: string | null = null;

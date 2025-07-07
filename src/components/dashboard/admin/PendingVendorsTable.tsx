@@ -5,6 +5,7 @@
 import React, { useEffect, useState } from 'react';
 import type { Vendor } from '@/lib/types';
 import { useAuth } from '@/lib/auth-provider';
+import { USER_ROLES } from '@/lib/constants';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -31,7 +32,7 @@ export function PendingVendorsTable() {
 
 
   useEffect(() => {
-    if (user && user.role === 'superadmin') {
+    if (user && user.primaryRole === USER_ROLES.OWNER_APP) {
       fetchPendingVendors();
     }
   }, [user, fetchPendingVendors]);

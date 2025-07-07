@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import type { Meeting } from '@/lib/types';
 import { useAuth } from '@/lib/auth-provider';
+import { USER_ROLES } from '@/lib/constants';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -116,7 +117,7 @@ export function MeetingsTable() {
 
   // Show all meetings to SuperAdmin/SocietyAdmin, filter for others
   const now = new Date();
-  const isAdminUser = user?.role === 'superadmin' || user?.role === 'societyAdmin';
+  const isAdminUser = user?.primaryRole === USER_ROLES.OWNER_APP || user?.primaryRole === USER_ROLES.SOCIETY_ADMIN;
   const visibleMeetings = isAdminUser
     ? allMeetingsForAdmin
     : allMeetingsForAdmin.filter(meeting => meeting.isActive && meeting.status === 'active');

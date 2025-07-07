@@ -76,11 +76,11 @@ const checkVisibility = (
       if (role === USER_ROLES.SOCIETY_ADMIN) return isSocietyAdminFn();
       if (role === USER_ROLES.OWNER || role === USER_ROLES.RENTER) return isOwnerOrRenterFn();
       if (role === USER_ROLES.GUARD) return isGuardFn();
-      return user?.role === role;
+      return user?.primaryRole === role;
     });
   }
   if (item.hideForRole && user) {
-    return !item.hideForRole.includes(user.role);
+    return !item.hideForRole.includes(user.primaryRole);
   }
   return true; // Default to visible if no specific role checks
 };
@@ -134,6 +134,13 @@ export const getNavItems = (
 
     // 8. SuperAdmin Only
     { href: '/dashboard/admin/manage-societies', label: 'Manage Societies', icon: Briefcase, iconColor: 'text-gray-400', isUserTypeCheck: (u, iA, iSA, iOR, iG) => iA() },
+    { href: '/dashboard/feature-access-control', label: 'Feature Access Control', icon: ShieldCheckIcon, iconColor: 'text-purple-600', isUserTypeCheck: (u, iA, iSA, iOR, iG) => {
+      // Allow Owner (App) and Ops roles
+      const hasRBACAccess = u?.roleAssociations?.some((association: any) => 
+        association.isActive && ['owner_app', 'ops'].includes(association.role)
+      ) || (u?.primaryRole && ['owner_app', 'ops'].includes(u.primaryRole));
+      return hasRBACAccess || iA();
+    }},
     { href: '/dashboard/admin/audit-logs', label: 'Audit Logs', icon: ShieldAlert, iconColor: 'text-yellow-600', isUserTypeCheck: (u, iA, iSA, iOR, iG) => iA() },
     { href: '/dashboard/admin/manage-personas', label: 'Manage Personas', icon: Sparkles, iconColor: 'text-indigo-500', isUserTypeCheck: (u, iA, iSA, iOR, iG) => iA() },
     { href: '/dashboard/admin/feedback', label: 'Feedback & Bug Reports', icon: Megaphone, iconColor: 'text-blue-600', isUserTypeCheck: (u, iA, iSA, iOR, iG) => iA() },

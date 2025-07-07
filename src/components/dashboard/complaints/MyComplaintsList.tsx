@@ -269,7 +269,7 @@ export function MyHelpDeskList({ requests = [], isLoading = false, fetchMyReques
               <TableBody>
                 {(filtered as HelpDeskRequest[]).map((req) => {
                   const isOwner = user && req.userId === user.id;
-                  const isAdmin = user && (user.role === USER_ROLES.SUPERADMIN || user.role === USER_ROLES.SOCIETY_ADMIN);
+                  const isAdmin = user && (user.primaryRole === USER_ROLES.OWNER_APP || user.primaryRole === USER_ROLES.SOCIETY_ADMIN);
                   return (
                     <TableRow key={req.id} className="hover:bg-muted/40 transition-colors group cursor-pointer" onClick={e => {
                       // Prevent row click if action button is clicked
@@ -353,7 +353,7 @@ export function MyHelpDeskList({ requests = [], isLoading = false, fetchMyReques
                     </div>
                   )}
                   {/* Admin comment box */}
-                  {user && (user.role === USER_ROLES.SUPERADMIN || user.role === USER_ROLES.SOCIETY_ADMIN) && isCommenting && (
+                  {user && (user.primaryRole === USER_ROLES.OWNER_APP || user.primaryRole === USER_ROLES.SOCIETY_ADMIN) && isCommenting && (
                     <div className="mt-4">
                       <textarea className="w-full border rounded p-2 mb-2" rows={3} placeholder="Add a comment..." value={commentText} onChange={e=>setCommentText(e.target.value)} />
                       <div className="flex gap-2 justify-end">
@@ -364,7 +364,7 @@ export function MyHelpDeskList({ requests = [], isLoading = false, fetchMyReques
                   )}
                 </div>
                 {/* Admin controls in modal */}
-                {user && (user.role === USER_ROLES.SUPERADMIN || user.role === USER_ROLES.SOCIETY_ADMIN) && (
+                {user && (user.primaryRole === USER_ROLES.OWNER_APP || user.primaryRole === USER_ROLES.SOCIETY_ADMIN) && (
                   <div className="mt-4 border-t pt-3 space-y-2">
                     <div className="font-semibold">Admin Controls:</div>
                     <div className="flex gap-2">

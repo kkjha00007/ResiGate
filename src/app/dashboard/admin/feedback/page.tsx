@@ -133,7 +133,7 @@ const FeedbackPage = () => {
   const totalPages = Math.ceil(filteredTickets.length / ITEMS_PER_PAGE);
   const paginatedTickets = filteredTickets.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
 
-  if (!user || (!isAdmin() && !isSocietyAdmin() && user.role !== 'superadmin')) {
+  if (!user || (!isAdmin() && !isSocietyAdmin() && user.primaryRole !== 'superadmin')) {
     return (
       <div className="max-w-xl mx-auto py-16 text-center">
         <Card className="shadow-xl">

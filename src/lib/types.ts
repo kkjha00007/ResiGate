@@ -1,20 +1,44 @@
-export type UserRole = "superadmin" | "societyAdmin" | "owner" | "renter" | "guard";
+export type UserRole = 
+  | "owner_app"        // Platform admin
+  | "ops"              // Operations team
+  | "society_admin"    // Society administrator
+  | "guard"            // Security guard
+  | "owner_resident"   // Flat owner
+  | "renter_resident"  // Tenant
+  | "member_resident"  // Family member
+  | "staff"            // Support staff
+  | "api_system"       // System/API role
+  // Legacy support
+  | "superadmin"       // Maps to owner_app
+  | "societyAdmin"     // Maps to society_admin
+  | "owner"            // Maps to owner_resident
+  | "renter";          // Maps to renter_resident
 
-export interface Vehicle {
-  number: string;
-  type: 'car' | 'bike';
-  notes?: string;
-  addedAt?: string; // ISO DateTime string
+// Role association with society/flat
+export interface UserRoleAssociation {
+  id: string;
+  userId: string;
+  role: UserRole;
+  societyId?: string;     // For society-scoped roles
+  flatNumber?: string;    // For flat-scoped roles
+  isActive: boolean;
+  assignedAt: string;
+  assignedBy: string;
+  expiresAt?: string;     // Optional expiration
+  // Custom permissions override defaults for this specific role association
+  customPermissions?: { [feature: string]: string[] };
 }
 
+// Enhanced User interface with multi-role support
 export interface User {
   id: string;
-  societyId: string; // Now required for all users
   email: string;
   password?: string; // Hashed password
   name: string;
-  role: UserRole;
-  flatNumber?: string;
+  primaryRole: UserRole; // Main role for backward compatibility
+  roleAssociations: UserRoleAssociation[]; // NEW: Multiple role associations
+  societyId?: string; // Primary society (for backward compatibility)
+  flatNumber?: string; // Primary flat (for backward compatibility)
   isApproved: boolean;
   registrationDate: string; // Store as ISO string
   secondaryPhoneNumber1?: string;
@@ -26,6 +50,24 @@ export interface User {
   vehicles?: Vehicle[];
   flatType?: string; // e.g., '1BHK', '2BHK', etc.
   creditBalance?: number; // NEW: advance/credit balance for auto-adjustment
+  // Staff-specific fields
+  staffType?: 'maid' | 'driver' | 'cook' | 'security' | 'maintenance' | 'other';
+  isStaffLoginEnabled?: boolean; // Configurable staff login
+  isStaff?: boolean; // Whether user is staff member
+  // API access
+  apiKey?: string; // For API_SYSTEM role
+  lastLoginAt?: string;
+  // Impersonation tracking
+  impersonatedBy?: string; // User ID of who is impersonating
+  impersonationStartedAt?: string;
+  canImpersonate?: boolean; // Whether user can impersonate others
+}
+
+export interface Vehicle {
+  number: string;
+  type: 'car' | 'bike';
+  notes?: string;
+  addedAt?: string; // ISO DateTime string
 }
 
 export type UserProfile = Omit<User, 'password'>;

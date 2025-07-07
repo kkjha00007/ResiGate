@@ -91,7 +91,7 @@ export async function PUT(
       ...updates, // Apply general updates (name, secondary phones, isApproved)
       id: userToUpdate.id, 
       email: userToUpdate.email, // Email should not be changed here
-      role: userToUpdate.role, // Role should not be changed here
+      primaryRole: userToUpdate.primaryRole, // Role should not be changed here
     };
     
     // Ensure password is not accidentally overwritten by general updates if it wasn't a password change request

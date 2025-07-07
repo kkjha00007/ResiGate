@@ -67,7 +67,7 @@ export function EditParkingSpotDialog({
   useEffect(() => {
     // Only Owners are eligible for parking allocation
     setAvailableResidents(
-      allUsers.filter(u => u.role === USER_ROLES.OWNER)
+      allUsers.filter(u => u.primaryRole === USER_ROLES.OWNER_RESIDENT)
               .sort((a, b) => (a.flatNumber ?? "").localeCompare(b.flatNumber ?? "") || a.name.localeCompare(b.name))
     );
   }, [allUsers]);

@@ -124,7 +124,7 @@ export function MyProfileForm() {
             <div className="space-y-2 text-sm text-muted-foreground p-4 bg-secondary/30 rounded-md border">
               <p><strong>Email:</strong> {user.email}</p>
               {user.flatNumber && <p><strong>Flat Number:</strong> {user.flatNumber}</p>}
-              <p><strong>Role:</strong> <span className="capitalize">{user.role}</span></p>
+              <p><strong>Role:</strong> <span className="capitalize">{user.primaryRole}</span></p>
               {/* Society Info Display */}
               {societyInfo && (
                 <>

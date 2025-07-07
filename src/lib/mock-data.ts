@@ -18,7 +18,15 @@ export const MOCK_USERS_LEGACY: User[] = [
     // IMPORTANT: Passwords should be HASHED. This is for conceptual reference only.
     password: 'adminpassword', 
     name: 'Super Admin',
-    role: USER_ROLES.SUPERADMIN,
+    primaryRole: USER_ROLES.OWNER_APP,
+    roleAssociations: [{
+      id: 'role-assoc-001',
+      userId: 'user-superadmin-001',
+      role: USER_ROLES.OWNER_APP,
+      isActive: true,
+      assignedAt: new Date('2023-01-01T10:00:00Z').toISOString(),
+      assignedBy: 'system'
+    }],
     isApproved: true,
     registrationDate: new Date('2023-01-01T10:00:00Z').toISOString(),
     societyId: 'society-demo-001', // <-- Added for type compatibility

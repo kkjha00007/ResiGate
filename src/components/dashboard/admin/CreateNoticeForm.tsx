@@ -4,6 +4,7 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import * as z from 'zod';
+import { USER_ROLES } from '@/lib/constants';
 import { Button } from '@/components/ui/button';
 import {
   Form,
@@ -43,7 +44,7 @@ export function CreateNoticeForm() {
   });
 
   const onSubmit = async (data: NoticeFormValues) => {
-    if (!user || user.role !== 'superadmin') {
+    if (!user || user.primaryRole !== USER_ROLES.OWNER_APP) {
       toast({ title: 'Unauthorized', description: 'You do not have permission to create notices.', variant: 'destructive' });
       return;
     }

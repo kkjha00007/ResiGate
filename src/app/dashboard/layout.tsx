@@ -26,8 +26,8 @@ export default function DashboardLayout({
     if (!isLoading && user && typeof window !== 'undefined') {
       const path = window.location.pathname;
       if (path.startsWith('/dashboard/admin')) {
-        const isSuperAdmin = user.role === 'superadmin';
-        const isSocietyAdmin = user.role === 'societyAdmin';
+        const isSuperAdmin = user.primaryRole === 'superadmin';
+        const isSocietyAdmin = user.primaryRole === 'societyAdmin';
         if (!isSuperAdmin && !isSocietyAdmin) {
           router.replace('/no-access'); // Use /no-access for forbidden
         }

@@ -35,7 +35,7 @@ export function AdminApprovalTable() {
   useEffect(() => {
     setPendingUsers(
       allUsers
-        .filter(u => u.role !== USER_ROLES.SUPERADMIN) // Still filter out superadmins
+        .filter(u => u.primaryRole !== USER_ROLES.OWNER_APP) // Still filter out platform admins
         .sort((a, b) => new Date(a.registrationDate).getTime() - new Date(b.registrationDate).getTime())
     );
   }, [allUsers]);
@@ -101,7 +101,7 @@ export function AdminApprovalTable() {
                   <TableRow key={userToProcess.id}>
                     <TableCell className="font-medium">{userToProcess.name}</TableCell>
                     <TableCell>{userToProcess.email}</TableCell>
-                    <TableCell className="capitalize">{userToProcess.role}</TableCell>
+                    <TableCell className="capitalize">{userToProcess.primaryRole}</TableCell>
                     <TableCell>{userToProcess.flatNumber}</TableCell>
                     <TableCell>{format(new Date(userToProcess.registrationDate), 'PPpp')}</TableCell>
                     <TableCell>
@@ -118,7 +118,7 @@ export function AdminApprovalTable() {
                           <AlertDialogHeader>
                             <AlertDialogTitle>Confirm Approval</AlertDialogTitle>
                             <AlertDialogDescription>
-                              Are you sure you want to approve {userToProcess.name} ({userToProcess.role})
+                              Are you sure you want to approve {userToProcess.name} ({userToProcess.primaryRole})
                               {userToProcess.flatNumber !== 'NA' ? ` for flat ${userToProcess.flatNumber}` : ''}?
                             </AlertDialogDescription>
                           </AlertDialogHeader>
@@ -143,7 +143,7 @@ export function AdminApprovalTable() {
                           <AlertDialogHeader>
                             <AlertDialogTitle>Confirm Rejection</AlertDialogTitle>
                             <AlertDialogDescription>
-                              Are you sure you want to reject the registration for {userToProcess.name} ({userToProcess.role})
+                              Are you sure you want to reject the registration for {userToProcess.name} ({userToProcess.primaryRole})
                               {userToProcess.flatNumber !== 'NA' ? ` for flat ${userToProcess.flatNumber}` : ''}? This action will permanently delete their registration.
                             </AlertDialogDescription>
                           </AlertDialogHeader>

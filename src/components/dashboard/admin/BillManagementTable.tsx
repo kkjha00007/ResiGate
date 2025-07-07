@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@/components/ui/table';
 import type { MaintenanceBill } from '@/lib/types';
 import { useAuth } from '@/lib/auth-provider';
+import { USER_ROLES } from '@/lib/constants';
 import jsPDF from 'jspdf';
 
 export function BillManagementTable() {
@@ -443,7 +444,7 @@ export function BillManagementTable() {
                   {bill.approvalStatus === 'draft' && (
                     <Button size="sm" className="ml-2" onClick={() => handleApprovalAction(bill, 'pending_approval')}>Submit for Approval</Button>
                   )}
-                  {bill.approvalStatus === 'pending_approval' && user?.role === 'societyAdmin' && (
+                  {bill.approvalStatus === 'pending_approval' && user?.primaryRole === USER_ROLES.SOCIETY_ADMIN && (
                     <>
                       <Button size="sm" className="ml-2" onClick={() => handleApprovalAction(bill, 'approved')}>Approve</Button>
                       <Button size="sm" variant="destructive" className="ml-2" onClick={() => handleApprovalAction(bill, 'rejected')}>Reject</Button>

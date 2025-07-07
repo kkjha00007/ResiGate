@@ -20,7 +20,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { useAuth } from '@/lib/auth-provider';
 import React, { useState, useEffect } from 'react'; // Added useEffect
 import { UserPlus, Eye, EyeOff, ShieldCheck } from 'lucide-react'; // Changed Building icon
-import { USER_ROLES, SELECTABLE_USER_ROLES } from '@/lib/constants';
+import { USER_ROLES, SELECTABLE_USER_ROLES, ROLE_GROUPS } from '@/lib/constants';
 import type { UserRole, Society } from '@/lib/types'; // Added Society type
 
 const registerSchema = z.object({
@@ -37,11 +37,11 @@ const registerSchema = z.object({
   message: "Passwords don't match",
   path: ["confirmPassword"],
 })
-.refine(data => data.role === USER_ROLES.GUARD ? data.flatNumber.toUpperCase() === 'NA' : true, {
+.refine(data => data.role === 'guard' ? data.flatNumber.toUpperCase() === 'NA' : true, {
   message: "Flat number must be 'NA' for Guard role.",
   path: ["flatNumber"],
 })
-.refine(data => (data.role === USER_ROLES.OWNER || data.role === USER_ROLES.RENTER) ? data.flatNumber.toUpperCase() !== 'NA' && data.flatNumber.length > 0 : true, {
+.refine(data => (['owner', 'renter'].includes(data.role)) ? data.flatNumber.toUpperCase() !== 'NA' && data.flatNumber.length > 0 : true, {
   message: "Flat number is required for Owner/Renter and cannot be 'NA'.",
   path: ["flatNumber"],
 });
@@ -82,10 +82,31 @@ export function RegisterForm() {
 
   const onSubmit = async (data: RegisterFormValues) => {
     setIsLoading(true);
+    
+    // Map the old role names to new RBAC roles
+    const roleMapping: Record<string, UserRole> = {
+      'owner': 'owner_resident',
+      'renter': 'renter_resident', 
+      'guard': 'guard'
+    };
+    
+    const primaryRole = roleMapping[data.role];
+    
     // The API expects societyId directly, no need for societyName in submission
-    const { confirmPassword, ...registrationData } = data;
-    // Ensure role is typed as 'owner' | 'renter' | 'guard'
-    await register({ ...registrationData, role: registrationData.role as 'owner' | 'renter' | 'guard' });
+    const { confirmPassword, role, ...registrationData } = data;
+    
+    // Create user data with new RBAC structure
+    const userData = {
+      ...registrationData,
+      primaryRole,
+      roleAssociations: [{
+        role: primaryRole,
+        societyId: data.societyId,
+        permissions: {} // Will be set by backend based on default permissions
+      }]
+    };
+    
+    await register(userData);
     setIsLoading(false);
   };
 

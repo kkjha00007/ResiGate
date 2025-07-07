@@ -24,8 +24,24 @@ const JWT_SECRET = process.env.JWT_SECRET || "dev-secret";
 
 export async function createJWT(user: any) {
   // Only include safe fields in payload
+  // For multi-role support, include all role associations
+  const roleAssociations = user.roleAssociations || (user.role && user.societyId ? [{
+    role: user.role,
+    societyId: user.societyId,
+    flatNumber: user.flatNumber,
+    isActive: true
+  }] : []);
+  
   return jwt.sign(
-    { userId: user.id, role: user.role, societyId: user.societyId },
+    { 
+      userId: user.id, 
+      role: user.role, // Keep for backward compatibility
+      societyId: user.societyId, // Keep for backward compatibility
+      roleAssociations,
+      isStaff: user.isStaff || false,
+      canImpersonate: user.canImpersonate || false,
+      impersonatingUserId: user.impersonatingUserId || null
+    },
     JWT_SECRET,
     { expiresIn: "15m" }
   );

@@ -16,7 +16,15 @@ interface AuthContextType {
   isFetchingInitialData: boolean;
   login: (email: string, password: string) => Promise<boolean>;
   logout: () => void;
-  register: (userData: Omit<User, 'id' | 'isApproved' | 'registrationDate' | 'password' | 'tenantId'> & {password: string, role: Exclude<UserRole, "superadmin" | "societyAdmin">, societyId: string}) => Promise<boolean>;
+  register: (userData: {
+    email: string;
+    password: string;
+    name: string;
+    flatNumber: string;
+    societyId: string;
+    primaryRole: UserRole;
+    roleAssociations: Array<{role: UserRole; societyId: string; permissions: Record<string, any>}>;
+  }) => Promise<boolean>;
   approveResident: (userId: string) => Promise<boolean>;
   rejectUser: (userId: string) => Promise<boolean>;
   updateUserProfile: (userId: string, updates: { name?: string; secondaryPhoneNumber1?: string; secondaryPhoneNumber2?: string }) => Promise<UserProfile | null>;
@@ -131,10 +139,53 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const router = useRouter();
   const { toast } = useToast();
 
-  const isAdmin = useCallback(() => user?.role === USER_ROLES.SUPERADMIN, [user]);
-  const isSocietyAdmin = useCallback(() => user?.role === USER_ROLES.SOCIETY_ADMIN, [user]);
-  const isOwnerOrRenter = useCallback(() => user?.role === USER_ROLES.OWNER || user?.role === USER_ROLES.RENTER, [user]);
-  const isGuard = useCallback(() => user?.role === USER_ROLES.GUARD, [user]);
+  const isAdmin = useCallback(() => {
+    if (!user) return false;
+    
+    // Check role associations for any admin role
+    const hasAdminRole = user.roleAssociations?.some((association: any) => 
+      association.isActive && ['owner_app', 'platform_admin', 'society_admin'].includes(association.role)
+    );
+    
+    // Fallback to legacy role check
+    return hasAdminRole || user?.primaryRole === 'superadmin';
+  }, [user]);
+
+  const isSocietyAdmin = useCallback(() => {
+    if (!user) return false;
+    
+    // Check role associations for society admin role
+    const hasSocietyAdminRole = user.roleAssociations?.some((association: any) => 
+      association.isActive && association.role === 'society_admin'
+    );
+    
+    // Fallback to legacy role check
+    return hasSocietyAdminRole || user?.primaryRole === 'society_admin';
+  }, [user]);
+
+  const isOwnerOrRenter = useCallback(() => {
+    if (!user) return false;
+    
+    // Check role associations for resident roles
+    const hasResidentRole = user.roleAssociations?.some((association: any) => 
+      association.isActive && ['resident'].includes(association.role)
+    );
+    
+    // Fallback to legacy role check
+    return hasResidentRole || ['owner', 'renter'].includes(user?.primaryRole);
+  }, [user]);
+
+  const isGuard = useCallback(() => {
+    if (!user) return false;
+    
+    // Check role associations for guard role
+    const hasGuardRole = user.roleAssociations?.some((association: any) => 
+      association.isActive && association.role === 'guard'
+    );
+    
+    // Fallback to legacy role check
+    return hasGuardRole || user?.primaryRole === 'guard';
+  }, [user]);
 
   const fetchSocietyInfo = useCallback(async () => {
     // This needs to be tenant aware. If superadmin, maybe they select a society?
@@ -402,12 +453,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, [user?.societyId, isAdmin, isSocietyAdmin, toast]);
 
   const fetchAllMeetingsForAdmin = useCallback(async () => {
-    if (!user || (!isAdmin() && !isSocietyAdmin() && user.role !== USER_ROLES.SUPERADMIN)) {
+    if (!user || (!isAdmin() && !isSocietyAdmin() && user.primaryRole !== 'superadmin')) {
       setAllMeetingsForAdminState([]); return;
     }
     try {
       let url = '';
-      if (user.role === USER_ROLES.SUPERADMIN) {
+      if (user.primaryRole === 'superadmin') {
         url = '/api/meetings/admin/all'; // No societyId filter for superadmin
       } else {
         url = `/api/meetings/admin/all?societyId=${user.societyId}`;
@@ -436,7 +487,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const response = await fetch(`/api/vendors/admin/pending?societyId=${user.societyId}`, {
         headers: {
           'X-Society-ID': user.societyId,
-          'X-User-Role': user.role,
+          'X-User-Role': user.primaryRole,
         },
       });
       if (!response.ok) {
@@ -567,7 +618,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     ];
 
     const roleSpecificFetches = [];
-    if (currentUser.role === USER_ROLES.SUPERADMIN || currentUser.role === USER_ROLES.SOCIETY_ADMIN) {
+    if (currentUser.primaryRole === USER_ROLES.OWNER_APP || currentUser.primaryRole === USER_ROLES.SOCIETY_ADMIN) {
         roleSpecificFetches.push(fetchAllUsers());
         roleSpecificFetches.push(fetchAllNoticesForAdmin());
         roleSpecificFetches.push(fetchAllMeetingsForAdmin());
@@ -678,7 +729,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setUser(null);
   }, []);
 
-  const register = async (userData: Omit<User, 'id' | 'isApproved' | 'registrationDate' | 'password' | 'tenantId'> & {password: string, role: Exclude<UserRole, "superadmin" | "societyAdmin">, societyId: string}): Promise<boolean> => {
+  const register = async (userData: {
+    email: string;
+    password: string;
+    name: string;
+    flatNumber: string;
+    societyId: string;
+    primaryRole: UserRole;
+    roleAssociations: Array<{role: UserRole; societyId: string; permissions: Record<string, any>}>;
+  }): Promise<boolean> => {
     setIsLoadingUser(true);
     try {
       const response = await fetch('/api/users', {
@@ -711,7 +770,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const approveResident = async (userId: string): Promise<boolean> => {
      const targetUser = allUsers.find(u => u.id === userId);
-     if (!targetUser?.societyId && !(user?.role === USER_ROLES.SUPERADMIN && targetUser)) {
+     if (!targetUser?.societyId && !(user?.primaryRole === USER_ROLES.OWNER_APP && targetUser)) {
        if (typeof window !== 'undefined') {
          toast({ title: 'Error', description: 'Society context missing for approval.', variant: 'destructive' });
        }
@@ -792,7 +851,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const userToUpdate = allUsers.find(u => u.id === userId) || (user?.id === userId ? user : null);
     const societyIdForUpdate = userToUpdate?.societyId;
 
-    if (!societyIdForUpdate && user?.role !== USER_ROLES.SUPERADMIN) {
+    if (!societyIdForUpdate && user?.primaryRole !== USER_ROLES.OWNER_APP) {
         if (typeof window !== 'undefined') {
           toast({ title: 'Error', description: 'Society context missing for profile update.', variant: 'destructive' });
         }
@@ -837,7 +896,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const userToUpdate = allUsers.find(u => u.id === userId) || (user?.id === userId ? user : null);
     const societyIdForUpdate = userToUpdate?.societyId;
 
-    if (!societyIdForUpdate && user?.role !== USER_ROLES.SUPERADMIN) {
+    if (!societyIdForUpdate && user?.primaryRole !== USER_ROLES.OWNER_APP) {
         if (typeof window !== 'undefined') {
           toast({ title: 'Error', description: 'Society context missing for password change.', variant: 'destructive' });
         }
@@ -961,7 +1020,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         return null;
       }
       // Toast handled by caller
-      if (user?.role !== USER_ROLES.GUARD) { // Non-guards might still trigger this if they are admin
+      if (user?.primaryRole !== USER_ROLES.GUARD) { // Non-guards might still trigger this if they are admin
           await fetchGatePasses();
       }
       await fetchVisitorEntries();
@@ -1347,7 +1406,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         method: 'DELETE',
         headers: {
           'X-Society-ID': user.societyId,
-          'X-User-Role': user.role,
+          'X-User-Role': user.primaryRole,
         },
       });
       const data = await response.json();
@@ -1383,7 +1442,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-user-role': user.role,
+          'x-user-role': user.primaryRole,
           'x-user-id': user.id,
           'x-user-name': user.name,
           'x-society-id': user.societyId,

@@ -2,6 +2,7 @@
 'use client';
 import React from 'react';
 import Link from 'next/link';
+import { USER_ROLES } from '@/lib/constants';
 import {
   LayoutDashboard,
   Users,
@@ -78,10 +79,10 @@ export function DashboardGrid() {
       return isOwnerOrRenter && isOwnerOrRenter();
     }
     if (item.href === '/dashboard/feedback') {
-      return user && user.role !== 'superadmin';
+      return user && user.primaryRole !== USER_ROLES.OWNER_APP;
     }
     if (item.href === '/dashboard/admin/feedback') {
-      return user && user.role === 'superadmin';
+      return user && user.primaryRole === USER_ROLES.OWNER_APP;
     }
     if (item.href === '/dashboard/admin/sos-alerts') {
       return (isAdmin && isAdmin()) || (isSocietyAdmin && isSocietyAdmin());

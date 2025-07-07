@@ -26,7 +26,7 @@ export function VehiclesTable() {
           vehicleNumber: v.number, // fix: use v.number
           registeredDate: v.addedAt || user.registrationDate || '', // fix: use v.addedAt
           ownerName: user.name || '',
-          ownerRole: user.role || '',
+          ownerRole: user.primaryRole || '',
           notes: v.notes || '',
           allocatedSpot: spotByUserId[user.id]?.spotNumber || '',
         }));
@@ -41,7 +41,7 @@ export function VehiclesTable() {
           vehicleNumber: user.vehicleNumber,
           registeredDate: user.registrationDate || '',
           ownerName: user.name || '',
-          ownerRole: user.role || '',
+          ownerRole: user.primaryRole || '',
           notes: '',
           allocatedSpot: spotByUserId[user.id]?.spotNumber || '',
         }];

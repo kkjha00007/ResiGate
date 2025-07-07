@@ -3,7 +3,7 @@
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { useAuth } from '@/lib/auth-provider';
-import { APP_NAME } from '@/lib/constants';
+import { APP_NAME, USER_ROLES } from '@/lib/constants';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { LogOut, Menu, ShieldCheck, UserCircle, Building2, Briefcase, Shield, Clock, Bell, Info, CheckCircle, AlertTriangle, Grid } from 'lucide-react'; // Added Briefcase, Shield, Clock, and notification icons
@@ -190,7 +190,7 @@ export function AppHeader({ navItems }: AppHeaderProps) {
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" className="relative h-10 w-10 rounded-full">
                 <Avatar className="h-9 w-9">
-                  <AvatarImage src={user.role === 'superadmin' ? `https://placehold.co/100x100/42A5F5/FFFFFF.png?text=${getInitials(user.name)}` : `https://placehold.co/100x100/42C8A4/FFFFFF.png?text=${getInitials(user.name)}`} alt={user.name} data-ai-hint="user avatar" />
+                  <AvatarImage src={user.primaryRole === USER_ROLES.OWNER_APP ? `https://placehold.co/100x100/42A5F5/FFFFFF.png?text=${getInitials(user.name)}` : `https://placehold.co/100x100/42C8A4/FFFFFF.png?text=${getInitials(user.name)}`} alt={user.name} data-ai-hint="user avatar" />
                   <AvatarFallback>{getInitials(user.name)}</AvatarFallback>
                 </Avatar>
               </Button>
@@ -218,7 +218,7 @@ export function AppHeader({ navItems }: AppHeaderProps) {
                 )}
                 <div className="flex items-center px-2 py-1 text-sm text-foreground">
                   <Briefcase className="mr-3 h-5 w-5 text-muted-foreground" />
-                  <span className="capitalize">Role: {user.role}</span>
+                  <span className="capitalize">Role: {user.primaryRole}</span>
                 </div>
                 {societyInfo?.societyName && (
                   <div className="flex items-center px-2 py-1 text-sm text-foreground">

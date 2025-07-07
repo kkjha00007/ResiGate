@@ -4,6 +4,7 @@ import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@
 import { Badge } from '@/components/ui/badge';
 import { AlertTriangle } from 'lucide-react';
 import { useAuth } from '@/lib/auth-provider';
+import { USER_ROLES } from '@/lib/constants';
 import { useToast } from '@/hooks/use-toast';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
@@ -36,7 +37,7 @@ export default function SocietyInvitesTable() {
   const [commentingId, setCommentingId] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!user || user.role !== 'superadmin') return;
+    if (!user || user.primaryRole !== USER_ROLES.OWNER_APP) return;
     setLoading(true);
     fetch('/api/society-invites')
       .then(res => res.ok ? res.json() : Promise.reject(res))
@@ -60,11 +61,11 @@ export default function SocietyInvitesTable() {
     }
   };
 
-  if (!user || user.role !== 'superadmin') {
+  if (!user || user.primaryRole !== USER_ROLES.OWNER_APP) {
     return (
       <div className="p-8 text-center text-destructive flex flex-col items-center">
         <AlertTriangle className="mx-auto mb-2 h-8 w-8" />
-        <div>Access denied. Only SuperAdmin can view society invites.</div>
+        <div>Access denied. Only Owner (App) can view society invites.</div>
       </div>
     );
   }

@@ -1,4 +1,3 @@
-
 ResiGate API Documentation
 ==========================
 
@@ -119,6 +118,14 @@ ResiGate API Documentation
 | Additional/Planned   | /billing/bills/email                                | POST                   | Email a bill to a resident                                           | Society            |
 | Additional/Planned   | /billing/bills/download                             | GET                    | Download bills for a period                                          | Society            |
 | Additional/Planned   | /billing/reports/download                           | GET                    | Download admin financial reports                                     | Society            |
+| RBAC Management      | /rbac/permissions                                   | GET                    | Get effective permissions for current user                           | User               |
+| RBAC Management      | /rbac/roles                                         | GET                    | Get user roles and associations                                      | User               |
+| RBAC Management      | /rbac/roles                                         | POST                   | Assign roles to users (admin only)                                   | Admin              |
+| RBAC Management      | /rbac/permissions/update                            | POST                   | Update custom permissions for role associations                      | Admin              |
+| RBAC Management      | /rbac/migrate                                       | POST                   | Migrate existing users to new RBAC structure                        | Admin              |
+| RBAC Management      | /rbac/feature-settings                              | GET                    | Get feature access settings by role group                           | Admin              |
+| RBAC Management      | /rbac/feature-settings                              | POST                   | Update feature access settings                                       | Admin              |
+| RBAC Management      | /rbac/demo-users                                    | POST                   | Create demo users for all roles (testing)                           | Admin              |
 
 ### Format: Each endpoint below is listed as:
 
@@ -916,3 +923,180 @@ The following endpoints exist in the codebase but may be partially implemented, 
 **Note:**
 - Some endpoints may be stubs or under development. For the most current and complete list, refer to the codebase or contact the technical team.
 - See also: Functional Documentation for workflows and UI details.
+
+---
+
+## 13. RBAC (Role-Based Access Control) API Endpoints
+
+The RBAC system provides comprehensive role and permission management with support for multi-role, multi-society associations.
+
+### 13.1 Role System Overview
+
+**Role Hierarchy:**
+- **Platform Admin**: Owner (App), Ops
+- **Society Admin**: Society Admin, Guard  
+- **Resident**: Owner Resident, Renter Resident, Member Resident
+- **Support**: Staff, API System
+
+**Login-Eligible Roles:** All roles except legacy roles can login to the main application.
+
+### 13.2 Get User Permissions
+
+**Endpoint:** `GET /api/rbac/permissions`
+
+Returns the effective permissions for the current authenticated user.
+
+**Response:**
+```json
+{
+  "permissions": {
+    "visitor_management": ["visitor_create", "visitor_read", "visitor_update"],
+    "gate_pass_management": ["gate_pass_create", "gate_pass_read"],
+    "facility_management": ["facility_read", "facility_book"]
+  },
+  "roleAssociations": [
+    {
+      "id": "role-assoc-001",
+      "role": "owner_resident",
+      "societyId": "society-001",
+      "isActive": true,
+      "permissions": {
+        "visitor_management": ["visitor_create", "visitor_read", "visitor_update"]
+      }
+    }
+  ]
+}
+```
+
+### 13.3 Role Management
+
+**Endpoint:** `GET /api/rbac/roles`
+
+Get current user's role assignments.
+
+**Endpoint:** `POST /api/rbac/roles`
+
+Assign roles to users (Admin only).
+
+**Request:**
+```json
+{
+  "userId": "user-123",
+  "roleAssignments": [
+    {
+      "role": "society_admin",
+      "societyId": "society-001",
+      "assignedBy": "admin-user-id"
+    }
+  ]
+}
+```
+
+### 13.4 Permission Updates
+
+**Endpoint:** `POST /api/rbac/permissions/update`
+
+Update custom permissions for specific role associations (Admin only).
+
+**Request:**
+```json
+{
+  "roleAssociationId": "role-assoc-001",
+  "customPermissions": {
+    "visitor_management": ["visitor_create", "visitor_read"],
+    "facility_management": ["facility_read"]
+  }
+}
+```
+
+### 13.5 User Migration
+
+**Endpoint:** `POST /api/rbac/migrate`
+
+Migrate existing users from legacy role structure to new RBAC system.
+
+**Request:**
+```json
+{
+  "batchSize": 50,
+  "dryRun": false
+}
+```
+
+### 13.6 Feature Access Control
+
+**Endpoint:** `GET /api/rbac/feature-settings`
+
+Get feature access settings by role group and society.
+
+**Endpoint:** `POST /api/rbac/feature-settings`
+
+Update feature access settings (Owner App/Ops only).
+
+**Request:**
+```json
+{
+  "societyId": "society-001",
+  "roleGroup": "RESIDENT", 
+  "featureSettings": {
+    "visitor_management": {
+      "enabled": true,
+      "permissions": ["visitor_create", "visitor_read", "visitor_update"]
+    },
+    "facility_management": {
+      "enabled": false,
+      "permissions": []
+    }
+  }
+}
+```
+
+### 13.7 Demo User Creation
+
+**Endpoint:** `POST /api/rbac/demo-users`
+
+Create demo users for all roles for testing purposes.
+
+**Request:**
+```json
+{
+  "societyId": "society-demo-001",
+  "prefix": "demo"
+}
+```
+
+**Response:**
+```json
+{
+  "message": "Demo users created successfully",
+  "users": [
+    {
+      "role": "owner_app",
+      "email": "demo.owner.app@example.com",
+      "password": "demo123",
+      "name": "Demo Owner App"
+    },
+    {
+      "role": "society_admin", 
+      "email": "demo.society.admin@example.com",
+      "password": "demo123",
+      "name": "Demo Society Admin"
+    }
+  ]
+}
+```
+
+### 13.8 Permission Enforcement
+
+All protected endpoints automatically enforce RBAC permissions using middleware. Unauthorized access returns:
+
+```json
+{
+  "error": "Insufficient permissions",
+  "required": ["visitor_create"],
+  "userPermissions": ["visitor_read"],
+  "statusCode": 403
+}
+```
+
+---

@@ -28,19 +28,73 @@ ResiGate is a **comprehensive society management system** for residential commun
 
 ---
 
-## 2. User Roles & Permissions
+## 2. User Roles & Permissions (RBAC System)
 
-| Role            | Description                    | Permissions/Access                                                                                   |
-|-----------------|-------------------------------|------------------------------------------------------------------------------------------------------|
-| **SuperAdmin**  | Platform-level admin           | - Manage all societies, users, and data<br>- View/manage all billing, audit, and settings            |
-| **SocietyAdmin**| Society administrator          | - Manage residents, billing, payments, expenses, disputes, reminders, config, and reporting         |
-| **Owner/Renter**| Resident (homeowner/tenant)    | - View/download bills/receipts, raise disputes, set reminders, view payment/expense reports         |
-| **Guard**       | Security personnel             | - Register/check-in/out visitors, validate passes, view dashboard                                   |
-| **Guest**       | Unauthenticated user           | - Public landing, public visitor entry (if enabled)                                                 |
+ResiGate implements a comprehensive **Role-Based Access Control (RBAC)** system supporting multi-role, multi-society associations with granular permissions.
+
+### 2.1 Role Hierarchy
+
+| Role Group        | Roles                                    | Scope                 | Login Access |
+|-------------------|------------------------------------------|-----------------------|--------------|
+| **Platform Admin** | Owner (App), Ops                        | Cross-platform        | ✅ Yes       |
+| **Society Admin**  | Society Admin, Guard                    | Society-specific      | ✅ Yes       |
+| **Resident**       | Owner Resident, Renter Resident, Member Resident | Society/Flat-specific | ✅ Yes       |
+| **Support**        | Staff, API System                       | Support/Integration   | ✅ Yes       |
+
+### 2.2 Detailed Role Descriptions
+
+| Role              | Description                          | Key Permissions                                                                                   |
+|-------------------|--------------------------------------|---------------------------------------------------------------------------------------------------|
+| **Owner (App)**   | Platform owner/administrator         | - Full platform access<br>- Manage all societies<br>- Feature access control<br>- User impersonation |
+| **Ops**           | Operations team member               | - Most platform features<br>- Feature access control<br>- Limited admin functions               |
+| **Society Admin** | Society administrator                | - Manage residents, billing, facilities<br>- Society-specific full control<br>- Approve requests |
+| **Guard**         | Security personnel                   | - Visitor management<br>- Gate pass validation<br>- Security dashboard<br>- SOS response        |
+| **Owner Resident**| Property owner                       | - Personal visitor management<br>- Facility booking<br>- Bill management<br>- Committee participation |
+| **Renter Resident**| Tenant                              | - Limited visitor management<br>- Facility booking<br>- Bill viewing<br>- Basic resident features |
+| **Member Resident**| Non-owner family member             | - Basic visitor management<br>- Limited facility access<br>- View-only bill access              |
+| **Staff**         | Support staff                        | - Impersonation for support<br>- Limited admin functions<br>- Help desk management              |
+| **API System**    | Integration/automation               | - System-level access<br>- No UI access<br>- API-only operations                                |
+
+### 2.3 Multi-Role Support
+
+- **Users can have multiple roles** across different societies
+- **Role associations** define user permissions per society/flat
+- **Custom permissions** can override default role permissions
+- **Impersonation support** for Staff and Platform Admin roles
+
+### 2.4 Granular Permissions
+
+The system includes **68 granular permissions** across **12 modules**:
+
+| Module                | CRUD Permissions                                    | Special Permissions           |
+|-----------------------|----------------------------------------------------|-------------------------------|
+| Visitor Management    | create, read, update, delete, approve              | validate_passes               |
+| Gate Pass Management  | create, read, update, delete                       | validate_qr                   |
+| Facility Management   | create, read, update, delete, book, approve        | manage_bookings               |
+| Parking Management    | create, read, update, delete, allocate             | manage_vehicles               |
+| Notice Management     | create, read, update, delete                       | pin_notices                   |
+| Meeting Management    | create, read, update, delete, attend               | manage_agenda                 |
+| Committee Management  | create, read, update, delete                       | vote, manage_elections        |
+| Billing Management    | create, read, update, delete, approve              | manage_disputes, send_reminders|
+| Complaint Management  | create, read, update, delete, resolve              | escalate                      |
+| User Management       | create, read, update, delete, approve              | impersonate                   |
+| Setting Management    | create, read, update, delete                       | manage_society_config         |
+| SOS Management        | create, read, update, delete, respond              | emergency_broadcast           |
 
 ---
 
-## 2.1. Feature Overview
+## 2.5. Feature Access Control
+
+Platform Admins (Owner App/Ops) can control feature access per role group per society through the Feature Access Control UI:
+
+- **Enable/Disable** entire feature modules for role groups
+- **Configure granular CRUD permissions** per feature
+- **Society-specific** feature control
+- **Real-time permission updates**
+
+---
+
+## 2.6. Feature Overview
 
 ### Core Features (2025)
 

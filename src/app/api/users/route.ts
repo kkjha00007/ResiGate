@@ -1,9 +1,9 @@
 // src/app/api/users/route.ts
 import { NextResponse, type NextRequest } from 'next/server';
 import { getUsersContainer, getSocietySettingsContainer } from '@/lib/cosmosdb';
-import type { User, UserRole, SocietyInfoSettings } from '@/lib/types';
+import type { User, UserRole, SocietyInfoSettings, UserRoleAssociation } from '@/lib/types';
 import { v4 as uuidv4 } from 'uuid';
-import { USER_ROLES, SELECTABLE_USER_ROLES } from '@/lib/constants'; // Ensure USER_ROLES is imported
+import { USER_ROLES, SELECTABLE_USER_ROLES, DEFAULT_ROLE_PERMISSIONS, LOGIN_ELIGIBLE_ROLES } from '@/lib/constants';
 import bcrypt from 'bcryptjs';
 import { CosmosClient } from '@azure/cosmos';
 import { createNotification } from '@/lib/notifications';
@@ -46,21 +46,52 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   const usersContainer = await getUsersContainer();
   try {
-    // Accept societyId instead of societyName/tenantId
-    const userData = await request.json() as Omit<User, 'id' | 'isApproved' | 'registrationDate' | 'password'> & {password: string, role: (typeof SELECTABLE_USER_ROLES)[number], societyId: string};
-    const { email, password: plainTextPassword, name, flatNumber, role, societyId } = userData;
+    // Accept new RBAC structure or legacy for backward compatibility
+    const userData = await request.json() as {
+      email: string;
+      password: string;
+      name: string;
+      flatNumber: string;
+      societyId: string;
+      primaryRole?: UserRole;
+      roleAssociations?: Array<{role: UserRole; societyId: string; permissions: Record<string, any>}>;
+      // Legacy support
+      role?: string;
+    };
+    
+    const { email, password: plainTextPassword, name, flatNumber, societyId, primaryRole, roleAssociations, role } = userData;
 
     // Step 1: Basic validation
-    if (!email || !plainTextPassword || !name || !flatNumber || !role || !societyId) {
-      return NextResponse.json({ message: 'Missing required fields: email, password, name, flatNumber, role, societyId.' }, { status: 400 });
+    if (!email || !plainTextPassword || !name || !flatNumber || !societyId) {
+      return NextResponse.json({ message: 'Missing required fields: email, password, name, flatNumber, societyId.' }, { status: 400 });
     }
-    if (!SELECTABLE_USER_ROLES.includes(role)) {
-        return NextResponse.json({ message: 'Invalid role selected' }, { status: 400 });
+
+    // Determine the primary role - either from new structure or legacy
+    let userPrimaryRole: UserRole;
+    if (primaryRole) {
+      userPrimaryRole = primaryRole;
+    } else if (role) {
+      // Legacy role mapping
+      const legacyRoleMapping: Record<string, UserRole> = {
+        'owner': 'owner_resident',
+        'renter': 'renter_resident',
+        'guard': 'guard'
+      };
+      userPrimaryRole = legacyRoleMapping[role] || role as UserRole;
+    } else {
+      return NextResponse.json({ message: 'Role information is required.' }, { status: 400 });
     }
-    if (role === USER_ROLES.GUARD && flatNumber.toUpperCase() !== 'NA') {
+
+    // Validate role exists in LOGIN_ELIGIBLE_ROLES
+    if (!LOGIN_ELIGIBLE_ROLES.includes(userPrimaryRole as any)) {
+      return NextResponse.json({ message: 'Invalid role selected' }, { status: 400 });
+    }
+
+    // Role-specific flat number validation
+    if (userPrimaryRole === USER_ROLES.GUARD && flatNumber.toUpperCase() !== 'NA') {
       return NextResponse.json({ message: "Flat number must be 'NA' for Guard role." }, { status: 400 });
     }
-    if ((role === USER_ROLES.OWNER || role === USER_ROLES.RENTER) && (flatNumber.toUpperCase() === 'NA' || !flatNumber)) {
+    if (['owner_resident', 'renter_resident'].includes(userPrimaryRole) && (flatNumber.toUpperCase() === 'NA' || !flatNumber)) {
       return NextResponse.json({ message: "Flat number is required for Owner/Renter and cannot be 'NA'." }, { status: 400 });
     }
 
@@ -93,14 +124,39 @@ export async function POST(request: NextRequest) {
     }
 
     // Step 4: Create new user object
-    const newUser: User = {
+    const userId = uuidv4();
+    
+    const userRoleAssociations: UserRoleAssociation[] = roleAssociations ? roleAssociations.map(ra => ({
       id: uuidv4(),
+      userId,
+      role: ra.role,
+      societyId: ra.societyId,
+      flatNumber,
+      permissions: ra.permissions,
+      isActive: true,
+      assignedAt: new Date().toISOString(),
+      assignedBy: 'system' // System assignment for new registrations
+    })) : [{
+      id: uuidv4(),
+      userId,
+      role: userPrimaryRole,
+      societyId,
+      flatNumber,
+      customPermissions: (DEFAULT_ROLE_PERMISSIONS as any)[userPrimaryRole] ? {} : undefined,
+      isActive: true,
+      assignedAt: new Date().toISOString(),
+      assignedBy: 'system' // System assignment for new registrations
+    }];
+
+    const newUser: User = {
+      id: userId,
       societyId,
       name,
       email,
       password: hashedPassword,
       flatNumber,
-      role, // Role comes from client
+      primaryRole: userPrimaryRole,
+      roleAssociations: userRoleAssociations,
       isApproved: false, 
       registrationDate: new Date().toISOString(),
     };
@@ -114,26 +170,27 @@ export async function POST(request: NextRequest) {
         console.error('User creation in DB returned undefined resource without throwing error.');
         return NextResponse.json({ message: 'Failed to create user record (unexpected DB response).' }, { status: 500 });
       }
-      // --- Notify all superadmins and society admins in this society ---
-      // Find all admins for this society
+      // --- Notify all society admins in this society ---
+      // Find all admins for this society using the new role structure
       const adminQuery = {
-        query: "SELECT * FROM c WHERE c.societyId = @societyId AND (c.role = @superadmin OR c.role = @societyAdmin)",
+        query: "SELECT * FROM c WHERE c.societyId = @societyId AND c.primaryRole = @societyAdmin",
         parameters: [
           { name: "@societyId", value: societyId },
-          { name: "@superadmin", value: USER_ROLES.SUPERADMIN },
           { name: "@societyAdmin", value: USER_ROLES.SOCIETY_ADMIN }
         ]
       };
       const { resources: admins } = await usersContainer.items.query<User>(adminQuery, { partitionKey: societyId }).fetchAll();
-      // Optionally, also notify global superadmins (not tied to a society)
-      const globalSuperadminQuery = {
-        query: "SELECT * FROM c WHERE c.role = @superadmin AND (IS_NULL(c.societyId) OR c.societyId = '')",
+      
+      // Also notify platform admins (Owner App and Ops)
+      const platformAdminQuery = {
+        query: "SELECT * FROM c WHERE c.primaryRole = @ownerApp OR c.primaryRole = @ops",
         parameters: [
-          { name: "@superadmin", value: USER_ROLES.SUPERADMIN }
+          { name: "@ownerApp", value: USER_ROLES.OWNER_APP },
+          { name: "@ops", value: USER_ROLES.OPS }
         ]
       };
-      const { resources: globalSuperadmins } = await usersContainer.items.query<User>(globalSuperadminQuery).fetchAll();
-      const allAdmins = [...admins, ...globalSuperadmins];
+      const { resources: platformAdmins } = await usersContainer.items.query<User>(platformAdminQuery).fetchAll();
+      const allAdmins = [...admins, ...platformAdmins];
       await Promise.all(
         allAdmins.map(admin =>
           createNotification({

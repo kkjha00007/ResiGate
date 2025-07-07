@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { v4 as uuidv4 } from "uuid";
 import { getFeedbackTicketsContainer } from "@/lib/cosmosdb";
 import { FeedbackTicket, FeedbackStatus, FeedbackComment, FEEDBACK_STATUS_VALUES } from "@/lib/types";
+import { USER_ROLES } from "@/lib/constants";
 const FEEDBACK_STATUS_SET = new Set(Object.values(FEEDBACK_STATUS_VALUES));
 import { getApiSessionUser } from '../../../lib/api-session-user';
 
@@ -10,13 +11,13 @@ interface ApiSessionUser {
   id: string;
   name: string;
   email: string;
-  role: string;
+  primaryRole: string;
   societyId?: string;
   flatNumber?: string;
 }
 
 function isSuperAdmin(user: ApiSessionUser) {
-  return user?.role === "superadmin";
+  return user?.primaryRole === USER_ROLES.OWNER_APP;
 }
 
 // GET: List tickets (SuperAdmin: all, others: own)

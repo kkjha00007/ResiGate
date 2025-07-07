@@ -11,7 +11,7 @@ const isSuperAdmin = (request: NextRequest): boolean => {
   // This is a placeholder. Implement actual superadmin check.
   // For example, if you have a user object in a session:
   // const user = await getSessionUser(request); // Fictional function
-  // return user?.role === USER_ROLES.SUPERADMIN;
+  // return user?.primaryRole === USER_ROLES.OWNER_APP;
   return true; // !!IMPORTANT!! Replace with actual admin check
 };
 
