@@ -130,7 +130,9 @@ export const getNavItems = (
     { href: '/dashboard/admin/manage-facilities', label: 'Manage Facilities', icon: Building, iconColor: 'text-teal-600', isUserTypeCheck: (u, iA, iSA, iOR, iG) => iA() || iSA() },
     { href: '/dashboard/admin/manage-vendors', label: 'Manage Vendors', icon: ListFilter, iconColor: 'text-yellow-500', isUserTypeCheck: (u, iA, iSA, iOR, iG) => iA() || iSA() },
     { href: '/dashboard/admin/manage-parking', label: 'Manage Parking', icon: ParkingSquare, iconColor: 'text-orange-600', isUserTypeCheck: (u, iA, iSA, iOR, iG) => iA() || iSA() },
-    { href: '/dashboard/admin/society-settings', label: 'Society Settings', icon: Building2, iconColor: 'text-rose-400', isUserTypeCheck: (u, iA, iSA, iOR, iG) => iA() || iSA() },
+  { href: '/dashboard/admin/society-settings', label: 'Society Settings', icon: Building2, iconColor: 'text-rose-400', isUserTypeCheck: (u, iA, iSA, iOR, iG) => iA() || iSA() },
+  // Bulk Society Upload (SuperAdmin, SocietyAdmin)
+  { href: '/dashboard/admin/society-upload', label: 'Bulk Society Upload', icon: ClipboardList, iconColor: 'text-orange-500', isUserTypeCheck: (u, iA, iSA, iOR, iG) => iA() || iSA() },
 
     // 8. SuperAdmin Only
     { href: '/dashboard/admin/manage-societies', label: 'Manage Societies', icon: Briefcase, iconColor: 'text-gray-400', isUserTypeCheck: (u, iA, iSA, iOR, iG) => iA() },
