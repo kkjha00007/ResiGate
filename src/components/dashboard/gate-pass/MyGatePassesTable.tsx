@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useState, useMemo } from 'react';
+import { FixedSizeList as List } from 'react-window';
 import type { GatePass } from '@/lib/types';
 import { useAuth } from '@/lib/auth-provider';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -160,62 +161,73 @@ export function MyGatePassesTable() {
             </TableHeader>
             <TableBody>
               {paginatedPasses.length > 0 ? (
-                paginatedPasses.map((pass) => (
-                  <TableRow key={pass.id}>
-                    <TableCell className="font-medium">{pass.visitorName}</TableCell>
-                    <TableCell>{isValid(parseISO(pass.expectedVisitDate)) ? format(parseISO(pass.expectedVisitDate), "PP") : 'Invalid Date'}</TableCell>
-                    <TableCell>{pass.visitDetailsOrTime}</TableCell>
-                    <TableCell><Badge variant="outline">{pass.tokenCode}</Badge></TableCell>
-                    <TableCell>
-                      <Badge variant={
-                        pass.status === GATE_PASS_STATUSES.PENDING ? "secondary" :
-                        pass.status === GATE_PASS_STATUSES.USED ? "default" :
-                        pass.status === GATE_PASS_STATUSES.CANCELLED ? "destructive" :
-                        "outline"
-                      }>
-                        {pass.status}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      {pass.status === GATE_PASS_STATUSES.PENDING && (
-                        <AlertDialog>
-                          <AlertDialogTrigger asChild>
-                            <Button 
-                              variant="outline" 
-                              size="sm" 
-                              className="text-destructive-foreground bg-destructive hover:bg-destructive/90 border-destructive hover:border-destructive/90"
-                              disabled={isCancelling === pass.id}
-                            >
-                              {isCancelling === pass.id ? (
-                                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-destructive-foreground"></div>
-                              ) : (
-                                <Trash2 className="mr-2 h-4 w-4" />
-                              )}
-                              Cancel
-                            </Button>
-                          </AlertDialogTrigger>
-                          <AlertDialogContent>
-                            <AlertDialogHeader>
-                              <AlertDialogTitle>Confirm Cancellation</AlertDialogTitle>
-                              <AlertDialogDescription>
-                                Are you sure you want to cancel the gate pass for {pass.visitorName} (Token: {pass.tokenCode})? This action cannot be undone.
-                              </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                              <AlertDialogCancel>Keep Pass</AlertDialogCancel>
-                              <AlertDialogAction
-                                onClick={() => handleCancelPass(pass.id)}
-                                className="bg-destructive hover:bg-destructive/90"
-                              >
-                                Confirm Cancel
-                              </AlertDialogAction>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialog>
-                      )}
-                    </TableCell>
-                  </TableRow>
-                ))
+                <List
+                  height={400}
+                  itemCount={paginatedPasses.length}
+                  itemSize={56}
+                  width="100%"
+                  style={{ minWidth: 800 }}
+                >
+                  {({ index, style }) => {
+                    const pass = paginatedPasses[index];
+                    return (
+                      <TableRow key={pass.id} style={style}>
+                        <TableCell className="font-medium">{pass.visitorName}</TableCell>
+                        <TableCell>{isValid(parseISO(pass.expectedVisitDate)) ? format(parseISO(pass.expectedVisitDate), "PP") : 'Invalid Date'}</TableCell>
+                        <TableCell>{pass.visitDetailsOrTime}</TableCell>
+                        <TableCell><Badge variant="outline">{pass.tokenCode}</Badge></TableCell>
+                        <TableCell>
+                          <Badge variant={
+                            pass.status === GATE_PASS_STATUSES.PENDING ? "secondary" :
+                            pass.status === GATE_PASS_STATUSES.USED ? "default" :
+                            pass.status === GATE_PASS_STATUSES.CANCELLED ? "destructive" :
+                            "outline"
+                          }>
+                            {pass.status}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          {pass.status === GATE_PASS_STATUSES.PENDING && (
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <Button 
+                                  variant="outline" 
+                                  size="sm" 
+                                  className="text-destructive-foreground bg-destructive hover:bg-destructive/90 border-destructive hover:border-destructive/90"
+                                  disabled={isCancelling === pass.id}
+                                >
+                                  {isCancelling === pass.id ? (
+                                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-destructive-foreground"></div>
+                                  ) : (
+                                    <Trash2 className="mr-2 h-4 w-4" />
+                                  )}
+                                  Cancel
+                                </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>Confirm Cancellation</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    Are you sure you want to cancel the gate pass for {pass.visitorName} (Token: {pass.tokenCode})? This action cannot be undone.
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>Keep Pass</AlertDialogCancel>
+                                  <AlertDialogAction
+                                    onClick={() => handleCancelPass(pass.id)}
+                                    className="bg-destructive hover:bg-destructive/90"
+                                  >
+                                    Confirm Cancel
+                                  </AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    );
+                  }}
+                </List>
               ) : (
                 <TableRow>
                   <TableCell colSpan={6} className="h-24 text-center text-muted-foreground">

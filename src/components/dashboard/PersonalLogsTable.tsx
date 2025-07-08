@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useMemo, useEffect } from 'react';
+import { FixedSizeList as List } from 'react-window';
 import type { VisitorEntry } from '@/lib/types';
 import { useAuth } from '@/lib/auth-provider';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -155,29 +156,40 @@ export function PersonalLogsTable() {
             </TableHeader>
             <TableBody>
               {paginatedEntries.length > 0 ? (
-                paginatedEntries.map((entry) => (
-                  <TableRow key={entry.id}>
-                    <TableCell className="font-medium">{entry.visitorName}</TableCell>
-                    <TableCell>{entry.purposeOfVisit}</TableCell>
-                    <TableCell>{isValid(parseISO(entry.entryTimestamp)) ? format(parseISO(entry.entryTimestamp), "PPpp") : 'Invalid Date'}</TableCell>
-                    <TableCell>{entry.vehicleNumber || 'N/A'}</TableCell>
-                     <TableCell className="text-center">
-                      {entry.visitorPhotoUrl ? (
-                        <Popover>
-                          <PopoverTrigger asChild>
-                            <Button variant="ghost" size="sm">View</Button>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-auto p-0">
-                             <Image src={entry.visitorPhotoUrl} alt={entry.visitorName} width={200} height={200} className="rounded-md object-cover" data-ai-hint="visitor photo" />
-                          </PopoverContent>
-                        </Popover>
-                      ) : (
-                        'N/A'
-                      )}
-                    </TableCell>
-                    <TableCell>{entry.tokenCode || 'N/A'}</TableCell>
-                  </TableRow>
-                ))
+                <List
+                  height={400}
+                  itemCount={paginatedEntries.length}
+                  itemSize={56}
+                  width="100%"
+                  style={{ minWidth: 800 }}
+                >
+                  {({ index, style }) => {
+                    const entry = paginatedEntries[index];
+                    return (
+                      <TableRow key={entry.id} style={style}>
+                        <TableCell className="font-medium">{entry.visitorName}</TableCell>
+                        <TableCell>{entry.purposeOfVisit}</TableCell>
+                        <TableCell>{isValid(parseISO(entry.entryTimestamp)) ? format(parseISO(entry.entryTimestamp), "PPpp") : 'Invalid Date'}</TableCell>
+                        <TableCell>{entry.vehicleNumber || 'N/A'}</TableCell>
+                        <TableCell className="text-center">
+                          {entry.visitorPhotoUrl ? (
+                            <Popover>
+                              <PopoverTrigger asChild>
+                                <Button variant="ghost" size="sm">View</Button>
+                              </PopoverTrigger>
+                              <PopoverContent className="w-auto p-0">
+                                 <Image src={entry.visitorPhotoUrl} alt={entry.visitorName} width={200} height={200} className="rounded-md object-cover" data-ai-hint="visitor photo" />
+                              </PopoverContent>
+                            </Popover>
+                          ) : (
+                            'N/A'
+                          )}
+                        </TableCell>
+                        <TableCell>{entry.tokenCode || 'N/A'}</TableCell>
+                      </TableRow>
+                    );
+                  }}
+                </List>
               ) : (
                 <TableRow>
                   <TableCell colSpan={6} className="h-24 text-center text-muted-foreground">

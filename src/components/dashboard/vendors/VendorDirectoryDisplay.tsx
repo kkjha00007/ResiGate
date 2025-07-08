@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useState, useMemo } from 'react';
+import { FixedSizeGrid as Grid } from 'react-window';
 import type { Vendor, VendorCategory } from '@/lib/types';
 import { useAuth } from '@/lib/auth-provider';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
@@ -109,54 +110,68 @@ export function VendorDirectoryDisplay() {
               )}
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filteredVendors.map((vendor) => (
-                <Card key={vendor.id} className="flex flex-col shadow-md hover:shadow-lg transition-shadow">
-                  <CardHeader className="pb-3">
-                    <div className="flex justify-between items-start">
-                        <CardTitle className="text-lg font-semibold text-primary">{vendor.name}</CardTitle>
-                        <Badge variant="secondary">{vendor.category}</Badge>
-                    </div>
-                    {vendor.contactPerson && (
-                        <CardDescription className="flex items-center text-xs pt-1">
-                            <User className="h-3.5 w-3.5 mr-1.5 text-muted-foreground" /> {vendor.contactPerson}
-                        </CardDescription>
-                    )}
-                  </CardHeader>
-                  <CardContent className="flex-grow space-y-2 text-sm">
-                    <div className="flex items-center">
-                      <Phone className="h-4 w-4 mr-2 text-muted-foreground" />
-                      <a href={`tel:${vendor.phoneNumber}`} className="text-foreground hover:text-primary hover:underline">{vendor.phoneNumber}</a>
-                    </div>
-                    {vendor.alternatePhoneNumber && (
-                       <div className="flex items-center">
-                         <PhoneForwarded className="h-4 w-4 mr-2 text-muted-foreground" />
-                         <a href={`tel:${vendor.alternatePhoneNumber}`} className="text-foreground hover:text-primary hover:underline">{vendor.alternatePhoneNumber}</a>
-                       </div>
-                    )}
-                    {vendor.address && (
-                      <div className="flex items-start">
-                        <MapPin className="h-4 w-4 mr-2 mt-0.5 text-muted-foreground flex-shrink-0" />
-                        <p className="text-muted-foreground">{vendor.address}</p>
-                      </div>
-                    )}
-                     <div className="flex items-start">
-                        <ListChecks className="h-4 w-4 mr-2 mt-0.5 text-muted-foreground flex-shrink-0" />
-                        <p className="text-muted-foreground"><strong className="font-medium text-foreground/90">Services:</strong> {vendor.servicesOffered}</p>
-                    </div>
-                    {vendor.notes && (
-                      <div className="flex items-start">
-                        <Info className="h-4 w-4 mr-2 mt-0.5 text-muted-foreground flex-shrink-0" />
-                         <p className="text-muted-foreground italic"><strong className="font-medium text-foreground/90 not-italic">Notes:</strong> {vendor.notes}</p>
-                      </div>
-                    )}
-                  </CardContent>
-                   <CardFooter className="text-xs text-muted-foreground pt-3 border-t">
-                      Added by {vendor.submittedByName} on {new Date(vendor.submittedAt).toLocaleDateString()}
-                   </CardFooter>
-                </Card>
-              ))}
-            </div>
+            <Grid
+              columnCount={3}
+              columnWidth={350}
+              height={600}
+              rowCount={Math.ceil(filteredVendors.length / 3)}
+              rowHeight={320}
+              width={1100}
+            >
+              {({ columnIndex, rowIndex, style }) => {
+                const index = rowIndex * 3 + columnIndex;
+                if (index >= filteredVendors.length) return null;
+                const vendor = filteredVendors[index];
+                return (
+                  <div style={style} key={vendor.id}>
+                    <Card className="flex flex-col shadow-md hover:shadow-lg transition-shadow">
+                      <CardHeader className="pb-3">
+                        <div className="flex justify-between items-start">
+                            <CardTitle className="text-lg font-semibold text-primary">{vendor.name}</CardTitle>
+                            <Badge variant="secondary">{vendor.category}</Badge>
+                        </div>
+                        {vendor.contactPerson && (
+                            <CardDescription className="flex items-center text-xs pt-1">
+                                <User className="h-3.5 w-3.5 mr-1.5 text-muted-foreground" /> {vendor.contactPerson}
+                            </CardDescription>
+                        )}
+                      </CardHeader>
+                      <CardContent className="flex-grow space-y-2 text-sm">
+                        <div className="flex items-center">
+                          <Phone className="h-4 w-4 mr-2 text-muted-foreground" />
+                          <a href={`tel:${vendor.phoneNumber}`} className="text-foreground hover:text-primary hover:underline">{vendor.phoneNumber}</a>
+                        </div>
+                        {vendor.alternatePhoneNumber && (
+                           <div className="flex items-center">
+                             <PhoneForwarded className="h-4 w-4 mr-2 text-muted-foreground" />
+                             <a href={`tel:${vendor.alternatePhoneNumber}`} className="text-foreground hover:text-primary hover:underline">{vendor.alternatePhoneNumber}</a>
+                           </div>
+                        )}
+                        {vendor.address && (
+                          <div className="flex items-start">
+                            <MapPin className="h-4 w-4 mr-2 mt-0.5 text-muted-foreground flex-shrink-0" />
+                            <p className="text-muted-foreground">{vendor.address}</p>
+                          </div>
+                        )}
+                         <div className="flex items-start">
+                            <ListChecks className="h-4 w-4 mr-2 mt-0.5 text-muted-foreground flex-shrink-0" />
+                            <p className="text-muted-foreground"><strong className="font-medium text-foreground/90">Services:</strong> {vendor.servicesOffered}</p>
+                        </div>
+                        {vendor.notes && (
+                          <div className="flex items-start">
+                            <Info className="h-4 w-4 mr-2 mt-0.5 text-muted-foreground flex-shrink-0" />
+                             <p className="text-muted-foreground italic"><strong className="font-medium text-foreground/90 not-italic">Notes:</strong> {vendor.notes}</p>
+                          </div>
+                        )}
+                      </CardContent>
+                       <CardFooter className="text-xs text-muted-foreground pt-3 border-t">
+                          Added by {vendor.submittedByName} on {new Date(vendor.submittedAt).toLocaleDateString()}
+                       </CardFooter>
+                    </Card>
+                  </div>
+                );
+              }}
+            </Grid>
           )}
         </CardContent>
       </Card>
