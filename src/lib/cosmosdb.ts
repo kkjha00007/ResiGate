@@ -28,6 +28,7 @@ export const maintenanceBillsContainerId = process.env.COSMOS_MAINTENANCE_BILLS_
 export const paymentsContainerId = process.env.COSMOS_PAYMENTS_CONTAINER_ID || "Payments";
 export const societyExpensesContainerId = process.env.COSMOS_SOCIETY_EXPENSES_CONTAINER_ID || "SocietyExpenses";
 export const billEmailLogsContainerId = process.env.COSMOS_BILL_EMAIL_LOGS_CONTAINER_ID || "BillEmailLogs";
+export const featureFlagsContainerId = process.env.COSMOS_FEATURE_FLAGS_CONTAINER_ID || "FeatureFlags";
 
 function getCosmosClient() {
   if (!endpoint || !key) {
@@ -42,6 +43,15 @@ function getCosmosClient() {
 
 function getDatabase(client: CosmosClient) {
   return client.database(databaseId);
+}
+
+// Export the CosmosClient for use in other modules
+export function getCosmosDB() {
+  const client = getCosmosClient();
+  return {
+    client,
+    database: getDatabase(client),
+  };
 }
 
 export function getSocietySettingsContainer() {

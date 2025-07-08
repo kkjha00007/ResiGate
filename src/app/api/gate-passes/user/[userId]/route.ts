@@ -7,16 +7,19 @@ import { GATE_PASS_STATUSES } from '@/lib/types';
 // Get gate passes for a specific user
 export async function GET(
   request: NextRequest,
-  { params }: { params: { userId: string } }
+  { params }: { params: Promise<{ userId: string }> }
 ) {
   let gatePassesContainer;
   try {
     gatePassesContainer = getGatePassesContainer();
   } catch (err) {
+    if (process.env.NODE_ENV !== 'production') {
+      console.error('Cosmos DB connection is not configured.', err);
+    }
     return NextResponse.json({ message: 'Cosmos DB connection is not configured.' }, { status: 500 });
   }
   try {
-    const userId = params.userId;
+    const { userId } = await params;
     if (!userId) {
       return NextResponse.json({ message: 'User ID is required' }, { status: 400 });
     }
@@ -43,7 +46,10 @@ export async function GET(
     return NextResponse.json(updatedGatePasses, { status: 200 });
 
   } catch (error) {
-    console.error(`Get Gate Passes for User ${params.userId} API error:`, error);
+    if (process.env.NODE_ENV !== 'production') {
+      const { userId } = await params;
+      console.error(`Get Gate Passes for User ${userId} API error:`, error);
+    }
     const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
     return NextResponse.json({ message: 'Internal server error', error: errorMessage }, { status: 500 });
   }

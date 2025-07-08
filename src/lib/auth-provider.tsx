@@ -568,7 +568,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, [user?.societyId, toast]);
 
   // Theme preference logic
-  const fetchThemePreference = async () => {
+  const fetchThemePreference = React.useCallback(async () => {
     if (!user?.id || !user?.societyId) return 'light';
     try {
       const response = await fetch('/api/users/theme-preference', {
@@ -583,7 +583,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     } catch {
       return 'light';
     }
-  };
+  }, [user?.id, user?.societyId]);
 
   const updateThemePreference = async (theme: 'light' | 'dark') => {
     if (!user?.id || !user?.societyId) return;

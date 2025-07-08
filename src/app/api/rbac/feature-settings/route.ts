@@ -12,6 +12,88 @@ interface RolePermissionSettings {
 }
 
 /**
+ * GET feature access settings for roles in a society
+ * GET /api/rbac/feature-settings?societyId=...
+ */
+export async function GET(req: NextRequest) {
+  try {
+    const { searchParams } = new URL(req.url);
+    const societyId = searchParams.get('societyId');
+    if (!societyId) {
+      return NextResponse.json({ message: 'Missing required societyId' }, { status: 400 });
+    }
+
+    // Verify authentication
+    const token = req.cookies.get('session')?.value;
+    if (!token) {
+      return NextResponse.json({ message: 'Not authenticated' }, { status: 401 });
+    }
+    const payload = await verifyJWT(token);
+    if (!payload || typeof payload !== 'object' || !('userId' in payload)) {
+      return NextResponse.json({ message: 'Invalid session' }, { status: 401 });
+    }
+    const currentUser = await getUserById(payload.userId, payload.societyId || 'default');
+    if (!currentUser) {
+      return NextResponse.json({ message: 'Current user not found' }, { status: 404 });
+    }
+
+    // Check if current user has permission to view feature settings
+    const canViewFeatures = currentUser.roleAssociations?.some((association: UserRoleAssociation) => 
+      association.isActive && ['owner_app', 'ops', 'society_admin'].includes(association.role)
+    ) || ['owner_app', 'ops', 'society_admin'].includes(currentUser.primaryRole);
+    if (!canViewFeatures) {
+      return NextResponse.json({ message: 'Insufficient permissions to view feature settings' }, { status: 403 });
+    }
+
+    // Fetch all users in the society
+    const usersContainer = await getUsersContainer();
+    const query = {
+      query: `SELECT * FROM c WHERE c.societyId = @societyId`,
+      parameters: [
+        { name: "@societyId", value: societyId }
+      ]
+    };
+    const { resources: users } = await usersContainer.items.query<User>(query).fetchAll();
+
+    // Aggregate roleSettings from users' roleAssociations
+    const roleSettings: { [role: string]: RolePermissionSettings } = {};
+    for (const user of users) {
+      (user.roleAssociations || []).forEach(association => {
+        if (association.societyId === societyId && association.isActive) {
+          if (!roleSettings[association.role]) {
+            roleSettings[association.role] = {
+              role: association.role,
+              roleGroup: '', // You can fill this if you have a mapping
+              isEnabled: true,
+              permissions: association.customPermissions || {}
+            };
+          } else {
+            // Merge permissions if needed (union of all users)
+            const perms = association.customPermissions || {};
+            Object.keys(perms).forEach(feature => {
+              if (!roleSettings[association.role].permissions[feature]) {
+                roleSettings[association.role].permissions[feature] = perms[feature];
+              } else {
+                // Union
+                roleSettings[association.role].permissions[feature] = Array.from(new Set([
+                  ...roleSettings[association.role].permissions[feature],
+                  ...perms[feature]
+                ]));
+              }
+            });
+          }
+        }
+      });
+    }
+
+    return NextResponse.json({ roleSettings });
+  } catch (error) {
+    console.error('Error fetching feature settings:', error);
+    return NextResponse.json({ message: 'Internal server error' }, { status: 500 });
+  }
+}
+
+/**
  * Save feature access settings for roles in a society
  */
 export async function POST(req: NextRequest) {
@@ -41,8 +123,8 @@ export async function POST(req: NextRequest) {
 
     // Check if current user has permission to manage feature settings
     const canManageFeatures = currentUser.roleAssociations?.some((association: UserRoleAssociation) => 
-      association.isActive && ['owner_app', 'ops'].includes(association.role)
-    ) || ['owner_app', 'ops'].includes(currentUser.primaryRole);
+      association.isActive && ['owner_app', 'ops', 'society_admin'].includes(association.role)
+    ) || ['owner_app', 'ops', 'society_admin'].includes(currentUser.primaryRole);
 
     if (!canManageFeatures) {
       return NextResponse.json({ message: 'Insufficient permissions to manage feature settings' }, { status: 403 });

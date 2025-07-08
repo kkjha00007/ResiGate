@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { Sun, Moon } from 'lucide-react';
 import { useAuth } from '@/lib/auth-provider';
 
+
 export function ThemeToggle() {
   const { user, fetchThemePreference, updateThemePreference } = useAuth();
   const [theme, setTheme] = useState<'light' | 'dark'>(() => {
@@ -12,10 +13,11 @@ export function ThemeToggle() {
     }
     return 'light';
   });
+  const [hasFetchedTheme, setHasFetchedTheme] = useState(false);
 
-  // On mount, sync with server if logged in
+  // On mount, sync with server if logged in, but only once per user session
   useEffect(() => {
-    if (user) {
+    if (user && !hasFetchedTheme) {
       fetchThemePreference().then((serverTheme) => {
         setTheme(serverTheme);
         if (serverTheme === 'dark') {
@@ -24,9 +26,10 @@ export function ThemeToggle() {
           document.documentElement.classList.remove('dark');
         }
         localStorage.setItem('theme', serverTheme);
+        setHasFetchedTheme(true);
       });
     }
-  }, [user, fetchThemePreference]);
+  }, [user, fetchThemePreference, hasFetchedTheme]);
 
   useEffect(() => {
     if (theme === 'dark') {

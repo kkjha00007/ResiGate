@@ -14,6 +14,46 @@ export type UserRole =
   | "owner"            // Maps to owner_resident
   | "renter";          // Maps to renter_resident
 
+// Feature Flag System types
+export type Environment = "dev" | "prod" | "demo";
+export type PricingTier = "free" | "premium" | "enterprise";
+
+// Feature Flag configuration
+export interface FeatureFlag {
+  key: string; // Unique feature identifier
+  name: string; // Display name
+  description: string; // Feature description
+  enabled: boolean; // Global default
+  environments?: { [env in Environment]?: boolean }; // Per-environment overrides
+  roles?: { [role in UserRole]?: boolean }; // Per-role overrides
+  tiers?: { [tier in PricingTier]?: boolean }; // Per-pricing-tier overrides
+  abTestConfig?: {
+    enabled: boolean;
+    groups: { [groupName: string]: { percentage: number; enabled: boolean } };
+  };
+  createdAt: string;
+  updatedAt: string;
+  createdBy: string;
+  modifiedBy: string;
+}
+
+// Feature evaluation context
+export interface FeatureContext {
+  userId?: string;
+  role: UserRole;
+  tier: PricingTier;
+  environment: Environment;
+  societyId?: string;
+  abTestGroups?: { [testKey: string]: string };
+}
+
+// Enhanced Feature Flag container for Cosmos DB
+export interface FeatureFlagContainer {
+  id: string; // Feature key
+  societyId: string; // Society scope
+  flag: FeatureFlag;
+}
+
 // Role association with society/flat
 export interface UserRoleAssociation {
   id: string;
@@ -48,19 +88,12 @@ export interface User {
   passwordResetTokenExpiry?: number; // Unix timestamp (ms)
   themePreference?: 'light' | 'dark'; // Add theme preference for user
   vehicles?: Vehicle[];
-  flatType?: string; // e.g., '1BHK', '2BHK', etc.
-  creditBalance?: number; // NEW: advance/credit balance for auto-adjustment
-  // Staff-specific fields
-  staffType?: 'maid' | 'driver' | 'cook' | 'security' | 'maintenance' | 'other';
-  isStaffLoginEnabled?: boolean; // Configurable staff login
-  isStaff?: boolean; // Whether user is staff member
-  // API access
-  apiKey?: string; // For API_SYSTEM role
-  lastLoginAt?: string;
-  // Impersonation tracking
-  impersonatedBy?: string; // User ID of who is impersonating
-  impersonationStartedAt?: string;
-  canImpersonate?: boolean; // Whether user can impersonate others
+  // Feature Flag System additions
+  pricingTier?: PricingTier; // User's subscription tier
+  abTestGroups?: { [testKey: string]: string }; // A/B test group assignments
+  creditBalance?: number; // Advance/Credit balance for user
+  canImpersonate?: boolean; // Whether the user can impersonate others (RBAC)
+  isStaff?: boolean; // Whether the user is staff (RBAC/UI convenience)
 }
 
 export interface Vehicle {
@@ -612,7 +645,7 @@ export interface SocietyBillingConfig {
     daysAfterDue: number; // grace period before interest
     rateType: 'fixed' | 'percent'; // percent per month or fixed per month
     amount: number; // percent or fixed per month
-    compounding?: 'monthly' | 'daily' | 'none'; // default: monthly
+    compounding?: 'monthly' | 'daily' | 'none' | null; // default: monthly
     maxAmount?: number; // optional cap
     perCategory?: boolean; // if true, interest applies per category
     description?: string;

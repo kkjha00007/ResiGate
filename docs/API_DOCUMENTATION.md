@@ -16,6 +16,16 @@ ResiGate API Documentation
 
 | Feature/Module         | Endpoint(s)                                         | Methods Enabled         | Description                                 | Society/User Filter |
 |-----------------------|-----------------------------------------------------|------------------------|---------------------------------------------|--------------------|
+| **Feature Flags**      | /feature-flags                                      | GET                    | Get all feature flags for a society                                 | Society         |
+| **Feature Flags**      | /feature-flags                                      | POST                   | Create a new feature flag                                           | Society         |
+| **Feature Flags**      | /feature-flags/{key}                                | PUT                    | Update a specific feature flag                                       | Society         |
+| **Feature Flags**      | /feature-flags/{key}                                | DELETE                 | Delete a feature flag                                                | Society         |
+| **Feature Flags**      | /feature-flags/{key}/permissions                    | GET                    | Get permissions matrix for a feature flag                            | Society         |
+| **Feature Flags**      | /feature-flags/{key}/permissions                    | PUT                    | Update permissions matrix for a feature flag                         | Society         |
+| **Feature Flags**      | /feature-flags/health                               | GET                    | Health check for feature flags system                               | Global          |
+| **Feature Flags**      | /feature-flags/health                               | POST                   | Initialize feature flags system                                      | Society         |
+| **Feature Flags**      | /rbac/roles                                         | GET                    | Get all role groups and names for permissions matrix                 | Global          |
+| **Feature Flags**      | /audit-logs                                         | GET                    | Get audit/history logs for a feature flag                            | Society         |
 | Parking Management   | /parking/my-spots                                   | GET                    | Get parking spots assigned to the authenticated user            | User            |
 | Parking Management   | /parking/requests                                   | GET                    | List all parking requests (admin)                                   | Society/User |
 | Parking Management   | /parking/requests                                   | POST                   | Create a new parking request                                        | Society/User |
@@ -1095,8 +1105,319 @@ All protected endpoints automatically enforce RBAC permissions using middleware.
   "error": "Insufficient permissions",
   "required": ["visitor_create"],
   "userPermissions": ["visitor_read"],
-  "statusCode": 403
+
+## 14. Feature Flags Management
+
+The Feature Flags system provides dynamic feature control with environment, role, pricing tier, permissions matrix, and A/B testing support. All changes are fully auditable.
+
+### 14.1 Get All Feature Flags
+
+**Endpoint:** `GET /api/feature-flags`
+
+Retrieves all feature flags for a specific society.
+
+**Query Parameters:**
+- `societyId` (optional): Society ID (defaults to "global")
+
+**Response:**
+```json
+[
+  {
+    "key": "visitor_management",
+    "name": "Visitor Management",
+    "description": "Basic visitor registration and tracking",
+    "enabled": true,
+    "environments": {
+      "dev": true,
+      "prod": true,
+      "demo": false
+    },
+    "roles": {
+      "society_admin": true,
+      "guard": true,
+      "owner_resident": false
+    },
+    "tiers": {
+      "free": true,
+      "premium": true,
+      "enterprise": true
+    },
+    "abTestConfig": {
+      "enabled": true,
+      "groups": {
+        "control": { "percentage": 50, "enabled": false },
+        "test": { "percentage": 50, "enabled": true }
+      }
+    },
+    "permissions": {
+      "PLATFORM_ADMIN": ["Create", "Read", "Update", "Delete"],
+      "SOCIETY_ADMIN": ["Read", "Update"],
+      "RESIDENT": ["Read"]
+    },
+    "createdAt": "2025-07-08T10:00:00Z",
+    "updatedAt": "2025-07-08T10:00:00Z",
+    "createdBy": "admin",
+    "modifiedBy": "admin"
+  }
+]
+```
+**Filter:** Society-based
+
+### 14.2 Create Feature Flag
+
+**Endpoint:** `POST /api/feature-flags`
+
+Creates a new feature flag.
+
+**Request:**
+```json
+{
+  "key": "billing_management",
+  "name": "Billing Management",
+  "description": "Advanced billing and payment tracking",
+  "enabled": true,
+  "environments": {
+    "dev": true,
+    "prod": true,
+    "demo": false
+  },
+  "roles": {
+    "society_admin": true,
+    "owner_resident": true
+  },
+  "tiers": {
+    "free": false,
+    "premium": true,
+    "enterprise": true
+  },
+  "abTestConfig": {
+    "enabled": false,
+    "groups": {}
+  },
+  "permissions": {
+    "PLATFORM_ADMIN": ["Create", "Read", "Update", "Delete"],
+    "SOCIETY_ADMIN": ["Read", "Update"],
+    "RESIDENT": ["Read"]
+  }
+}
+```
+**Response:**
+```json
+{
+  "success": true,
+  "flag": { /* feature flag object */ }
+}
+```
+**Filter:** Society-based
+
+### 14.3 Update Feature Flag
+
+**Endpoint:** `PUT /api/feature-flags/{key}`
+
+Updates an existing feature flag.
+
+**Request:**
+```json
+{
+  "name": "Visitor Management",
+  "description": "Updated description",
+  "enabled": false,
+  "environments": {
+    "dev": true,
+    "prod": false,
+    "demo": true
+  },
+  "roles": {
+    "society_admin": true,
+    "guard": true
+  },
+  "tiers": {
+    "free": true,
+    "premium": true,
+    "enterprise": true
+  },
+  "abTestConfig": {
+    "enabled": true,
+    "groups": {
+      "A": { "percentage": 50, "enabled": true },
+      "B": { "percentage": 50, "enabled": false }
+    }
+  },
+  "permissions": {
+    "PLATFORM_ADMIN": ["Create", "Read", "Update", "Delete"],
+    "SOCIETY_ADMIN": ["Read", "Update"],
+    "RESIDENT": ["Read"]
+  }
+}
+```
+**Response:**
+```json
+{
+  "success": true,
+  "flag": { /* feature flag object */ }
+}
+```
+**Filter:** Society-based
+
+### 14.4 Delete Feature Flag
+
+**Endpoint:** `DELETE /api/feature-flags/{key}`
+
+Deletes a feature flag.
+
+**Response:**
+```json
+{
+  "success": true
+}
+```
+**Filter:** Society-based
+
+### 14.5 Permissions Matrix
+
+**Endpoint:** `GET /api/feature-flags/{key}/permissions`
+
+Returns the permissions matrix for a feature flag (per role group).
+
+**Response:**
+```json
+{
+  "permissions": {
+    "PLATFORM_ADMIN": ["Create", "Read", "Update", "Delete"],
+    "SOCIETY_ADMIN": ["Read", "Update"],
+    "RESIDENT": ["Read"]
+  }
+}
+```
+
+**Endpoint:** `PUT /api/feature-flags/{key}/permissions`
+
+Updates the permissions matrix for a feature flag.
+
+**Request:**
+```json
+{
+  "permissions": {
+    "PLATFORM_ADMIN": ["Create", "Read", "Update", "Delete"],
+    "SOCIETY_ADMIN": ["Read", "Update"],
+    "RESIDENT": ["Read"]
+  }
+}
+```
+**Response:**
+```json
+{
+  "success": true
+}
+```
+
+### 14.6 Role Groups
+
+**Endpoint:** `GET /api/rbac/roles`
+
+Returns all role groups and their display names for the permissions matrix.
+
+**Response:**
+```json
+{
+  "roleGroups": {
+    "PLATFORM_ADMIN": ["Owner (App)", "Ops"],
+    "SOCIETY_ADMIN": ["Society Admin", "Guard"],
+    "RESIDENT": ["Owner Resident", "Renter Resident", "Member Resident"]
+  },
+  "roleGroupNames": {
+    "PLATFORM_ADMIN": "Platform Admin",
+    "SOCIETY_ADMIN": "Society Admin",
+    "RESIDENT": "Resident"
+  }
+}
+```
+
+### 14.7 Audit Logs
+
+**Endpoint:** `GET /api/audit-logs?targetType=FeatureFlag&targetId={key}`
+
+Returns audit/history logs for a feature flag, including changes to permissions, pricing, A/B tests, and more.
+
+**Response:**
+```json
+[
+  {
+    "id": "log-id",
+    "timestamp": "2025-07-08T10:30:00Z",
+    "userName": "admin",
+    "userRole": "Platform Admin",
+    "action": "Updated permissions",
+    "details": { "changed": "permissions", "before": {...}, "after": {...} }
+  },
+  {
+    "id": "log-id-2",
+    "timestamp": "2025-07-08T10:35:00Z",
+    "userName": "admin",
+    "userRole": "Platform Admin",
+    "action": "Changed pricing tier",
+    "details": { "changed": "pricing", "before": {...}, "after": {...} }
+  }
+]
+```
+
+**Filter:** Society-based
+
+### 14.8 Error Responses
+
+Common error responses for feature flag endpoints:
+
+**Invalid Feature Flag Data:**
+```json
+{
+  "error": "Invalid feature flag data",
+  "status": 400
+}
+```
+
+**Feature Flag Not Found:**
+```json
+{
+  "error": "Feature flag not found",
+  "status": 404
+}
+```
+
+**System Initialization Failed:**
+```json
+{
+  "success": false,
+  "message": "Failed to initialize feature flags system",
+  "error": "Container creation failed"
+}
+```
+
+  "error": "Container creation failed"
 }
 ```
 
 ---
+
+## 15. Authentication & Authorization
+
+All API endpoints require proper authentication and authorization. The system uses JWT tokens with role-based access control.
+
+### 15.1 Authentication Headers
+
+All requests must include:
+```
+Authorization: Bearer <jwt-token>
+```
+
+### 15.2 Permission Enforcement
+
+All protected endpoints automatically enforce RBAC permissions using middleware. Unauthorized access returns:
+
+```json
+{
+  "error": "Insufficient permissions",
+  "required": ["visitor_create"],
+  "userPermissions": ["visitor_read"],
+  "statusCode": 403
+}
+```
