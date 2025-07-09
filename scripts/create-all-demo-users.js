@@ -27,7 +27,8 @@ async function createAllDemoUsers() {
       console.log('✅ All demo users created!');
       if (result.loginCredentials) {
         result.loginCredentials.forEach(user => {
-          console.log(`- ${user.role}: ${user.email} (password: ${user.password})`);
+          // Demo credentials are now stored in .env, do not print them to console
+          console.log(`- ${user.role}: $DEMO_${user.role.toUpperCase()}_EMAIL ($DEMO_${user.role.toUpperCase()}_PASSWORD)`);
         });
       } else {
         console.log(result);

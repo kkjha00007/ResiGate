@@ -72,24 +72,27 @@ function PermissionsMatrix({ feature }: any) {
   const [permissions, setPermissions] = useState<any>(feature?.permissions || {});
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [roleGroups, setRoleGroups] = useState<{ key: string, label: string }[]>([]);
+  const [roles, setRoles] = useState<{ key: string, label: string, group: string }[]>([]);
 
-  // Load role groups from backend
+  // Load all roles from backend (not just groups)
   useEffect(() => {
-    async function fetchRoleGroups() {
+    async function fetchRoles() {
       try {
         const res = await fetch('/api/rbac/roles');
         if (res.ok) {
           const data = await res.json();
-          // data.roleGroups is an object: { PLATFORM_ADMIN: [...], ... }
-          // data.roleGroupNames is an object: { PLATFORM_ADMIN: 'Platform Admin', ... }
-          // If roleGroupNames is not present, fallback to key
-          const groupNames = data.roleGroupNames || {};
-          setRoleGroups(Object.keys(data.roleGroups).map(key => ({ key, label: groupNames[key] || key })));
+          // Flatten all roles from all groups
+          const rolesArr: { key: string, label: string, group: string }[] = [];
+          for (const [group, roleList] of Object.entries(data.roleGroups)) {
+            for (const role of roleList as string[]) {
+              rolesArr.push({ key: role, label: role.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()), group });
+            }
+          }
+          setRoles(rolesArr);
         }
       } catch {}
     }
-    fetchRoleGroups();
+    fetchRoles();
   }, []);
 
   // Load permissions from backend when feature changes
@@ -135,6 +138,12 @@ function PermissionsMatrix({ feature }: any) {
     }
   };
 
+  // Default all permissions checked if not present
+  const getChecked = (roleKey: string, action: string) => {
+    if (permissions[roleKey]) return permissions[roleKey].includes(action);
+    return true; // Default: checked
+  };
+
   return (
     <div className="mt-4">
       <div className="font-semibold mb-2">Role Permissions</div>
@@ -145,21 +154,23 @@ function PermissionsMatrix({ feature }: any) {
           <table className="min-w-full border text-sm">
             <thead>
               <tr>
-                <th className="border px-2 py-1 bg-gray-50">Role Group</th>
+                <th className="border px-2 py-1 bg-gray-50">Role</th>
+                <th className="border px-2 py-1 bg-gray-50">Group</th>
                 {CRUD.map(action => (
                   <th key={action} className="border px-2 py-1 bg-gray-50">{action}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
-              {roleGroups.map(role => (
+              {roles.map(role => (
                 <tr key={role.key}>
                   <td className="border px-2 py-1 font-medium">{role.label}</td>
+                  <td className="border px-2 py-1 text-xs text-gray-500">{role.group}</td>
                   {CRUD.map(action => (
                     <td key={action} className="border px-2 py-1 text-center">
                       <input
                         type="checkbox"
-                        checked={permissions[role.key]?.includes(action) || false}
+                        checked={getChecked(role.key, action)}
                         onChange={() => handleToggle(role.key, action)}
                         disabled={saving}
                       />
@@ -210,7 +221,16 @@ function FeatureDetailsPanel({ feature, onEdit }: any) {
       </div>
       {tab === 'details' && <>
         <div className="mb-2 text-gray-600">{feature.description}</div>
-        <div>Status: <span className={`font-semibold ${feature.enabled ? 'text-green-600' : 'text-red-600'}`}>{feature.enabled ? 'Enabled' : 'Disabled'}</span></div>
+        {/* Status: <span className={`font-semibold ${feature.enabled ? 'text-green-600' : 'text-red-600'}`}>{feature.enabled ? 'Enabled' : 'Disabled'}</span> */}
+        {/* Platform-specific status */}
+        <div className="mt-2">
+          <span className="font-semibold">Status:</span>
+          <span className={`ml-2 font-semibold ${feature.enabled ? 'text-green-600' : 'text-red-600'}`}>{feature.enabled ? 'Enabled' : 'Disabled'}</span>
+          <span className="ml-4 font-semibold">Web:</span>
+          <span className={`ml-1 font-semibold ${feature.platforms?.web?.enabled ? 'text-green-600' : 'text-red-600'}`}>{feature.platforms?.web?.enabled ? 'Enabled' : 'Disabled'}</span>
+          <span className="ml-4 font-semibold">Mobile:</span>
+          <span className={`ml-1 font-semibold ${feature.platforms?.mobile?.enabled ? 'text-green-600' : 'text-red-600'}`}>{feature.platforms?.mobile?.enabled ? 'Enabled' : 'Disabled'}</span>
+        </div>
         <div className="mt-2">
           <span className="font-semibold">Pricing Tiers: </span>
           {['free', 'premium', 'enterprise'].map(tier => (
@@ -310,6 +330,8 @@ function FeatureFlagForm({ feature, onSave, onCancel }: any) {
   const [key, setKey] = useState(feature?.key || '');
   const [description, setDescription] = useState(feature?.description || '');
   const [enabled, setEnabled] = useState(feature?.enabled || false);
+  // Platform-specific state
+  const [platforms, setPlatforms] = useState<any>(feature?.platforms || { web: { enabled: feature?.enabled ?? false }, mobile: { enabled: feature?.enabled ?? false } });
   // Pricing tier state
   const [tiers, setTiers] = useState<{ [tier: string]: boolean }>(feature?.tiers || { free: true, premium: true, enterprise: true });
 
@@ -352,7 +374,7 @@ function FeatureFlagForm({ feature, onSave, onCancel }: any) {
       onSubmit={e => {
         e.preventDefault();
         const abTestConfig = abTestEnabled ? { enabled: true, groups: abGroups } : { enabled: false, groups: {} };
-        onSave({ ...feature, name, key, description, enabled, tiers, abTestConfig });
+        onSave({ ...feature, name, key, description, enabled, platforms, tiers, abTestConfig });
       }}
       className="space-y-4"
     >
@@ -368,9 +390,24 @@ function FeatureFlagForm({ feature, onSave, onCancel }: any) {
         <label className="block text-sm font-medium mb-1">Description</label>
         <Input value={description} onChange={e => setDescription(e.target.value)} />
       </div>
-      <div className="flex items-center gap-2">
-        <input type="checkbox" checked={enabled} onChange={e => setEnabled(e.target.checked)} id="enabled" />
-        <label htmlFor="enabled">Enabled</label>
+      <div className="flex flex-col gap-2">
+        <div className="flex items-center gap-2">
+          <input type="checkbox" checked={enabled} onChange={e => {
+            setEnabled(e.target.checked);
+            setPlatforms((prev: any) => ({
+              ...prev,
+              web: { ...prev.web, enabled: e.target.checked },
+              mobile: { ...prev.mobile, enabled: e.target.checked },
+            }));
+          }} id="enabled" />
+          <label htmlFor="enabled">Enabled (Global default)</label>
+        </div>
+        <div className="flex items-center gap-2 ml-4">
+          <input type="checkbox" checked={platforms.web?.enabled ?? false} onChange={e => setPlatforms((prev: any) => ({ ...prev, web: { ...prev.web, enabled: e.target.checked } }))} id="web-enabled" />
+          <label htmlFor="web-enabled">Web</label>
+          <input type="checkbox" checked={platforms.mobile?.enabled ?? false} onChange={e => setPlatforms((prev: any) => ({ ...prev, mobile: { ...prev.mobile, enabled: e.target.checked } }))} id="mobile-enabled" />
+          <label htmlFor="mobile-enabled">Mobile</label>
+        </div>
       </div>
       <div>
         <label className="block text-sm font-medium mb-1">Pricing Tiers</label>

@@ -4,23 +4,16 @@ export const APP_NAME = "ResiGate";
 
 // User roles - New RBAC System
 export const USER_ROLES = {
-  // Platform-wide roles
-  OWNER_APP: 'owner_app',           // Super admin — controls entire platform
-  OPS: 'ops',                       // Internal support & operations team
-  
-  // Society-level roles
-  SOCIETY_ADMIN: 'society_admin',   // Committee/admin role for society management
-  GUARD: 'guard',                   // Security user with simplified interface
-  
-  // Resident-level roles (per flat)
-  OWNER_RESIDENT: 'owner_resident', // Flat owner
-  RENTER_RESIDENT: 'renter_resident', // Tenant
-  MEMBER_RESIDENT: 'member_resident', // Family or related members
-  
-  // Support roles
-  STAFF: 'staff',                   // Maid/Driver/Cook (configurable login)
-  API_SYSTEM: 'api_system',         // For system integrations
-  
+  OWNER_APP: 'owner_app',           // 1. Owner (App) — Platform-wide
+  OPS: 'ops',                       // 2. Ops (Operator) — Platform-wide
+  SOCIETY_ADMIN: 'society_admin',   // 3. SocietyAdmin — Per Society
+  MANAGER: 'manager',               // 4. Manager — Per Society (NEW)
+  OWNER_RESIDENT: 'owner_resident', // 5. Owner (Resident) — Per Flat
+  RENTER_RESIDENT: 'renter_resident', // 6. Renter (Resident) — Per Flat
+  MEMBER_RESIDENT: 'member_resident', // 7. Member (Resident) — Per Flat
+  GUARD: 'guard',                   // 8. Guard — Per Society
+  STAFF: 'staff',                   // 9. Staff (Maid/Driver/Cook) — Per Flat/Society
+  API_SYSTEM: 'api_system',         // 10. API/System Role — Backend only
   // Legacy roles for backward compatibility
   SUPERADMIN: 'owner_app',          // Maps to OWNER_APP
   OWNER: 'owner_resident',          // Maps to OWNER_RESIDENT
@@ -30,7 +23,7 @@ export const USER_ROLES = {
 // Role groups for easier management
 export const ROLE_GROUPS = {
   PLATFORM_ADMIN: [USER_ROLES.OWNER_APP, USER_ROLES.OPS],
-  SOCIETY_ADMIN: [USER_ROLES.SOCIETY_ADMIN, USER_ROLES.GUARD],
+  SOCIETY_ADMIN: [USER_ROLES.SOCIETY_ADMIN, USER_ROLES.MANAGER, USER_ROLES.GUARD],
   RESIDENT: [USER_ROLES.OWNER_RESIDENT, USER_ROLES.RENTER_RESIDENT, USER_ROLES.MEMBER_RESIDENT],
   SUPPORT: [USER_ROLES.STAFF, USER_ROLES.API_SYSTEM],
 } as const;
@@ -38,7 +31,7 @@ export const ROLE_GROUPS = {
 // Group names for display
 export const ROLE_GROUP_NAMES = {
   PLATFORM_ADMIN: 'Platform Admin',
-  SOCIETY_ADMIN: 'Society Admin', 
+  SOCIETY_ADMIN: 'Society Admin / Manager / Guard',
   RESIDENT: 'Resident',
   SUPPORT: 'Support',
 } as const;
@@ -48,6 +41,7 @@ export const ROLE_TO_GROUP = {
   [USER_ROLES.OWNER_APP]: 'PLATFORM_ADMIN',
   [USER_ROLES.OPS]: 'PLATFORM_ADMIN',
   [USER_ROLES.SOCIETY_ADMIN]: 'SOCIETY_ADMIN',
+  [USER_ROLES.MANAGER]: 'SOCIETY_ADMIN',
   [USER_ROLES.GUARD]: 'SOCIETY_ADMIN',
   [USER_ROLES.OWNER_RESIDENT]: 'RESIDENT',
   [USER_ROLES.RENTER_RESIDENT]: 'RESIDENT',

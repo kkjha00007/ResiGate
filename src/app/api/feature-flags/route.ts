@@ -49,7 +49,18 @@ async function getAllFeatureFlagsFromDB(societyId: string): Promise<FeatureFlag[
     
     const { resources } = await container.items.query<FeatureFlagContainer>(querySpec).fetchAll();
     
-    return resources.map((item: FeatureFlagContainer) => item.flag);
+    // Always return flags with normalized platform structure
+    return resources.map((item: FeatureFlagContainer) => {
+      const flag = item.flag;
+      if (!flag.platforms) flag.platforms = {};
+      if (!flag.platforms.web) flag.platforms.web = { enabled: flag.enabled };
+      if (!flag.platforms.mobile) flag.platforms.mobile = { enabled: flag.enabled };
+      if (flag.roles && (!flag.platforms.web.roles || !flag.platforms.mobile.roles)) {
+        flag.platforms.web.roles = flag.platforms.web.roles || { ...flag.roles };
+        flag.platforms.mobile.roles = flag.platforms.mobile.roles || { ...flag.roles };
+      }
+      return flag;
+    });
   } catch (error) {
     console.error('Error fetching feature flags from database:', error);
     return [];
@@ -61,6 +72,17 @@ async function getAllFeatureFlagsFromDB(societyId: string): Promise<FeatureFlag[
  */
 async function saveFeatureFlagToDB(flag: FeatureFlag, societyId: string): Promise<boolean> {
   try {
+    // --- Normalize platform-specific controls before saving ---
+    if (!flag.platforms) {
+      flag.platforms = {};
+    }
+    if (!flag.platforms.web) flag.platforms.web = { enabled: flag.enabled };
+    if (!flag.platforms.mobile) flag.platforms.mobile = { enabled: flag.enabled };
+    if (flag.roles && (!flag.platforms.web.roles || !flag.platforms.mobile.roles)) {
+      flag.platforms.web.roles = flag.platforms.web.roles || { ...flag.roles };
+      flag.platforms.mobile.roles = flag.platforms.mobile.roles || { ...flag.roles };
+    }
+    
     const { database } = getCosmosDB();
     const container = database.container(CONTAINER_NAME);
     
@@ -84,18 +106,37 @@ async function saveFeatureFlagToDB(flag: FeatureFlag, societyId: string): Promis
 async function createDefaultFeatureFlags(societyId: string): Promise<FeatureFlag[]> {
   const defaultFlags: FeatureFlag[] = [];
   
+  // Import role/group/platform constants
+  // Import role/group/platform constants
+  // Use require only for dynamic import in Node, but here we can import at top if needed
+  // const { USER_ROLES } = require("@/lib/constants");
+  // Instead, use already imported constants if possible
+  const CRUD = ['Create', 'Read', 'Update', 'Delete'];
+  // Build all roles list (as string[])
+  const allRoles: string[] = Object.values(require("@/lib/constants").USER_ROLES);
   for (const [key, value] of Object.entries(FEATURES)) {
+    // Set all permissions for all roles
+    const webRoles: { [role: string]: boolean } = {};
+    const mobileRoles: { [role: string]: boolean } = {};
+    allRoles.forEach((role: string) => {
+      webRoles[role] = true;
+      mobileRoles[role] = true;
+    });
     const flag: FeatureFlag = {
       key: value,
       name: key.replace(/_/g, ' ').toLowerCase(),
       description: `Default flag for ${key}`,
       enabled: true,
+      platforms: {
+        web: { enabled: true, roles: webRoles },
+        mobile: { enabled: true, roles: mobileRoles },
+      },
       environments: {
         dev: true,
         prod: true,
         demo: true,
       },
-      roles: {}, // Will be managed by RBAC
+      roles: {}, // legacy/global
       tiers: {
         [FEATURE_TO_TIER[value as keyof typeof FEATURE_TO_TIER] || PRICING_TIERS.FREE]: true,
       },
@@ -105,7 +146,6 @@ async function createDefaultFeatureFlags(societyId: string): Promise<FeatureFlag
       createdBy: 'system',
       modifiedBy: 'system',
     };
-    
     defaultFlags.push(flag);
     await saveFeatureFlagToDB(flag, societyId);
   }

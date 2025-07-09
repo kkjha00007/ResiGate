@@ -1,3 +1,8 @@
+
+## 📚 Additional Documentation
+
+- See `docs/FEATURE_FLAG_IMPLEMENTATION_SUMMARY.md` for a high-level summary of the Feature Flag System implementation and rollout.
+- All API, RBAC, and testing guides are in the `docs/` folder.
 # ResiGate – Society Management System for Residential Communities
 
 > **Version**: 2.0  

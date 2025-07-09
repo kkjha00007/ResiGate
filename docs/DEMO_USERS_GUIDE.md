@@ -26,40 +26,40 @@ Content-Type: application/json
   "users": [
     {
       "role": "owner_app",
-      "email": "demo.owner.app@example.com", 
-      "password": "demo123",
+      "email": "$DEMO_OWNER_EMAIL",
+      "password": "$DEMO_OWNER_PASSWORD",
       "name": "Demo Owner App"
     },
     {
       "role": "ops",
-      "email": "demo.ops@example.com",
-      "password": "demo123", 
+      "email": "$DEMO_OPS_EMAIL",
+      "password": "$DEMO_OPS_PASSWORD",
       "name": "Demo Ops"
     },
     {
       "role": "society_admin",
-      "email": "demo.society.admin@example.com",
-      "password": "demo123",
+      "email": "$DEMO_SOCIETY_ADMIN_EMAIL",
+      "password": "$DEMO_SOCIETY_ADMIN_PASSWORD",
       "name": "Demo Society Admin"
     },
     {
       "role": "guard", 
-      "email": "demo.guard@example.com",
-      "password": "demo123",
+      "email": "$DEMO_GUARD_EMAIL",
+      "password": "$DEMO_GUARD_PASSWORD",
       "name": "Demo Guard",
       "flatNumber": "NA"
     },
     {
       "role": "owner_resident",
-      "email": "demo.owner.resident@example.com",
-      "password": "demo123", 
+      "email": "$DEMO_OWNER_RESIDENT_EMAIL",
+      "password": "$DEMO_OWNER_RESIDENT_PASSWORD",
       "name": "Demo Owner Resident",
       "flatNumber": "A-101"
     },
     {
       "role": "renter_resident",
-      "email": "demo.renter.resident@example.com", 
-      "password": "demo123",
+      "email": "$DEMO_RENTER_RESIDENT_EMAIL",
+      "password": "$DEMO_RENTER_RESIDENT_PASSWORD",
       "name": "Demo Renter Resident",
       "flatNumber": "A-102"
     },
@@ -72,8 +72,8 @@ Content-Type: application/json
     },
     {
       "role": "staff",
-      "email": "demo.staff@example.com",
-      "password": "demo123",
+      "email": "$DEMO_STAFF_EMAIL",
+      "password": "$DEMO_STAFF_PASSWORD",
       "name": "Demo Staff",
       "flatNumber": "NA"
     },

@@ -8,55 +8,75 @@ The RBAC-enabled backend is running and ready for testing:
 
 ## Demo Users for Testing
 
-Use these credentials to test different role scenarios:
+Use these credentials to test different role scenarios. All demo credentials are now stored in your `.env` file as environment variables (see below).
 
 ### Platform Admin (Full Access)
 ```
-Email: demo.owner.app@example.com
-Password: demo123
+Email: $DEMO_OWNER_EMAIL
+Password: $DEMO_OWNER_PASSWORD
 Role: owner_app
 Access: All features, impersonation, feature control
 ```
 
 ### Society Admin (Society Management)
 ```
-Email: demo.society.admin@example.com  
-Password: demo123
+Email: $DEMO_SOCIETY_ADMIN_EMAIL
+Password: $DEMO_SOCIETY_ADMIN_PASSWORD
 Role: society_admin
 Access: Society-level admin functions
 ```
 
 ### Security Guard (Visitor Management)
 ```
-Email: demo.guard@example.com
-Password: demo123
+Email: $DEMO_GUARD_EMAIL
+Password: $DEMO_GUARD_PASSWORD
 Role: guard
 Access: Visitor management, gate passes, security
 ```
 
 ### Owner Resident (Full Resident Access)
 ```
-Email: demo.owner.resident@example.com
-Password: demo123
+Email: $DEMO_OWNER_RESIDENT_EMAIL
+Password: $DEMO_OWNER_RESIDENT_PASSWORD
 Role: owner_resident
 Access: Personal visitors, facility booking, bills
 ```
 
 ### Renter Resident (Limited Resident Access)
 ```
-Email: demo.renter.resident@example.com
-Password: demo123  
+Email: $DEMO_RENTER_RESIDENT_EMAIL
+Password: $DEMO_RENTER_RESIDENT_PASSWORD
 Role: renter_resident
 Access: Limited visitor management, facilities
 ```
 
 ### Staff (Support Access)
 ```
-Email: demo.staff@example.com
-Password: demo123
+Email: $DEMO_STAFF_EMAIL
+Password: $DEMO_STAFF_PASSWORD
 Role: staff
 Access: Support functions, help desk, impersonation
 ```
+## Demo Credentials Setup
+
+Add the following variables to your `.env` file (or `.env.demo`):
+
+```
+DEMO_OWNER_EMAIL=demo.owner.app@example.com
+DEMO_OWNER_PASSWORD=demo123
+DEMO_SOCIETY_ADMIN_EMAIL=demo.society.admin@example.com
+DEMO_SOCIETY_ADMIN_PASSWORD=demo123
+DEMO_GUARD_EMAIL=demo.guard@example.com
+DEMO_GUARD_PASSWORD=demo123
+DEMO_OWNER_RESIDENT_EMAIL=demo.owner.resident@example.com
+DEMO_OWNER_RESIDENT_PASSWORD=demo123
+DEMO_RENTER_RESIDENT_EMAIL=demo.renter.resident@example.com
+DEMO_RENTER_RESIDENT_PASSWORD=demo123
+DEMO_STAFF_EMAIL=demo.staff@example.com
+DEMO_STAFF_PASSWORD=demo123
+```
+
+Reference these variables in your scripts and documentation instead of hardcoding demo credentials.
 
 ## Quick API Test Sequence
 

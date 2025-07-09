@@ -16,12 +16,12 @@ ResiGate API Documentation
 
 | Feature/Module         | Endpoint(s)                                         | Methods Enabled         | Description                                 | Society/User Filter |
 |-----------------------|-----------------------------------------------------|------------------------|---------------------------------------------|--------------------|
-| **Feature Flags**      | /feature-flags                                      | GET                    | Get all feature flags for a society                                 | Society         |
-| **Feature Flags**      | /feature-flags                                      | POST                   | Create a new feature flag                                           | Society         |
-| **Feature Flags**      | /feature-flags/{key}                                | PUT                    | Update a specific feature flag                                       | Society         |
+| **Feature Flags**      | /feature-flags                                      | GET                    | Get all feature flags for a society (supports platform-specific controls: web/mobile, per-role) | Society         |
+| **Feature Flags**      | /feature-flags                                      | POST                   | Create a new feature flag (supports platform-specific controls: web/mobile, per-role) | Society         |
+| **Feature Flags**      | /feature-flags/{key}                                | PUT                    | Update a specific feature flag (supports platform-specific controls: web/mobile, per-role) | Society         |
 | **Feature Flags**      | /feature-flags/{key}                                | DELETE                 | Delete a feature flag                                                | Society         |
-| **Feature Flags**      | /feature-flags/{key}/permissions                    | GET                    | Get permissions matrix for a feature flag                            | Society         |
-| **Feature Flags**      | /feature-flags/{key}/permissions                    | PUT                    | Update permissions matrix for a feature flag                         | Society         |
+| **Feature Flags**      | /feature-flags/{key}/permissions                    | GET                    | Get permissions matrix for a feature flag (supports platform-specific controls) | Society         |
+| **Feature Flags**      | /feature-flags/{key}/permissions                    | PUT                    | Update permissions matrix for a feature flag (supports platform-specific controls) | Society         |
 | **Feature Flags**      | /feature-flags/health                               | GET                    | Health check for feature flags system                               | Global          |
 | **Feature Flags**      | /feature-flags/health                               | POST                   | Initialize feature flags system                                      | Society         |
 | **Feature Flags**      | /rbac/roles                                         | GET                    | Get all role groups and names for permissions matrix                 | Global          |
@@ -139,14 +139,31 @@ ResiGate API Documentation
 
 ### Format: Each endpoint below is listed as:
 
+
 #### [METHOD] [ENDPOINT]
 **Request:**
 ```json
 // Example request body or parameters (if applicable)
+// For platform-specific feature flag update:
+{
+  "key": "committee_delete",
+  "name": "committee delete",
+  "description": "Default flag for COMMITTEE_DELETE",
+  "enabled": true,
+  "platforms": {
+    "web": { "enabled": true, "roles": { "owner_app": true, "society_admin": true } },
+    "mobile": { "enabled": false, "roles": { "owner_app": false, "society_admin": true } }
+  },
+  ...
+}
 ```
 **Response:**
 ```json
 // Example response body
+{
+  "success": true,
+  "flag": { ...updated flag object... }
+}
 ```
 **Filter:** [User-based | Society-based | Society/User | ...]
 

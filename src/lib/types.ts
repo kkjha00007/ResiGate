@@ -19,13 +19,21 @@ export type Environment = "dev" | "prod" | "demo";
 export type PricingTier = "free" | "premium" | "enterprise";
 
 // Feature Flag configuration
+export type Platform = 'web' | 'mobile';
+
 export interface FeatureFlag {
   key: string; // Unique feature identifier
   name: string; // Display name
   description: string; // Feature description
   enabled: boolean; // Global default
+  platforms?: {
+    [platform in Platform]?: {
+      enabled?: boolean; // Platform-specific enable/disable
+      roles?: { [role in UserRole]?: boolean }; // Per-role per-platform
+    }
+  };
   environments?: { [env in Environment]?: boolean }; // Per-environment overrides
-  roles?: { [role in UserRole]?: boolean }; // Per-role overrides
+  roles?: { [role in UserRole]?: boolean }; // Per-role overrides (legacy/global)
   tiers?: { [tier in PricingTier]?: boolean }; // Per-pricing-tier overrides
   abTestConfig?: {
     enabled: boolean;

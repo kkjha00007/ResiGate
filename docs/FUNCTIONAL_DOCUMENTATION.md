@@ -85,11 +85,13 @@ The system includes **68 granular permissions** across **12 modules**:
 
 ## 2.5. Feature Access Control
 
+
 Platform Admins (Owner App/Ops) can control feature access per role group per society through the Feature Access Control UI:
 
 - **Enable/Disable** entire feature modules for role groups
 - **Configure granular CRUD permissions** per feature (matrix per role group)
 - **Society-specific** feature control
+- **Platform-Specific Control**: Enable/disable features for Web and Mobile platforms independently, including per-role toggles for each platform
 - **Pricing Tier Control**: Map features to Free, Premium, Enterprise tiers
 - **A/B Testing**: Enable, configure, and manage A/B test groups and rollout percentages
 - **Audit/History**: View all changes to features, permissions, pricing, and A/B tests in a tabbed audit log
@@ -158,8 +160,10 @@ ResiGate now includes a robust, modern **Feature Flag System (FFS)** that provid
 
 ### 3.3 Feature Flag Administration
 
+
 #### Web-Only Admin Interface
 - **Feature Toggle**: Real-time enable/disable of features
+- **Platform-Specific Toggle**: Enable/disable features for Web and Mobile platforms independently, including per-role toggles for each platform
 - **Environment Control**: Per-environment feature activation
 - **Role-Based Permissions Matrix**: Configure CRUD permissions per role group for each feature
 - **Tier Management**: Feature-to-tier mapping configuration (Free, Premium, Enterprise)
