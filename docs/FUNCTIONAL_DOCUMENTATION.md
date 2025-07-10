@@ -439,3 +439,33 @@ The following features and UI components are present in the codebase but may be 
 **Note:**
 - Some features may be stubs or under development. For the most current and complete list, refer to the codebase or contact the technical team.
 - See also: API Documentation for endpoint details.
+
+---
+
+## 4. Password Reset & OTP Flows (2025)
+
+ResiGate implements robust, secure, and user-friendly password reset flows for both email and phone (OTP):
+
+- **Email Reset:**
+  - Secure, time-limited reset link sent via SendGrid (dynamic template).
+  - Always returns a generic message to prevent user enumeration.
+  - Rate-limited per user.
+  - Cosmos DB operations use the correct partition key (`societyId`).
+
+- **Phone/OTP Reset:**
+  - OTP is generated using a mock logic: 1st, 3rd, 5th, 7th, 9th digit of phone + '0'.
+  - OTP is not sent via SMS in this environment (mock only).
+  - OTP is stored securely with expiry (10 min) and rate limiting.
+  - OTP validation uses the same logic; on success, a short-lived reset token is issued.
+  - All endpoints return generic messages to prevent user enumeration.
+
+- **Security:**
+  - All endpoints return JSON only, with a `message` field for errors.
+  - All flows are rate-limited and log errors/abuse.
+  - No sensitive/demo credentials are exposed in code or docs.
+
+- **Ready for Production:**
+  - Email and SMS providers can be integrated with minimal changes.
+  - All flows are tested and ready for both web and mobile clients.
+
+---

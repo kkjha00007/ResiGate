@@ -173,6 +173,41 @@ Authorization: Bearer <jwt_token>
 - [ ] **Session Management**: Refresh tokens, handle expiration
 - [ ] **Feature Toggling**: Show/hide features based on permissions
 
+## Password Reset & OTP Testing
+
+### 1. Forgot Password (Email)
+- **Endpoint:** `POST /api/auth/forgot-password`
+- **Request:** `{ "email": "user@example.com" }`
+- **Response:** `{ "message": "If your email is registered, a reset link has been sent." }`
+- **Note:** Always returns a generic message. Check your email for the reset link (if registered).
+
+### 2. Forgot Password (Phone/OTP)
+- **Endpoint:** `POST /api/auth/forgot-password-otp`
+- **Request:** `{ "phone": "9876543210" }`
+- **Response:** `{ "message": "OTP sent" }`
+- **Note:** OTP is not sent via SMS in this environment. Use the mock logic below to generate the OTP for testing.
+
+#### Mock OTP Logic
+- OTP = 1st, 3rd, 5th, 7th, 9th digit of phone + '0'
+- Example: For phone `9876543210`, OTP = `975310`
+
+### 3. Verify OTP
+- **Endpoint:** `POST /api/auth/verify-reset-otp`
+- **Request:** `{ "phone": "9876543210", "otp": "975310" }`
+- **Response (success):** `{ "token": "secure-reset-token" }`
+- **Response (error):** `{ "message": "Invalid or expired OTP" }`
+
+### 4. Reset Password
+- **Endpoint:** `POST /api/auth/reset-password`
+- **Request:** `{ "token": "secure-reset-token", "password": "newPassword123" }`
+- **Response (success):** `{ "message": "Password has been reset." }`
+- **Response (error):** `{ "message": "Invalid or expired token." }`
+
+### 5. Security & Rate Limiting
+- All endpoints are rate-limited (max 3 per hour per user).
+- OTP expires in 10 minutes. Reset token expires in 15 minutes.
+- All responses are JSON and never reveal if a user exists.
+
 ## Support & Documentation
 
 - **Full API Documentation**: `docs/API_DOCUMENTATION.md`

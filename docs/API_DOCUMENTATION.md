@@ -1122,6 +1122,9 @@ All protected endpoints automatically enforce RBAC permissions using middleware.
   "error": "Insufficient permissions",
   "required": ["visitor_create"],
   "userPermissions": ["visitor_read"],
+  "statusCode": 403
+}
+```
 
 ## 14. Feature Flags Management
 
@@ -1409,10 +1412,6 @@ Common error responses for feature flag endpoints:
 }
 ```
 
-  "error": "Container creation failed"
-}
-```
-
 ---
 
 ## 15. Authentication & Authorization
@@ -1438,3 +1437,75 @@ All protected endpoints automatically enforce RBAC permissions using middleware.
   "statusCode": 403
 }
 ```
+
+---
+
+### Password Reset & OTP APIs (2025)
+
+#### POST /auth/forgot-password
+**Request:**
+```json
+{ "email": "user@example.com" }
+```
+**Response (always):**
+```json
+{ "message": "If your email is registered, a reset link has been sent." }
+```
+- Sends a secure, time-limited reset link to the user's email (SendGrid integration).
+- Rate-limited per user.
+- Always returns a generic message to prevent email enumeration.
+
+#### POST /auth/forgot-password-otp
+**Request:**
+```json
+{ "phone": "9876543210" }
+```
+**Response (always):**
+```json
+{ "message": "OTP sent" }
+```
+- Sends a 6-digit OTP via SMS (mocked for now: OTP = 1st, 3rd, 5th, 7th, 9th digit of phone + '0').
+- Rate-limited per user, OTP expires in 10 minutes.
+- Always returns a generic message to prevent phone enumeration.
+
+#### POST /auth/verify-reset-otp
+**Request:**
+```json
+{ "phone": "9876543210", "otp": "975310" }
+```
+**Response (success):**
+```json
+{ "token": "secure-reset-token" }
+```
+**Response (error):**
+```json
+{ "message": "Invalid or expired OTP" }
+```
+- Validates OTP using the same mock logic as above.
+- On success, returns a short-lived reset token.
+
+#### POST /auth/reset-password
+**Request:**
+```json
+{ "token": "secure-reset-token", "password": "newPassword123" }
+```
+**Response (success):**
+```json
+{ "message": "Password has been reset." }
+```
+**Response (error):**
+```json
+{ "message": "Invalid or expired token." }
+```
+- Token can be from email link or OTP verification.
+- Token expires after use or after 15 minutes.
+
+---
+
+**Security & Best Practices:**
+- All endpoints return JSON only.
+- All error responses are JSON with a `message` field.
+- All flows are rate-limited and log errors/abuse.
+- Cosmos DB operations use the correct partition key (`societyId`).
+- No user enumeration or sensitive info leaks.
+- OTP is mocked for now; ready for real SMS integration.
