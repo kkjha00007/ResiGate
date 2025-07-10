@@ -3,6 +3,7 @@ import { getUsersContainer, getAuditLogsContainer } from "./cosmosdb";
 import { v4 as uuidv4 } from "uuid";
 import jwt from "jsonwebtoken";
 import nodemailer from "nodemailer";
+import sgMail from '@sendgrid/mail';
 import bcrypt from "bcryptjs";
 
 export async function logAuditAction(entry: Omit<AuditLogEntry, "id" | "timestamp">) {
@@ -82,18 +83,39 @@ function getTransporter() {
   return transporter;
 }
 
-export async function sendEmail({ to, subject, text, html }: { to: string; subject: string; text: string; html?: string }) {
+// SendGrid integration
+sgMail.setApiKey(process.env.SENDGRID_API_KEY!);
+
+export async function sendEmail({
+  to,
+  subject,
+  text,
+  html,
+  templateId,
+  dynamicTemplateData
+}: {
+  to: string;
+  subject?: string;
+  text?: string;
+  html?: string;
+  templateId?: string;
+  dynamicTemplateData?: Record<string, any>;
+}) {
   try {
-    const transporter = getTransporter();
-    await transporter.sendMail({
-      from: process.env.SMTP_FROM || 'no-reply@resigate.com',
+    const msg: any = {
       to,
-      subject,
-      text,
-      html,
-    });
+      from: process.env.SENDGRID_FROM_EMAIL || 'no-reply@resigate.com',
+    };
+    if (templateId) {
+      msg.templateId = templateId;
+      msg.dynamicTemplateData = dynamicTemplateData;
+    } else {
+      msg.subject = subject;
+      msg.text = text;
+      msg.html = html;
+    }
+    await sgMail.send(msg);
   } catch (err) {
-    // Mask sensitive info in logs
     const safeErr = err instanceof Error ? err.message : String(err);
     console.error("Failed to send email to", to, ":", safeErr);
     throw err;
