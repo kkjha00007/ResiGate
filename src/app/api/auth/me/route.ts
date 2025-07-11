@@ -86,7 +86,7 @@ export async function PUT(req: NextRequest) {
   try {
     const usersContainer = await (await import('@/lib/cosmosdb')).getUsersContainer();
     await usersContainer.item(user.id, user.societyId).patch(
-      Object.entries(update).map(([key, value]) => ({ op: 'replace', path: `/${key}`, value }))
+      Object.entries(update).map(([key, value]) => ({ op: 'add', path: `/${key}`, value }))
     );
     // Return updated user
     const updatedUser = await getUserById(user.id, user.societyId);

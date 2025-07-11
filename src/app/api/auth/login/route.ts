@@ -5,6 +5,7 @@ import type { User, LoginAudit } from '@/lib/types';
 import bcrypt from 'bcryptjs';
 import { v4 as uuidv4 } from 'uuid';
 import { createJWT } from '@/lib/server-utils';
+import { createRefreshToken } from '@/lib/refresh-tokens';
 
 export async function POST(request: NextRequest) {
   try {
@@ -59,10 +60,13 @@ export async function POST(request: NextRequest) {
       // Log the audit error but don't fail the login
     }
 
-    // --- Set JWT session cookie ---
-    const token = await createJWT(userProfile);
-    // --- Return JWT in response for mobile clients ---
-    const response = NextResponse.json({ ...userProfile, token }, { status: 200 });
+    // --- Create JWT (60 min) and Refresh Token (90 days) ---
+    const token = await createJWT(userProfile, '60m');
+    const refreshTokenRecord = await createRefreshToken(user.id, undefined, 90);
+    const refreshToken = refreshTokenRecord.id;
+
+    // --- Return both tokens in response for mobile clients ---
+    const response = NextResponse.json({ ...userProfile, token, refreshToken }, { status: 200 });
 
     const hostname = request.headers.get('host') || '';
     const isLocalhost = /localhost|127\.0\.0\.1/i.test(hostname);
@@ -75,8 +79,18 @@ export async function POST(request: NextRequest) {
       secure: secureFlag, // Only secure in production and not localhost
       sameSite: 'lax',
       path: '/',
-      maxAge: 60 * 15, // 15 minutes
+      maxAge: 60 * 60, // 60 minutes
     });
+    // Optionally, set refresh token as httpOnly cookie for web clients (not required for mobile)
+    // response.cookies.set({
+    //   name: 'refreshToken',
+    //   value: refreshToken,
+    //   httpOnly: true,
+    //   secure: secureFlag,
+    //   sameSite: 'lax',
+    //   path: '/',
+    //   maxAge: 60 * 60 * 24 * 90, // 90 days
+    // });
     return response;
 
   } catch (error) {

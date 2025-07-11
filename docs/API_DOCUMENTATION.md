@@ -1,3 +1,99 @@
+## Authentication API (with Refresh Token Support)
+
+### 1. Login
+
+**Endpoint:**  
+`POST /api/auth/login`
+
+**Request Body:**
+```json
+{
+  "email": "user@example.com",
+  "password": "yourPassword123"
+}
+```
+
+**Response:**
+```json
+{
+  "token": "<jwt-access-token>",           // 60 min expiry
+  "refreshToken": "<secure-refresh-token>",// 90 days expiry
+  "id": "user-id",
+  "email": "user@example.com",
+  "name": "John Doe",
+  "role": "resident"
+  // ...other user fields
+}
+```
+
+---
+
+### 2. Refresh Token
+
+**Endpoint:**  
+`POST /api/auth/refresh`
+
+**Request Body:**
+```json
+{
+  "refreshToken": "<secure-refresh-token>"
+}
+```
+
+**Response (success):**
+```json
+{
+  "token": "<new-jwt-access-token>",           // 60 min expiry
+  "refreshToken": "<new-secure-refresh-token>" // 90 days expiry (rotated)
+}
+```
+
+**Response (error, expired/invalid):**
+```json
+{
+  "message": "Invalid or revoked refresh token"
+}
+```
+or
+```json
+{
+  "message": "Refresh token expired"
+}
+```
+
+---
+
+### 3. Logout
+
+**Endpoint:**  
+`POST /api/auth/logout`
+
+**Request Body:**
+```json
+{
+  "refreshToken": "<secure-refresh-token>"
+}
+```
+
+**Response:**
+```json
+{
+  "success": true
+}
+```
+- The backend will revoke the refresh token and clear the session cookie.
+
+---
+
+### Notes for Mobile Team
+
+- **Store both tokens securely** (e.g., SecureStore/Keychain).
+- **Use the access token** for all authenticated API calls.
+- **When the access token expires**, call `/api/auth/refresh` with the refresh token to get a new access token and refresh token.
+- **On logout**, call `/api/auth/logout` with the refresh token to revoke it.
+- If the refresh token is expired or revoked, prompt the user to log in again.
+
+---
 ResiGate API Documentation
 ==========================
 
@@ -1558,3 +1654,26 @@ _All fields are optional. Only send what you want to update._
 - Changing email may trigger verification (future-proofed).
 - All updates are validated and partial (PATCH-like behavior).
 - Returns the updated user profile (same as GET /auth/me).
+
+> **Note:**
+> - Only include fields you want to update in the request body. Do not send fields with empty strings unless you want to clear them (and only if the backend supports clearing for that field).
+> - Field names must match exactly as documented below (e.g., use `aboutMe`, not `about`).
+>
+> **Supported fields:**
+> - `name` (string)
+> - `email` (string, triggers verification if changed)
+> - `phone` (string, 10 digits)
+> - `birthdate` (string, ISO 8601 date)
+> - `gender` (string, e.g., "male", "female", "other")
+> - `aboutMe` (string, max 500 chars)
+> - `profilePhoto` (string, URL or base64)
+> - `privacySettings` (object, optional, for future use)
+>
+> **Example request:**
+> ```json
+> {
+>   "name": "Jane Doe",
+>   "aboutMe": "Nothing ",
+>   "email": "jane@example.com"
+> }
+> ```

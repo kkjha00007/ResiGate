@@ -23,7 +23,7 @@ export async function logAuditAction(entry: Omit<AuditLogEntry, "id" | "timestam
 
 const JWT_SECRET = process.env.JWT_SECRET || "dev-secret";
 
-export async function createJWT(user: any) {
+export async function createJWT(user: any, expiresIn: string = '15m') {
   // Only include safe fields in payload
   // For multi-role support, include all role associations
   const roleAssociations = user.roleAssociations || (user.role && user.societyId ? [{
@@ -43,8 +43,8 @@ export async function createJWT(user: any) {
       canImpersonate: user.canImpersonate || false,
       impersonatingUserId: user.impersonatingUserId || null
     },
-    JWT_SECRET,
-    { expiresIn: "15m" }
+    JWT_SECRET as string,
+    { expiresIn: expiresIn as any }
   );
 }
 
