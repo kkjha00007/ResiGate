@@ -91,6 +91,12 @@ export interface User {
   registrationDate: string; // Store as ISO string
   secondaryPhoneNumber1?: string;
   secondaryPhoneNumber2?: string;
+  phone?: string; // Primary phone number (10 digits)
+  birthdate?: string; // ISO 8601 date
+  gender?: string; // 'male', 'female', 'other', etc.
+  aboutMe?: string; // Max 500 chars
+  profilePhoto?: string; // URL or base64
+  privacySettings?: Record<string, any>; // For future use
   // Password reset fields
   passwordResetToken?: string;
   passwordResetTokenExpiry?: number; // Unix timestamp (ms)

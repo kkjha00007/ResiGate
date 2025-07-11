@@ -1509,3 +1509,52 @@ All protected endpoints automatically enforce RBAC permissions using middleware.
 - Cosmos DB operations use the correct partition key (`societyId`).
 - No user enumeration or sensitive info leaks.
 - OTP is mocked for now; ready for real SMS integration.
+
+---
+
+#### PUT /auth/me
+**Description:** Update the authenticated user's profile. Accepts partial updates (only send fields to change).
+
+**Auth:** Bearer token (Authorization header)
+
+**Request Body:**
+```json
+{
+  "name": "Jane Doe",
+  "email": "jane@example.com",
+  "phone": "9876543210",
+  "birthdate": "1990-01-01",
+  "gender": "female",
+  "aboutMe": "Hello, I'm Jane!",
+  "profilePhoto": "https://...",
+  "privacySettings": { "showEmail": false }
+}
+```
+_All fields are optional. Only send what you want to update._
+
+**Response (200 OK):**
+```json
+{
+  "id": "user-id",
+  "email": "jane@example.com",
+  "name": "Jane Doe",
+  "phone": "9876543210",
+  "birthdate": "1990-01-01",
+  "gender": "female",
+  "aboutMe": "Hello, I'm Jane!",
+  "profilePhoto": "https://...",
+  "privacySettings": { "showEmail": false },
+  ...other profile fields...
+}
+```
+
+**Error Responses:**
+- 400: `{ "message": "Validation error", "errors": { ... } }`
+- 401: `{ "message": "Not authenticated" }`
+- 500: `{ "message": "Internal server error." }`
+
+**Notes:**
+- Only the authenticated user can update their own profile.
+- Changing email may trigger verification (future-proofed).
+- All updates are validated and partial (PATCH-like behavior).
+- Returns the updated user profile (same as GET /auth/me).
